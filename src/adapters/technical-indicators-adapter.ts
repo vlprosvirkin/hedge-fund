@@ -17,7 +17,7 @@ import type {
 } from '../types/index.js';
 import { INDICATOR_THRESHOLDS, SIGNAL_WEIGHTS } from '../types/index.js';
 import { API_CONFIG } from '../config.js';
-import { addUSDT } from '../utils.js';
+import { addUSDSuffix } from '../utils.js';
 import axios from 'axios';
 
 export class TechnicalIndicatorsAdapter {
@@ -71,8 +71,8 @@ export class TechnicalIndicatorsAdapter {
       // Validate timeframe
       this.validateTimeframe(timeframe);
 
-      // Add USDT suffix for technical analysis API
-      const symbol = addUSDT(asset);
+      // Add USD suffix for technical analysis API
+      const symbol = addUSDSuffix(asset);
 
       const response = await axios.post<StatsResponse>(`${this.baseUrl}/stats`, {
         symbol: symbol,
@@ -103,8 +103,8 @@ export class TechnicalIndicatorsAdapter {
       // Validate timeframe
       this.validateTimeframe(timeframe);
 
-      // Add USDT suffix for technical analysis API
-      const symbol = addUSDT(asset);
+      // Add USD suffix for technical analysis API
+      const symbol = addUSDSuffix(asset);
 
       const response = await axios.post(`${this.baseUrl}/indicators`, {
         symbol: symbol,
@@ -493,8 +493,8 @@ export class TechnicalIndicatorsAdapter {
    */
   async getNews(asset: string): Promise<TechnicalNewsResult> {
     try {
-      // Add USDT suffix for technical analysis API
-      const symbol = addUSDT(asset);
+      // Add USD suffix for technical analysis API
+      const symbol = addUSDSuffix(asset);
 
       const response = await axios.get<TechnicalNewsItem[]>(`${this.baseUrl}/news/${symbol}`);
       return { items: response.data };
@@ -525,7 +525,7 @@ export class TechnicalIndicatorsAdapter {
         this.getTechnicalIndicators(asset, timeframe),
         this.getAssetMetadata(asset, timeframe),
         this.getNews(asset),
-        this.getSignalStrength(`${asset}USD`, timeframe)
+        this.getSignalStrength(asset, timeframe)
       ]);
 
       // Determine recommendation based on signal strength and sentiment
@@ -630,8 +630,8 @@ export class TechnicalIndicatorsAdapter {
       // Validate timeframe
       this.validateTimeframe(timeframe);
 
-      // Symbol is already clean ticker, no conversion needed
-      const asset = symbol;
+      // Convert symbol to clean ticker if needed (BTCUSDT -> BTC, BTCUSD -> BTC)
+      const asset = symbol.replace(/USDT$/, '').replace(/USD$/, '');
       const indicatorData = await this.getTechnicalIndicators(asset, timeframe);
 
       const signals: Array<{

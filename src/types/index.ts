@@ -183,7 +183,6 @@ export const SystemConfigSchema = z.object({
   rebalanceInterval: z.number(), // seconds
   maxPositions: z.number(),
   killSwitchEnabled: z.boolean(),
-  mockMode: z.boolean(),
 });
 
 export const PipelineArtifactSchema = z.object({

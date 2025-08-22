@@ -71,8 +71,7 @@ export const DEFAULT_CONFIG: SystemConfig = {
   debateInterval: 3600, // 1 hour
   rebalanceInterval: 3600, // 1 hour
   maxPositions: 8,
-  killSwitchEnabled: true,
-  mockMode: false
+  killSwitchEnabled: true
 };
 
 // Risk limits by profile
@@ -219,7 +218,6 @@ export const SYSTEM_CONFIG = {
   rebalanceInterval: parseInt(process.env.REBALANCE_INTERVAL || DEFAULT_CONFIG.rebalanceInterval.toString()),
   maxPositions: parseInt(process.env.MAX_POSITIONS || DEFAULT_CONFIG.maxPositions.toString()),
   killSwitchEnabled: process.env.KILL_SWITCH_ENABLED !== 'false',
-  mockMode: process.env.MOCK_MODE === 'true',
   logLevel: process.env.LOG_LEVEL || 'info',
   environment: process.env.NODE_ENV || 'development'
 };
@@ -231,8 +229,7 @@ export function loadConfig(): SystemConfig {
     debateInterval: SYSTEM_CONFIG.debateInterval,
     rebalanceInterval: SYSTEM_CONFIG.rebalanceInterval,
     maxPositions: SYSTEM_CONFIG.maxPositions,
-    killSwitchEnabled: SYSTEM_CONFIG.killSwitchEnabled,
-    mockMode: SYSTEM_CONFIG.mockMode
+    killSwitchEnabled: SYSTEM_CONFIG.killSwitchEnabled
   };
 }
 
@@ -260,19 +257,17 @@ export function validateAPIConfig(): { valid: boolean; errors: string[]; warning
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Check required API keys for production mode
-  if (!SYSTEM_CONFIG.mockMode) {
-    if (!API_CONFIG.binance.apiKey || !API_CONFIG.binance.secretKey) {
-      errors.push('Binance API credentials are required for production mode');
-    }
+  // Check required API keys
+  if (!API_CONFIG.binance.apiKey || !API_CONFIG.binance.secretKey) {
+    errors.push('Binance API credentials are required');
+  }
 
-    if (!API_CONFIG.aspis.apiKey) {
-      errors.push('Aspis API key is required for production mode');
-    }
+  if (!API_CONFIG.aspis.apiKey) {
+    errors.push('Aspis API key is required');
+  }
 
-    if (!API_CONFIG.openai.apiKey) {
-      warnings.push('OpenAI API key is missing - agents will use mock data');
-    }
+  if (!API_CONFIG.openai.apiKey) {
+    warnings.push('OpenAI API key is missing - agents will use mock data');
   }
 
   // Check API URLs
@@ -315,7 +310,6 @@ export function getConfigSummary() {
   return {
     system: {
       environment: SYSTEM_CONFIG.environment,
-      mockMode: SYSTEM_CONFIG.mockMode,
       riskProfile: SYSTEM_CONFIG.riskProfile,
       logLevel: SYSTEM_CONFIG.logLevel
     },

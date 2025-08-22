@@ -2,6 +2,44 @@ import type { TradingAdapter } from '../interfaces/adapters.js';
 import type { Position, Order, FillEvent } from '../types/index.js';
 import { API_CONFIG } from '../config.js';
 import { v4 as uuidv4 } from 'uuid';
+import axios, { AxiosError } from 'axios';
+
+// Types based on the provided API client
+interface ExecuteOrderInput {
+  chainId: string;
+  vault: string;
+  srcToken: string;
+  dstToken: string;
+  amountIn: string;
+  exchange: string;
+  slippage: string;
+  srcTokenSymbol?: string;
+  dstTokenSymbol?: string;
+}
+
+interface ExecuteOrderResponse {
+  exchange: string;
+  srcToken: string;
+  dstToken: string;
+  inputAmount: number;
+  outputAmount: string;
+  outputAmountScaled: string;
+  status: string;
+  tx_hash: string;
+}
+
+interface GetBalanceResponse {
+  [key: string]: {
+    scaled: string;
+    non_scaled: string;
+  };
+}
+
+interface GetVaultByApiKeyResponse {
+  apiKey: string;
+  tgId: string;
+  vaultAddress: string;
+}
 
 export class AspisAdapter implements TradingAdapter {
   private isConnectedFlag = false;
@@ -19,6 +57,12 @@ export class AspisAdapter implements TradingAdapter {
     this.vaultAddress = vaultAddress || API_CONFIG.aspis.vaultAddress;
     this.baseUrl = baseUrl || API_CONFIG.aspis.baseUrl;
 
+    console.log('AspisAdapter config:', {
+      apiKey: this.apiKey ? `${this.apiKey.substring(0, 10)}...` : 'undefined',
+      vaultAddress: this.vaultAddress ? `${this.vaultAddress.substring(0, 20)}...` : 'undefined',
+      baseUrl: this.baseUrl
+    });
+
     if (!this.apiKey) {
       throw new Error('ASPIS_API_KEY is required');
     }
@@ -29,25 +73,24 @@ export class AspisAdapter implements TradingAdapter {
 
   async connect(): Promise<void> {
     try {
-      // Authenticate with Aspis API
-      const response = await fetch(`${this.baseUrl}/auth/validate`, {
-        method: 'POST',
+      // Test connection by getting balance
+      const response = await axios.get<GetBalanceResponse>(`${this.baseUrl}/get_balance`, {
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
+          'x-api-key': this.apiKey!,
         },
-        body: JSON.stringify({
-          vaultAddress: this.vaultAddress
-        })
+        params: {
+          chainId: '42161',
+          vault: this.vaultAddress,
+        },
+        timeout: 30000,
       });
-
-      if (!response.ok) {
-        throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
-      }
 
       this.isConnectedFlag = true;
       console.log('Connected to Aspis trading API');
     } catch (error) {
+      if (error instanceof AxiosError) {
+        throw new Error(`Failed to connect to Aspis: ${error.response?.status} ${error.response?.statusText}`);
+      }
       throw new Error(`Failed to connect to Aspis: ${error}`);
     }
   }
@@ -62,19 +105,29 @@ export class AspisAdapter implements TradingAdapter {
   }
 
   async getPositions(): Promise<Position[]> {
-    const response = await fetch(`${this.baseUrl}/trading/positions`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
+    // Get positions from balance endpoint
+    try {
+      const accountInfo = await this.getAccountInfo();
+      const positions: Position[] = [];
+
+      for (const balance of accountInfo.balances) {
+        if (balance.free > 0 || balance.locked > 0) {
+          positions.push({
+            symbol: balance.asset,
+            quantity: balance.free + balance.locked,
+            avgPrice: 0, // Would need price data to calculate
+            unrealizedPnL: 0,
+            realizedPnL: 0,
+            timestamp: Date.now()
+          });
+        }
       }
-    });
 
-    if (!response.ok) {
-      throw new Error(`Failed to get positions: ${response.status} ${response.statusText}`);
+      return positions;
+    } catch (error) {
+      console.warn('Failed to get positions:', error);
+      return [];
     }
-
-    return await response.json();
   }
 
   async syncPositions(): Promise<Position[]> {
@@ -88,69 +141,58 @@ export class AspisAdapter implements TradingAdapter {
     type: 'market' | 'limit' | 'stop';
     price?: number;
   }): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/trading/order`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        ...params,
-        vaultAddress: this.vaultAddress
-      })
-    });
+    try {
+      // Convert symbol to token format (BTC -> BTC, ETH -> ETH)
+      const srcToken = params.side === 'buy' ? 'USDT' : params.symbol;
+      const dstToken = params.side === 'buy' ? params.symbol : 'USDT';
 
-    if (!response.ok) {
-      throw new Error(`Failed to place order: ${response.status} ${response.statusText}`);
+      const input: ExecuteOrderInput = {
+        chainId: '42161',
+        vault: this.vaultAddress!,
+        srcToken,
+        dstToken,
+        amountIn: params.quantity.toString(),
+        exchange: 'ODOS',
+        slippage: '10'
+      };
+
+      const response = await axios.post<ExecuteOrderResponse>(`${this.baseUrl}/execute_order`, input, {
+        headers: {
+          'x-api-key': this.apiKey!,
+        },
+        timeout: 90000, // 90 seconds timeout
+      });
+
+      return response.data.tx_hash || 'order-' + Date.now();
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        console.error('Execute order error:', {
+          error: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+        });
+        throw new Error(`Failed to place order: ${error.response?.status} ${error.response?.statusText}`);
+      }
+      throw new Error(`Failed to place order: ${error}`);
     }
-
-    const result = await response.json();
-    return result.orderId;
   }
 
   async cancelOrder(orderId: string): Promise<boolean> {
-    const response = await fetch(`${this.baseUrl}/trading/order/${orderId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    return response.ok;
+    // Aspis API executes orders immediately, no cancellation possible
+    return false;
   }
 
   async getOrder(orderId: string): Promise<Order | null> {
-    const response = await fetch(`${this.baseUrl}/trading/order/${orderId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    return await response.json();
+    // Aspis API executes orders immediately, no order status tracking
+    // Return null as orders are not tracked after execution
+    return null;
   }
 
   async getOrders(symbol?: string): Promise<Order[]> {
-    const params = symbol ? `?symbol=${symbol}` : '';
-    const response = await fetch(`${this.baseUrl}/trading/orders${params}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to get orders: ${response.status} ${response.statusText}`);
-    }
-
-    return await response.json();
+    // Aspis API doesn't have a direct orders endpoint
+    // Orders are executed immediately, so we return empty array
+    // In a real implementation, you would track executed orders
+    return [];
   }
 
   onFill(callback: (fillEvent: FillEvent) => void): void {
@@ -199,19 +241,37 @@ export class AspisAdapter implements TradingAdapter {
     totalValue: number;
     marginLevel?: number;
   }> {
-    const response = await fetch(`${this.baseUrl}/account/info`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
+    try {
+      const response = await axios.get<GetBalanceResponse>(`${this.baseUrl}/get_balance`, {
+        headers: {
+          'x-api-key': this.apiKey!,
+        },
+        params: {
+          chainId: '42161',
+          vault: this.vaultAddress,
+        },
+        timeout: 30000,
+      });
+
+      // Convert Aspis balance format to our format
+      const balances = Object.entries(response.data).map(([asset, balance]) => ({
+        asset,
+        free: parseFloat(balance.scaled || '0'),
+        locked: 0 // Aspis doesn't have locked balances concept
+      }));
+
+      const totalValue = balances.reduce((sum, balance) => sum + balance.free, 0);
+
+      return {
+        balances,
+        totalValue
+      };
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        throw new Error(`Failed to get account info: ${error.response?.status} ${error.response?.statusText}`);
       }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to get account info: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to get account info: ${error}`);
     }
-
-    return await response.json();
   }
 
   async getTradingFees(symbol?: string): Promise<{
@@ -274,19 +334,22 @@ export class AspisAdapter implements TradingAdapter {
     minPrice: number;
     maxPrice: number;
   }> {
-    const response = await fetch(`${this.baseUrl}/trading/symbols/${symbol}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to get symbol info: ${response.status} ${response.statusText}`);
+    // Aspis API doesn't have symbol info endpoint
+    // Return default values for supported symbols
+    if (!this.isSupportedSymbol(symbol)) {
+      throw new Error(`Symbol ${symbol} is not supported`);
     }
 
-    return await response.json();
+    return {
+      symbol,
+      status: 'TRADING',
+      minQty: 0.00001,
+      maxQty: 1000000,
+      stepSize: 0.00001,
+      tickSize: 0.01,
+      minPrice: 0.01,
+      maxPrice: 1000000
+    };
   }
 
   async placeConditionalOrder(params: {
@@ -373,6 +436,25 @@ export class AspisAdapter implements TradingAdapter {
       valid: errors.length === 0,
       errors
     };
+  }
+
+  async getSupportedTokens(): Promise<string[]> {
+    try {
+      const response = await axios.get<string[]>(`${this.baseUrl}/get_supported_tokens`, {
+        headers: {
+          'x-api-key': this.apiKey!,
+          'Content-Type': 'application/json',
+        },
+        params: {
+          chainId: '42161',
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.warn('Failed to get supported tokens, using fallback:', error);
+      return ['BTC', 'ETH', 'ADA', 'DOT', 'LINK'];
+    }
   }
 
   private isSupportedSymbol(symbol: string): boolean {

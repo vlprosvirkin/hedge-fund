@@ -3,8 +3,8 @@
  */
 
 /**
- * Add USDT suffix to clean ticker for technical analysis API (BTC -> BTCUSDT)
+ * Add USD suffix for technical analysis API (BTC -> BTCUSD)
  */
-export function addUSDT(ticker: string): string {
-    return `${ticker}USDT`;
+export function addUSDSuffix(ticker: string): string {
+    return `${ticker}USD`;
 }

@@ -30,21 +30,14 @@ async function decisionExecutionIntegrationTest() {
             maxPositions: 5,
             riskProfile: 'neutral',
             rebalanceInterval: 3600,
-            killSwitchEnabled: true,
-            mockMode: false
+            killSwitchEnabled: true
         };
 
         // Инициализация адаптеров
         const technicalAdapter = new TechnicalIndicatorsAdapter();
         const newsAdapter = new NewsAPIAdapter();
-        // Создаем AspisAdapter с принудительным mock режимом
-        const aspisAdapter = new (class extends AspisAdapter {
-            constructor() {
-                super('mock-key', 'mock-url');
-                // Принудительно устанавливаем mock режим
-                (this as any).mockMode = true;
-            }
-        })();
+        // Создаем AspisAdapter с реальными учетными данными
+        const aspisAdapter = new AspisAdapter();
         const agentsService = new AgentsService();
 
         // Mock services
@@ -83,7 +76,7 @@ async function decisionExecutionIntegrationTest() {
         const mockUniverse = {
             connect: async () => console.log('✅ Universe service connected'),
             disconnect: async () => console.log('✅ Universe service disconnected'),
-            getUniverse: async (params: any) => ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'ADAUSDT', 'DOTUSDT']
+            getUniverse: async (params: any) => ['ETH', 'ARB'] // Используем токены, которые есть в балансе
         };
 
         const mockRiskService = {
@@ -417,17 +410,14 @@ async function decisionExecutionIntegrationTest() {
 
 // Вспомогательные функции
 function calculateQuantity(weight: number, symbol: string): number {
-    const baseQuantities: Record<string, number> = {
-        'BTCUSDT': 0.01,
-        'ETHUSDT': 0.1,
-        'SOLUSDT': 1,
-        'ADAUSDT': 1000,
-        'DOTUSDT': 10,
-        'LINKUSDT': 50
+    // Fixed $1 USD equivalent for testing - meets minimum requirement
+    const quantities: Record<string, number> = {
+        'ETH': 1,    // $1 USDT -> ETH
+        'ARB': 1,    // $1 USDT -> ARB
+        'BTC': 1,    // $1 USDT -> BTC
+        'SOL': 1,    // $1 USDT -> SOL
     };
-
-    const baseQty = baseQuantities[symbol] || 1;
-    return baseQty * weight * 10; // Масштабируем по весу
+    return quantities[symbol] || 1;
 }
 
 function calculateCurrentWeight(position: any, allPositions: any[]): number {

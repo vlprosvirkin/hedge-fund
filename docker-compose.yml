@@ -14,7 +14,7 @@ services:
       - DEBATE_INTERVAL=3600
       - MAX_POSITIONS=8
       - KILL_SWITCH_ENABLED=true
-      - MOCK_MODE=false
+      
       
       # Database (AWS RDS)
       - DB_HOST=${DB_HOST}
