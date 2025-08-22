@@ -53,6 +53,13 @@ export class NewsAPIAdapter implements NewsAdapter {
         this.baseUrl = baseUrl || 'http://3.79.47.238:4500';
         this.apiKey = apiKey || API_CONFIG.news.apiKeys.newsapi || '';
         this.timeout = 30000;
+
+        // Debug: Log API key (first 10 chars only)
+        if (this.apiKey) {
+            console.log(`News API Key: ${this.apiKey.substring(0, 10)}...`);
+        } else {
+            console.log('News API Key: undefined');
+        }
     }
 
     async connect(): Promise<void> {
@@ -135,6 +142,10 @@ export class NewsAPIAdapter implements NewsAdapter {
      */
     async getDigestByAsset(asset: string, limit: number = 10): Promise<DigestResponse> {
         const cacheKey = `digest-${asset}-${limit}`;
+
+        // Clear cache for debugging
+        this.cache.delete(cacheKey);
+
         const cached = this.getCached<DigestResponse>(cacheKey);
 
         if (cached) {
@@ -143,11 +154,21 @@ export class NewsAPIAdapter implements NewsAdapter {
         }
 
         try {
+            console.log(`Making request to: ${this.baseUrl}/digest/${asset}/${limit}`);
+            console.log(`Headers:`, {
+                'accept': 'application/json',
+                'Authorization': this.apiKey ? `Bearer ${this.apiKey.substring(0, 10)}...` : 'none'
+            });
+
             const response = await axios.get<DigestResponse>(
                 `${this.baseUrl}/digest/${asset}/${limit}`,
                 {
-                    headers: this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {},
-                    timeout: this.timeout
+                    headers: {
+                        'accept': 'application/json',
+                        'User-Agent': 'HedgeFund-MVP/1.0',
+                        ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {})
+                    },
+                    timeout: 10000 // Reduce timeout to 10 seconds
                 }
             );
 
@@ -164,8 +185,12 @@ export class NewsAPIAdapter implements NewsAdapter {
                     const retryResponse = await axios.get<DigestResponse>(
                         `${this.baseUrl}/digest/${asset}/${limit}`,
                         {
-                            headers: this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {},
-                            timeout: this.timeout
+                            headers: {
+                                'accept': 'application/json',
+                                'User-Agent': 'HedgeFund-MVP/1.0',
+                                ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {})
+                            },
+                            timeout: 10000 // Reduce timeout to 10 seconds
                         }
                     );
                     const retryData = retryResponse.data;
@@ -214,7 +239,7 @@ export class NewsAPIAdapter implements NewsAdapter {
     }
 
     // NewsAdapter interface implementation
-    async search(query: string, limit: number = 10): Promise<NewsItem[]> {
+    async search(query: string, since: number, until: number): Promise<NewsItem[]> {
         try {
             // Try to find relevant assets from query
             const supportedTokens = await this.getSupportedTokens();
@@ -227,6 +252,10 @@ export class NewsAPIAdapter implements NewsAdapter {
             const matchingAssets = allAssets.filter(asset =>
                 query.toLowerCase().includes(asset.text.toLowerCase())
             );
+
+            // Calculate limit based on time range (roughly 1 item per hour)
+            const timeRangeHours = Math.max(1, Math.floor((until - since) / (1000 * 60 * 60)));
+            const limit = Math.min(20, Math.max(5, timeRangeHours));
 
             if (matchingAssets.length > 0 && matchingAssets[0]) {
                 // Get digest for the first matching asset
@@ -262,6 +291,8 @@ export class NewsAPIAdapter implements NewsAdapter {
             }
         } catch (error) {
             console.warn('Failed to search news, returning mock data:', error);
+            const timeRangeHours = Math.max(1, Math.floor((until - since) / (1000 * 60 * 60)));
+            const limit = Math.min(20, Math.max(5, timeRangeHours));
             return this.getMockNews(query, limit);
         }
     }

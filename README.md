@@ -90,7 +90,7 @@ This system implements a complete crypto trading pipeline with:
    - Professional order placement and management
    - Real-time fill event handling and position tracking
    - Account balance and portfolio metrics monitoring
-   - Mock mode for safe testing and development
+   - Real trading execution with Aspis infrastructure
    - **[View Aspis API Methods →](docs/ASPIS_API_METHODS.md)**
 
 9. **Data Storage & Analytics** ([PostgresAdapter](docs/DATABASE_SCHEMA.md))
@@ -157,14 +157,19 @@ Create a `.env` file with the following variables:
 1. Visit [https://v2.aspis.finance/create-vault](https://v2.aspis.finance/create-vault)
 2. Select **Agent Fund** option
 3. Complete the vault creation process
-4. Use the provided API key in your configuration
+4. Use the provided API key and vault address in your configuration
 
 ```env
 # API Keys
 BINANCE_API_KEY=your_binance_api_key
 BINANCE_SECRET_KEY=your_binance_secret_key
 ASPIS_API_KEY=your_aspis_api_key
+ASPIS_VAULT_ADDRESS=your_vault_address
 OPENAI_API_KEY=your_openai_api_key
+
+# External APIs
+TECHNICAL_INDICATORS_URL=http://63.176.129.185:8000
+NEWS_API_KEY=your_news_api_key
 
 # Database Configuration
 DB_HOST=your_postgres_host
@@ -183,19 +188,16 @@ MAX_POSITIONS=8
 ### Running the System
 
 ```bash
-# Run mock pipeline (safe for testing)
-npm run mock
-
 # Start production system (requires real API keys)
 npm start
 
 # Run comprehensive integration tests
-npm run test:integration    # Technical analysis pipeline
-npm run test:news          # News API and sentiment analysis  
-npm run test:services      # Multi-agent system
-npm run test:decision      # Full decision-execution cycle
-npm run test:telegram      # Telegram notifications and transparency
-npm run test:database      # PostgreSQL database and storage
+npm run test:technical-analysis    # Technical analysis pipeline
+npm run test:news                  # News API and sentiment analysis  
+npm run test:services              # Multi-agent system
+npm run test:decision              # Full decision-execution cycle
+npm run test:telegram              # Telegram notifications and transparency
+npm run test:database              # PostgreSQL database and storage
 
 # Development mode with hot reload
 npm run dev
@@ -403,12 +405,12 @@ npm run test:decision
 # ✅ Covers portfolio rebalancing and position tracking
 ```
 
-#### Mock Pipeline
-The mock pipeline runs with simulated data for safe testing:
-- Mock market data generation with realistic price movements
-- Simulated news feeds with sentiment scoring
-- Fake order execution with fill simulation
-- Risk-free testing environment with portfolio tracking
+#### Integration Testing
+The system includes comprehensive integration tests that validate real API connections:
+- Real market data from Binance API
+- Live news feeds with sentiment analysis
+- Actual order execution through Aspis API
+- Production-ready testing environment with portfolio tracking
 
 #### Test Coverage
 - **API Integration**: All external APIs (Technical Indicators, News, Aspis)
@@ -442,7 +444,7 @@ src/
 │   └── decision-execution-integration.ts # Full cycle test
 ├── interfaces/               # Service interfaces
 ├── orchestrator.ts          # Main orchestration logic
-├── mock-pipeline.ts         # Mock testing pipeline
+
 └── index.ts                # Application entry point
 
 docs/                        # Comprehensive documentation
@@ -498,9 +500,9 @@ This is a research and educational project. **Do not use with real money without
 - **Monitoring**: Comprehensive logging and transparency
 
 ### Development Mode 🔧
-- **Mock Mode**: Safe testing environment with simulated data
+- **Integration Tests**: Comprehensive testing with real APIs
 - **Database**: Real PostgreSQL with test data cleanup
-- **Telegram**: Mock notifications for development
+- **Telegram**: Real notifications for development
 
 ### Risk Warnings
 - **Market Risk**: Cryptocurrency markets are highly volatile and can result in significant losses

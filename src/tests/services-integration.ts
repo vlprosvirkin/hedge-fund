@@ -108,7 +108,8 @@ async function servicesIntegrationTest() {
         let newsData: NewsItem[] = [];
 
         try {
-            newsData = await newsAdapter.search(testAsset, 5);
+            const now = Date.now();
+            newsData = await newsAdapter.search(testAsset, now - 3600000, now);
             console.log(`✅ News data retrieved successfully: ${newsData.length} articles`);
 
             if (newsData.length > 0) {

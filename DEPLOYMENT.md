@@ -28,10 +28,14 @@ PORT=4500
 BINANCE_API_KEY=your_binance_api_key
 BINANCE_SECRET_KEY=your_binance_secret_key
 ASPIS_API_KEY=your_aspis_api_key
+ASPIS_VAULT_ADDRESS=your_vault_address
 OPENAI_API_KEY=your_openai_api_key
 NEWS_API_KEY=your_news_api_key
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 TELEGRAM_CHAT_ID=your_telegram_chat_id
+
+# External APIs
+TECHNICAL_INDICATORS_URL=http://63.176.129.185:8000
 ```
 
 ### 2. Deploy Application

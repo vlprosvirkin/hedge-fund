@@ -2,7 +2,7 @@
 
 ## Overview
 
-Our `AspisAdapter` implements the core trading methods needed for the hedge fund MVP. The adapter supports both mock mode (for testing) and real API mode (for production).
+Our `AspisAdapter` implements the core trading methods needed for the hedge fund MVP. The adapter connects to the real Aspis Trading API for professional order execution.
 
 ## Core Trading Methods
 
@@ -84,27 +84,15 @@ adapter.onFill((fillEvent) => {
 });
 ```
 
-## Mock Mode
+## API Integration
 
-When no API credentials are provided, the adapter automatically runs in mock mode:
-
-```typescript
-// Mock mode - no API keys needed
-const mockAdapter = new AspisAdapter();
-
-// All methods return simulated data
-const positions = await mockAdapter.getPositions();
-const account = await mockAdapter.getAccountInfo();
-```
-
-## Real API Integration
-
-For production use, provide API credentials:
+For production use, provide API credentials and vault address:
 
 ```typescript
-// Real mode - requires API key
-const realAdapter = new AspisAdapter(
-  process.env.ASPIS_API_KEY
+// Real mode - requires API key and vault address
+const adapter = new AspisAdapter(
+  process.env.ASPIS_API_KEY,
+  process.env.ASPIS_VAULT_ADDRESS
 );
 ```
 
@@ -145,12 +133,12 @@ Based on typical trading API patterns, these endpoints would be used:
 
 ## Testing
 
-The mock mode allows for comprehensive testing without real API calls:
+The integration tests validate real API connections:
 
 ```typescript
 // Test order placement
 const orderId = await adapter.placeOrder({
-  symbol: 'BTCUSDT',
+  symbol: 'BTC',
   side: 'buy',
   quantity: 0.001,
   type: 'market'

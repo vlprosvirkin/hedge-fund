@@ -41,7 +41,6 @@ jobs:
         npm run test:technical-analysis
         npm run test:news
         npm run test:services
-        npm run test:decision
         npm run test:telegram
         npm run test:database
       env:

@@ -284,7 +284,8 @@ Generate claims for the most promising tickers based on ${role} analysis.`;
       const asset = ticker;
 
       // Get news for the asset
-      const news = await this.newsAdapter.search(asset, limit);
+      const now = Date.now();
+      const news = await this.newsAdapter.search(asset, now - 3600000, now);
 
       const averageSentiment = news.length > 0
         ? news.reduce((sum, article) => sum + article.sentiment, 0) / news.length

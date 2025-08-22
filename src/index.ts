@@ -5,7 +5,7 @@ import { BinanceAdapter } from './adapters/binance-adapter.js';
 import { AspisAdapter } from './adapters/aspis-adapter.js';
 import { AgentsService } from './services/agents.js';
 import type { SystemConfig } from './types/index.js';
-import { runMockPipeline } from './mock-pipeline.js';
+
 import dotenv from 'dotenv';
 import pino from 'pino';
 
@@ -29,10 +29,7 @@ async function main() {
   logger.info('🚀 Hedge Fund MVP Starting...');
 
   switch (command) {
-    case 'mock':
-      logger.info('Running mock pipeline...');
-      await runMockPipeline();
-      break;
+
 
     case 'start':
       logger.info('Starting production trading system...');

@@ -51,7 +51,8 @@ async function newsIntegrationTest() {
 
         // 4. Тестирование поиска новостей по запросу
         console.log('\n🔍 Step 3: Testing news search...');
-        const searchResults: NewsItem[] = await adapter.search('Bitcoin', 5);
+        const now = Date.now();
+        const searchResults: NewsItem[] = await adapter.search('Bitcoin', now - 3600000, now);
 
         console.log('✅ News search completed successfully');
         console.log(`   Search results: ${searchResults.length} items`);
@@ -105,11 +106,11 @@ async function newsIntegrationTest() {
 
         if (latestNews.length > 0) {
             const latest = latestNews[0];
-                            if (latest) {
-                    console.log(`   Most recent: ${latest.title.substring(0, 80)}...`);
-                    console.log(`   Sentiment: ${latest.sentiment?.toFixed(2) || 'N/A'}`);
-                    console.log(`   Source: ${latest.source}`);
-                }
+            if (latest) {
+                console.log(`   Most recent: ${latest.title.substring(0, 80)}...`);
+                console.log(`   Sentiment: ${latest.sentiment?.toFixed(2) || 'N/A'}`);
+                console.log(`   Source: ${latest.source}`);
+            }
         }
 
         // 7. Тестирование получения новостей по тикерам
@@ -121,10 +122,10 @@ async function newsIntegrationTest() {
 
         if (tickerNews.length > 0) {
             const tickerNewsItem = tickerNews[0];
-                            if (tickerNewsItem) {
-                    console.log(`   Sample ticker news: ${tickerNewsItem.title.substring(0, 80)}...`);
-                    console.log(`   Sentiment: ${tickerNewsItem.sentiment?.toFixed(2) || 'N/A'}`);
-                }
+            if (tickerNewsItem) {
+                console.log(`   Sample ticker news: ${tickerNewsItem.title.substring(0, 80)}...`);
+                console.log(`   Sentiment: ${tickerNewsItem.sentiment?.toFixed(2) || 'N/A'}`);
+            }
         }
 
         // 8. Тестирование кэширования

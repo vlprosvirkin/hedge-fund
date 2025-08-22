@@ -2,7 +2,7 @@
 
 ## Overview
 
-To use the real Aspis Trading API (instead of mock mode), you need to create an Agent Fund vault and get your API key.
+To use the Aspis Trading API, you need to create an Agent Fund vault and get your API key and vault address.
 
 ## Step-by-Step Setup
 
@@ -20,6 +20,7 @@ Add your API key to `.env`:
 ```env
 # Aspis Trading API
 ASPIS_API_KEY=your_api_key_here
+ASPIS_VAULT_ADDRESS=your_vault_address_here
 
 # Other required keys
 BINANCE_API_KEY=your_binance_api_key
@@ -27,7 +28,6 @@ BINANCE_SECRET_KEY=your_binance_secret_key
 OPENAI_API_KEY=your_openai_api_key
 
 # System configuration
-MOCK_MODE=false
 RISK_PROFILE=neutral
 ```
 
@@ -61,17 +61,11 @@ const orderId = await adapter.placeOrder({
 });
 ```
 
-## Mock Mode vs Real Mode
+## Production Mode
 
-### Mock Mode (Default)
-- No API key required
-- Simulated trading
-- Safe for testing
-- No real money involved
-
-### Real Mode
-- Requires valid API key
-- Real trading execution
+The system runs in production mode with real trading execution:
+- Requires valid API key and vault address
+- Real trading execution through Aspis
 - Real money at risk
 - Production use only
 
@@ -86,9 +80,9 @@ const orderId = await adapter.placeOrder({
 
 ### Common Issues
 
-1. **"Mock mode" message**
+1. **"ASPIS_API_KEY is required" error**
    - Check that `ASPIS_API_KEY` is set in `.env`
-   - Ensure `MOCK_MODE=false`
+   - Verify `ASPIS_VAULT_ADDRESS` is also set
 
 2. **Connection errors**
    - Verify API key is correct
@@ -96,7 +90,7 @@ const orderId = await adapter.placeOrder({
    - Ensure vault is active
 
 3. **Order rejection**
-   - Check symbol format (e.g., 'BTCUSDT')
+   - Check symbol format (e.g., 'BTC', 'ETH')
    - Verify minimum quantities
    - Check account balance
 
