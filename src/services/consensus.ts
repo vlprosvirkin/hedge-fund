@@ -1,0 +1,194 @@
+import type { Claim, ConsensusRec, MarketStats } from '../types/index.js';
+import { v4 as uuidv4 } from 'uuid';
+
+export class ConsensusService {
+  async buildConsensus(
+    claims: Claim[],
+    marketStats: MarketStats[],
+    maxPositions: number = 10
+  ): Promise<ConsensusRec[]> {
+    // Group claims by ticker
+    const tickerGroups = this.groupClaimsByTicker(claims);
+    
+    // Calculate consensus for each ticker
+    const consensus: ConsensusRec[] = [];
+    
+    for (const [ticker, tickerClaims] of tickerGroups) {
+      const marketStat = marketStats.find(stat => stat.symbol === ticker);
+      if (!marketStat) continue;
+
+      const consensusRec = this.calculateTickerConsensus(ticker, tickerClaims, marketStat);
+      consensus.push(consensusRec);
+    }
+
+    // Sort by final score and return top positions
+    return consensus
+      .sort((a, b) => b.finalScore - a.finalScore)
+      .slice(0, maxPositions);
+  }
+
+  private groupClaimsByTicker(claims: Claim[]): Map<string, Claim[]> {
+    const groups = new Map<string, Claim[]>();
+    
+    for (const claim of claims) {
+      if (!groups.has(claim.ticker)) {
+        groups.set(claim.ticker, []);
+      }
+      groups.get(claim.ticker)!.push(claim);
+    }
+    
+    return groups;
+  }
+
+  private calculateTickerConsensus(
+    ticker: string,
+    claims: Claim[],
+    marketStat: MarketStats
+  ): ConsensusRec {
+    // Calculate average confidence
+    const avgConfidence = claims.reduce((sum, claim) => sum + claim.confidence, 0) / claims.length;
+    
+    // Calculate coverage (how many different agent roles covered this ticker)
+    const roles = new Set(claims.map(claim => claim.agentRole));
+    const coverage = roles.size / 3; // 3 possible roles: fundamental, sentiment, valuation
+    
+    // Calculate liquidity score (normalized volume)
+    const liquidity = Math.min(marketStat.volume24h / 1000000, 1); // Normalize to 0-1
+    
+    // Calculate final score
+    const finalScore = this.calculateFinalScore(avgConfidence, coverage, liquidity, claims);
+    
+    return {
+      ticker,
+      avgConfidence,
+      coverage,
+      liquidity,
+      finalScore,
+      claims: claims.map(claim => claim.id)
+    };
+  }
+
+  private calculateFinalScore(
+    avgConfidence: number,
+    coverage: number,
+    liquidity: number,
+    claims: Claim[]
+  ): number {
+    // Base score from confidence and coverage
+    let score = avgConfidence * coverage;
+    
+    // Bonus for high liquidity
+    score *= (0.7 + 0.3 * liquidity);
+    
+    // Penalty for risk flags
+    const riskFlags = claims.flatMap(claim => claim.riskFlags || []);
+    const riskPenalty = Math.min(riskFlags.length * 0.1, 0.3);
+    score *= (1 - riskPenalty);
+    
+    // Bonus for consensus across roles
+    const roleConsensus = this.calculateRoleConsensus(claims);
+    score *= (0.8 + 0.2 * roleConsensus);
+    
+    return Math.max(0, Math.min(1, score));
+  }
+
+  private calculateRoleConsensus(claims: Claim[]): number {
+    const roleConfidences = {
+      fundamental: 0,
+      sentiment: 0,
+      valuation: 0
+    };
+    
+    const roleCounts = {
+      fundamental: 0,
+      sentiment: 0,
+      valuation: 0
+    };
+    
+    for (const claim of claims) {
+      roleConfidences[claim.agentRole as keyof typeof roleConfidences] += claim.confidence;
+      roleCounts[claim.agentRole as keyof typeof roleCounts]++;
+    }
+    
+    // Calculate average confidence per role
+    const avgConfidences = Object.keys(roleConfidences).map(role => {
+      const count = roleCounts[role as keyof typeof roleCounts];
+      return count > 0 ? roleConfidences[role as keyof typeof roleConfidences] / count : 0;
+    });
+    
+    // Return standard deviation (lower is better consensus)
+    const mean = avgConfidences.reduce((sum, val) => sum + val, 0) / avgConfidences.length;
+    const variance = avgConfidences.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / avgConfidences.length;
+    const stdDev = Math.sqrt(variance);
+    
+    // Convert to consensus score (1 - stdDev, higher is better)
+    return Math.max(0, 1 - stdDev);
+  }
+
+  // Additional consensus methods
+  async applyRiskAdjustments(
+    consensus: ConsensusRec[],
+    riskProfile: 'averse' | 'neutral' | 'bold'
+  ): Promise<ConsensusRec[]> {
+    const adjustments = {
+      averse: { liquidityWeight: 0.4, confidenceWeight: 0.6 },
+      neutral: { liquidityWeight: 0.3, confidenceWeight: 0.7 },
+      bold: { liquidityWeight: 0.2, confidenceWeight: 0.8 }
+    };
+    
+    const adjustment = adjustments[riskProfile];
+    
+    return consensus.map(rec => ({
+      ...rec,
+      finalScore: rec.avgConfidence * adjustment.confidenceWeight + 
+                  rec.liquidity * adjustment.liquidityWeight
+    })).sort((a, b) => b.finalScore - a.finalScore);
+  }
+
+  async detectConflicts(claims: Claim[]): Promise<{
+    conflicts: Array<{ ticker: string; claims: Claim[]; severity: 'low' | 'medium' | 'high' }>;
+  }> {
+    const conflicts: Array<{ ticker: string; claims: Claim[]; severity: 'low' | 'medium' | 'high' }> = [];
+    const tickerGroups = this.groupClaimsByTicker(claims);
+    
+    for (const [ticker, tickerClaims] of tickerGroups) {
+      if (tickerClaims.length < 2) continue;
+      
+      // Check for conflicting recommendations
+      const buySignals = tickerClaims.filter(claim => 
+        claim.claim.toLowerCase().includes('buy') || 
+        claim.claim.toLowerCase().includes('bullish')
+      );
+      
+      const sellSignals = tickerClaims.filter(claim => 
+        claim.claim.toLowerCase().includes('sell') || 
+        claim.claim.toLowerCase().includes('bearish')
+      );
+      
+      if (buySignals.length > 0 && sellSignals.length > 0) {
+        const severity = this.calculateConflictSeverity(buySignals, sellSignals);
+        conflicts.push({
+          ticker,
+          claims: tickerClaims,
+          severity
+        });
+      }
+    }
+    
+    return { conflicts };
+  }
+
+  private calculateConflictSeverity(
+    buySignals: Claim[],
+    sellSignals: Claim[]
+  ): 'low' | 'medium' | 'high' {
+    const buyConfidence = buySignals.reduce((sum, claim) => sum + claim.confidence, 0) / buySignals.length;
+    const sellConfidence = sellSignals.reduce((sum, claim) => sum + claim.confidence, 0) / sellSignals.length;
+    
+    const confidenceDiff = Math.abs(buyConfidence - sellConfidence);
+    
+    if (confidenceDiff < 0.2) return 'high';
+    if (confidenceDiff < 0.4) return 'medium';
+    return 'low';
+  }
+}
