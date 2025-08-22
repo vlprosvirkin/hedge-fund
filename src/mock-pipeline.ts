@@ -54,7 +54,7 @@ class MockFactStore {
     return [
       {
         id: uuidv4(),
-        ticker: 'BTCUSDT',
+        ticker: 'BTC',
         newsItemId: uuidv4(),
         relevance: 0.9,
         timestamp: Date.now() - 3600000,
@@ -71,7 +71,7 @@ class MockFactStore {
 
 class MockUniverseService {
   async getUniverse() {
-    return ['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'DOTUSDT', 'LINKUSDT'];
+    return ['BTC', 'ETH', 'ADA', 'DOT', 'LINK'];
   }
 
   async getSymbolMapping() { return null; }

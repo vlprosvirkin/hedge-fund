@@ -1,5 +1,6 @@
 import type { NewsAdapter } from '../interfaces/adapters.js';
 import { API_CONFIG } from '../config.js';
+
 import axios from 'axios';
 
 export interface DigestItem {
@@ -155,6 +156,27 @@ export class NewsAPIAdapter implements NewsAdapter {
 
             return data;
         } catch (error: any) {
+            // Retry once on 503 errors
+            if (error.response?.status === 503) {
+                console.warn(`503 error for ${asset}, retrying once...`);
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+                    const retryResponse = await axios.get<DigestResponse>(
+                        `${this.baseUrl}/digest/${asset}/${limit}`,
+                        {
+                            headers: this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {},
+                            timeout: this.timeout
+                        }
+                    );
+                    const retryData = retryResponse.data;
+                    this.setCache(cacheKey, retryData, 300);
+                    return retryData;
+                } catch (retryError: any) {
+                    console.warn(`Retry failed for ${asset}, returning mock data:`, retryError.message);
+                    return this.getMockDigestByAsset(asset, limit);
+                }
+            }
+
             console.warn(`Failed to fetch digest for ${asset}, returning mock data:`, error.message);
             return this.getMockDigestByAsset(asset, limit);
         }
@@ -411,8 +433,7 @@ export class NewsAPIAdapter implements NewsAdapter {
 
         for (const ticker of tickers) {
             try {
-                // Convert ticker format (e.g., BTCUSDT -> BTC)
-                const asset = ticker.replace('USDT', '').replace('USD', '');
+                const asset = ticker;
                 const digest = await this.getDigestByAsset(asset, Math.ceil(limit / tickers.length));
 
                 const newsItems = digest.items.map(item => ({

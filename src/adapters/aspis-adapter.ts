@@ -8,33 +8,45 @@ export class AspisAdapter implements TradingAdapter {
   private fillCallbacks: ((fillEvent: FillEvent) => void)[] = [];
   private orders = new Map<string, Order>();
   private positions = new Map<string, Position>();
-  private mockMode: boolean;
 
   constructor(
     private apiKey?: string,
+    private vaultAddress?: string,
     private baseUrl?: string
   ) {
     // Use config values if not provided
     this.apiKey = apiKey || API_CONFIG.aspis.apiKey;
+    this.vaultAddress = vaultAddress || API_CONFIG.aspis.vaultAddress;
     this.baseUrl = baseUrl || API_CONFIG.aspis.baseUrl;
-    this.mockMode = !this.apiKey;
 
-    // Initialize with mock positions
-    this.initializeMockPositions();
+    if (!this.apiKey) {
+      throw new Error('ASPIS_API_KEY is required');
+    }
+    if (!this.vaultAddress) {
+      throw new Error('ASPIS_VAULT_ADDRESS is required');
+    }
   }
 
   async connect(): Promise<void> {
     try {
-      if (this.mockMode) {
-        // Mock mode - just simulate connection
-        this.isConnectedFlag = true;
-        console.log('Connected to Aspis trading API (MOCK MODE)');
-      } else {
-        // Real mode - would authenticate with Aspis API
-        // For now, just simulate successful connection
-        this.isConnectedFlag = true;
-        console.log('Connected to Aspis trading API (REAL MODE)');
+      // Authenticate with Aspis API
+      const response = await fetch(`${this.baseUrl}/auth/validate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          vaultAddress: this.vaultAddress
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
       }
+
+      this.isConnectedFlag = true;
+      console.log('Connected to Aspis trading API');
     } catch (error) {
       throw new Error(`Failed to connect to Aspis: ${error}`);
     }
@@ -50,12 +62,22 @@ export class AspisAdapter implements TradingAdapter {
   }
 
   async getPositions(): Promise<Position[]> {
-    return Array.from(this.positions.values());
+    const response = await fetch(`${this.baseUrl}/trading/positions`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get positions: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
   }
 
   async syncPositions(): Promise<Position[]> {
-    // In real implementation, would fetch from Aspis API
-    // For now, return mock positions
     return this.getPositions();
   }
 
@@ -66,54 +88,69 @@ export class AspisAdapter implements TradingAdapter {
     type: 'market' | 'limit' | 'stop';
     price?: number;
   }): Promise<string> {
-    const orderId = uuidv4();
+    const response = await fetch(`${this.baseUrl}/trading/order`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ...params,
+        vaultAddress: this.vaultAddress
+      })
+    });
 
-    const order: Order = {
-      id: orderId,
-      symbol: params.symbol.toUpperCase(),
-      side: params.side,
-      type: params.type,
-      quantity: params.quantity,
-      price: params.price,
-      status: 'pending',
-      timestamp: Date.now()
-    };
+    if (!response.ok) {
+      throw new Error(`Failed to place order: ${response.status} ${response.statusText}`);
+    }
 
-    this.orders.set(orderId, order);
-
-    // Simulate order processing
-    setTimeout(() => {
-      this.simulateOrderFill(order);
-    }, 1000 + Math.random() * 2000);
-
-    return orderId;
+    const result = await response.json();
+    return result.orderId;
   }
 
   async cancelOrder(orderId: string): Promise<boolean> {
-    const order = this.orders.get(orderId);
-    if (!order) {
-      return false;
-    }
+    const response = await fetch(`${this.baseUrl}/trading/order/${orderId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
 
-    if (order.status === 'pending') {
-      order.status = 'cancelled';
-      this.orders.set(orderId, order);
-      return true;
-    }
-
-    return false;
+    return response.ok;
   }
 
   async getOrder(orderId: string): Promise<Order | null> {
-    return this.orders.get(orderId) || null;
+    const response = await fetch(`${this.baseUrl}/trading/order/${orderId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return await response.json();
   }
 
   async getOrders(symbol?: string): Promise<Order[]> {
-    const orders = Array.from(this.orders.values());
-    if (symbol) {
-      return orders.filter(order => order.symbol === symbol.toUpperCase());
+    const params = symbol ? `?symbol=${symbol}` : '';
+    const response = await fetch(`${this.baseUrl}/trading/orders${params}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get orders: ${response.status} ${response.statusText}`);
     }
-    return orders;
+
+    return await response.json();
   }
 
   onFill(callback: (fillEvent: FillEvent) => void): void {
@@ -162,20 +199,19 @@ export class AspisAdapter implements TradingAdapter {
     totalValue: number;
     marginLevel?: number;
   }> {
-    if (this.mockMode) {
-      return {
-        balances: [
-          { asset: 'USDT', free: 10000, locked: 0 },
-          { asset: 'BTC', free: 0.1, locked: 0 },
-          { asset: 'ETH', free: 2.5, locked: 0 }
-        ],
-        totalValue: 25000,
-        marginLevel: 1.5
-      };
+    const response = await fetch(`${this.baseUrl}/account/info`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get account info: ${response.status} ${response.statusText}`);
     }
 
-    // Real implementation would call Aspis API
-    throw new Error('Real API implementation not yet available');
+    return await response.json();
   }
 
   async getTradingFees(symbol?: string): Promise<{
@@ -183,16 +219,19 @@ export class AspisAdapter implements TradingAdapter {
     takerFee: number;
     symbol?: string;
   }> {
-    if (this.mockMode) {
-      return {
-        makerFee: 0.001, // 0.1%
-        takerFee: 0.001, // 0.1%
-        symbol: symbol || 'BTCUSDT'
-      };
+    const response = await fetch(`${this.baseUrl}/trading/fees${symbol ? `?symbol=${symbol}` : ''}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get trading fees: ${response.status} ${response.statusText}`);
     }
 
-    // Real implementation would call Aspis API
-    throw new Error('Real API implementation not yet available');
+    return await response.json();
   }
 
   async getTradeHistory(symbol?: string, limit = 100): Promise<Array<{
@@ -206,26 +245,23 @@ export class AspisAdapter implements TradingAdapter {
     feeAsset: string;
     timestamp: number;
   }>> {
-    if (this.mockMode) {
-      const mockTrades = [];
-      for (let i = 0; i < Math.min(limit, 10); i++) {
-        mockTrades.push({
-          id: uuidv4(),
-          orderId: uuidv4(),
-          symbol: symbol || 'BTCUSDT',
-          side: (Math.random() > 0.5 ? 'buy' : 'sell') as 'buy' | 'sell',
-          quantity: 0.001 + Math.random() * 0.01,
-          price: 50000 + Math.random() * 1000,
-          fee: 0.001,
-          feeAsset: 'USDT',
-          timestamp: Date.now() - Math.random() * 86400000 // Last 24 hours
-        });
+    const params = new URLSearchParams();
+    if (symbol) params.append('symbol', symbol);
+    params.append('limit', limit.toString());
+
+    const response = await fetch(`${this.baseUrl}/trading/history?${params}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
       }
-      return mockTrades;
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get trade history: ${response.status} ${response.statusText}`);
     }
 
-    // Real implementation would call Aspis API
-    throw new Error('Real API implementation not yet available');
+    return await response.json();
   }
 
   async getSymbolInfo(symbol: string): Promise<{
@@ -238,21 +274,19 @@ export class AspisAdapter implements TradingAdapter {
     minPrice: number;
     maxPrice: number;
   }> {
-    if (this.mockMode) {
-      return {
-        symbol: symbol.toUpperCase(),
-        status: 'TRADING',
-        minQty: 0.00001,
-        maxQty: 1000000,
-        stepSize: 0.00001,
-        tickSize: 0.01,
-        minPrice: 0.01,
-        maxPrice: 1000000
-      };
+    const response = await fetch(`${this.baseUrl}/trading/symbols/${symbol}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get symbol info: ${response.status} ${response.statusText}`);
     }
 
-    // Real implementation would call Aspis API
-    throw new Error('Real API implementation not yet available');
+    return await response.json();
   }
 
   async placeConditionalOrder(params: {
@@ -264,14 +298,21 @@ export class AspisAdapter implements TradingAdapter {
     price?: number;
     trailingAmount?: number;
   }): Promise<string> {
-    if (this.mockMode) {
-      const orderId = uuidv4();
-      console.log(`Mock conditional order placed: ${params.type} for ${params.symbol}`);
-      return orderId;
+    const response = await fetch(`${this.baseUrl}/trading/conditional-order`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(params)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to place conditional order: ${response.status} ${response.statusText}`);
     }
 
-    // Real implementation would call Aspis API
-    throw new Error('Real API implementation not yet available');
+    const result = await response.json();
+    return result.orderId;
   }
 
   async getPortfolioMetrics(): Promise<{
@@ -283,128 +324,24 @@ export class AspisAdapter implements TradingAdapter {
     unrealizedPnL: number;
     realizedPnL: number;
   }> {
-    if (this.mockMode) {
-      return {
-        totalValue: 25000,
-        availableBalance: 10000,
-        usedMargin: 15000,
-        freeMargin: 10000,
-        marginLevel: 1.5,
-        unrealizedPnL: 500,
-        realizedPnL: 200
-      };
-    }
-
-    // Real implementation would call Aspis API
-    throw new Error('Real API implementation not yet available');
-  }
-
-  private simulateOrderFill(order: Order): void {
-    // Simulate order fill
-    order.status = 'filled';
-    this.orders.set(order.id, order);
-
-    // Update position
-    this.updatePosition(order);
-
-    // Trigger fill callback
-    const fillEvent: FillEvent = {
-      orderId: order.id,
-      symbol: order.symbol,
-      side: order.side,
-      quantity: order.quantity,
-      price: order.price || this.getMockPrice(order.symbol),
-      timestamp: Date.now(),
-      fee: order.quantity * 0.001 // 0.1% fee
-    };
-
-    this.fillCallbacks.forEach(callback => callback(fillEvent));
-  }
-
-  private updatePosition(order: Order): void {
-    const symbol = order.symbol;
-    const currentPosition = this.positions.get(symbol);
-    const fillPrice = order.price || this.getMockPrice(symbol);
-    const fillQuantity = order.side === 'buy' ? order.quantity : -order.quantity;
-
-    if (currentPosition) {
-      // Update existing position
-      const newQuantity = currentPosition.quantity + fillQuantity;
-      const newAvgPrice = this.calculateAveragePrice(
-        currentPosition.quantity,
-        currentPosition.avgPrice,
-        fillQuantity,
-        fillPrice
-      );
-
-      this.positions.set(symbol, {
-        ...currentPosition,
-        quantity: newQuantity,
-        avgPrice: newAvgPrice,
-        timestamp: Date.now()
-      });
-    } else if (fillQuantity > 0) {
-      // Create new position
-      this.positions.set(symbol, {
-        symbol,
-        quantity: fillQuantity,
-        avgPrice: fillPrice,
-        unrealizedPnL: 0,
-        realizedPnL: 0,
-        timestamp: Date.now()
-      });
-    }
-  }
-
-  private calculateAveragePrice(
-    currentQty: number,
-    currentAvg: number,
-    newQty: number,
-    newPrice: number
-  ): number {
-    const totalQty = currentQty + newQty;
-    const totalValue = currentQty * currentAvg + newQty * newPrice;
-    return totalValue / totalQty;
-  }
-
-  private getMockPrice(symbol: string): number {
-    // Generate mock price based on symbol
-    const basePrices: Record<string, number> = {
-      'BTCUSDT': 50000,
-      'ETHUSDT': 3000,
-      'ADAUSDT': 0.5,
-      'DOTUSDT': 7,
-      'LINKUSDT': 15
-    };
-
-    const basePrice = basePrices[symbol] || 100;
-    return basePrice * (0.95 + Math.random() * 0.1); // ±5% variation
-  }
-
-  private initializeMockPositions(): void {
-    const mockPositions: Position[] = [
-      {
-        symbol: 'BTCUSDT',
-        quantity: 0.1,
-        avgPrice: 48000,
-        unrealizedPnL: 200,
-        realizedPnL: 0,
-        timestamp: Date.now()
-      },
-      {
-        symbol: 'ETHUSDT',
-        quantity: 2.5,
-        avgPrice: 2800,
-        unrealizedPnL: 500,
-        realizedPnL: 0,
-        timestamp: Date.now()
+    const response = await fetch(`${this.baseUrl}/portfolio/metrics`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
       }
-    ];
-
-    mockPositions.forEach(position => {
-      this.positions.set(position.symbol, position);
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get portfolio metrics: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
   }
+
+
+
+
 
   // Additional utility methods
   async validateOrder(params: {
@@ -439,7 +376,7 @@ export class AspisAdapter implements TradingAdapter {
   }
 
   private isSupportedSymbol(symbol: string): boolean {
-    const supported = ['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'DOTUSDT', 'LINKUSDT'];
+    const supported = ['BTC', 'ETH', 'ADA', 'DOT', 'LINK'];
     return supported.includes(symbol.toUpperCase());
   }
 }

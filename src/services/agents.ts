@@ -241,8 +241,8 @@ Generate claims for the most promising tickers based on ${role} analysis.`;
     try {
       const timeframe = '1h';
 
-      // Convert ticker format (BTCUSDT -> BTC)
-      const asset = ticker.replace('USDT', '').replace('USD', '');
+      // Ticker is already clean format (BTC, ETH, etc)
+      const asset = ticker;
 
       // Get comprehensive analysis
       const analysis = await this.technicalIndicators.getComprehensiveAnalysis(asset, timeframe);
@@ -280,8 +280,8 @@ Generate claims for the most promising tickers based on ${role} analysis.`;
     recentNews: any[];
   }> {
     try {
-      // Convert ticker format (BTCUSDT -> BTC)
-      const asset = ticker.replace('USDT', '').replace('USD', '');
+      // Ticker is already clean format (BTC, ETH, etc)
+      const asset = ticker;
 
       // Get news for the asset
       const news = await this.newsAdapter.search(asset, limit);
@@ -316,8 +316,8 @@ Generate claims for the most promising tickers based on ${role} analysis.`;
     volatility: number;
   }> {
     try {
-      // Convert ticker format (BTCUSDT -> BTC)
-      const asset = ticker.replace('USDT', '').replace('USD', '');
+      // Ticker is already clean format (BTC, ETH, etc)
+      const asset = ticker;
 
       // Get asset metadata from technical indicators API
       const metadata = await this.technicalIndicators.getAssetMetadata(asset, '1d');

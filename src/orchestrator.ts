@@ -373,11 +373,11 @@ export class HedgeFundOrchestrator {
   private calculateQuantity(weight: number, symbol: string): number {
     // Mock calculation - in real implementation would use portfolio value and current price
     const baseQuantities: Record<string, number> = {
-      'BTCUSDT': 0.01,
-      'ETHUSDT': 0.1,
-      'ADAUSDT': 1000,
-      'DOTUSDT': 10,
-      'LINKUSDT': 50
+      'BTC': 0.01,
+      'ETH': 0.1,
+      'ADA': 1000,
+      'DOT': 10,
+      'LINK': 50
     };
 
     const baseQty = baseQuantities[symbol] || 1;

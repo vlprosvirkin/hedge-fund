@@ -19,6 +19,7 @@ export const API_CONFIG = {
   // Aspis API
   aspis: {
     apiKey: process.env.ASPIS_API_KEY || '',
+    vaultAddress: process.env.ASPIS_VAULT_ADDRESS || '',
     baseUrl: process.env.ASPIS_BASE_URL || 'https://trading-api.aspis.finance',
     wsUrl: process.env.ASPIS_WS_URL || 'wss://trading-api.aspis.finance/ws',
     timeout: parseInt(process.env.ASPIS_TIMEOUT || '30000'),
@@ -108,11 +109,11 @@ export const UNIVERSE_CONFIG = {
   maxSpread: 0.5, // 0.5% maximum spread
   minLiquidity: 0.1, // Minimum liquidity score
   whitelist: [
-    'BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'DOTUSDT', 'LINKUSDT',
-    'BNBUSDT', 'SOLUSDT', 'MATICUSDT', 'AVAXUSDT', 'UNIUSDT'
+    'BTC', 'ETH', 'ADA', 'DOT', 'LINK',
+    'BNB', 'SOL', 'MATIC', 'AVAX', 'UNI'
   ],
   blacklist: [
-    'LUNAUSDT', 'USTUSDT' // Example blacklisted tokens
+    'LUNA', 'UST' // Example blacklisted tokens
   ]
 };
 

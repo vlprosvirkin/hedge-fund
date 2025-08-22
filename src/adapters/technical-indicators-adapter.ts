@@ -17,6 +17,7 @@ import type {
 } from '../types/index.js';
 import { INDICATOR_THRESHOLDS, SIGNAL_WEIGHTS } from '../types/index.js';
 import { API_CONFIG } from '../config.js';
+import { addUSDT } from '../utils.js';
 import axios from 'axios';
 
 export class TechnicalIndicatorsAdapter {
@@ -70,9 +71,8 @@ export class TechnicalIndicatorsAdapter {
       // Validate timeframe
       this.validateTimeframe(timeframe);
 
-      // Ensure asset is in correct format (remove USD if present, then add USD)
-      const cleanAsset = asset.replace('USD', '').replace('USDT', '');
-      const symbol = `${cleanAsset}USD`;
+      // Add USDT suffix for technical analysis API
+      const symbol = addUSDT(asset);
 
       const response = await axios.post<StatsResponse>(`${this.baseUrl}/stats`, {
         symbol: symbol,
@@ -103,9 +103,8 @@ export class TechnicalIndicatorsAdapter {
       // Validate timeframe
       this.validateTimeframe(timeframe);
 
-      // Ensure asset is in correct format (remove USD if present, then add USD)
-      const cleanAsset = asset.replace('USD', '').replace('USDT', '');
-      const symbol = `${cleanAsset}USD`;
+      // Add USDT suffix for technical analysis API
+      const symbol = addUSDT(asset);
 
       const response = await axios.post(`${this.baseUrl}/indicators`, {
         symbol: symbol,
@@ -149,8 +148,8 @@ export class TechnicalIndicatorsAdapter {
    */
   async getIndicator(params: IndicatorRequest): Promise<IndicatorResponse> {
     try {
-      // Convert to real API format
-      const asset = params.symbol.replace('USDT', '').replace('USD', '');
+      // Asset is already clean ticker, no conversion needed
+      const asset = params.symbol;
       const indicatorData = await this.getTechnicalIndicators(asset, params.timeframe);
 
       // Convert to legacy format
@@ -494,9 +493,8 @@ export class TechnicalIndicatorsAdapter {
    */
   async getNews(asset: string): Promise<TechnicalNewsResult> {
     try {
-      // Ensure asset is in correct format (remove USD if present, then add USD)
-      const cleanAsset = asset.replace('USD', '').replace('USDT', '');
-      const symbol = `${cleanAsset}USD`;
+      // Add USDT suffix for technical analysis API
+      const symbol = addUSDT(asset);
 
       const response = await axios.get<TechnicalNewsItem[]>(`${this.baseUrl}/news/${symbol}`);
       return { items: response.data };
@@ -632,8 +630,8 @@ export class TechnicalIndicatorsAdapter {
       // Validate timeframe
       this.validateTimeframe(timeframe);
 
-      // Convert symbol format (BTCUSDT -> BTC)
-      const asset = symbol.replace('USDT', '').replace('USD', '');
+      // Symbol is already clean ticker, no conversion needed
+      const asset = symbol;
       const indicatorData = await this.getTechnicalIndicators(asset, timeframe);
 
       const signals: Array<{
