@@ -83,25 +83,53 @@ export class AspisAdapter implements TradingAdapter {
     return this.isConnectedFlag;
   }
 
+
+
   async getPositions(): Promise<Position[]> {
     // Get positions from balance endpoint
     try {
       const accountInfo = await this.getAccountInfo();
       const positions: Position[] = [];
 
+      console.log('Raw account info balances:', accountInfo.balances);
+
       for (const balance of accountInfo.balances) {
         if (balance.free > 0 || balance.locked > 0) {
-          positions.push({
+          // Get current price for PnL calculation
+          let currentPrice = 0;
+          try {
+            if (balance.asset !== 'USDT') {
+              currentPrice = await this.getTokenPrice(balance.asset);
+            } else {
+              currentPrice = 1; // USDT is pegged to USD
+            }
+          } catch (error) {
+            console.warn(`Failed to get price for ${balance.asset}:`, error);
+            // Use a fallback price or skip this position
+            if (balance.asset === 'USDT') {
+              currentPrice = 1;
+            } else {
+              // Skip positions with unknown prices to avoid incorrect PnL calculations
+              console.warn(`Skipping position for ${balance.asset} due to price fetch failure`);
+              continue;
+            }
+          }
+
+          const position = {
             symbol: balance.asset,
             quantity: balance.free + balance.locked,
-            avgPrice: 0, // Would need price data to calculate
-            unrealizedPnL: 0,
-            realizedPnL: 0,
+            avgPrice: currentPrice, // Use current price as approximation
+            unrealizedPnL: 0, // Would need historical data to calculate properly
+            realizedPnL: 0, // Would need trade history to calculate
             timestamp: Date.now()
-          });
+          };
+
+          console.log(`Creating position for ${balance.asset}:`, position);
+          positions.push(position);
         }
       }
 
+      console.log('Final positions:', positions);
       return positions;
     } catch (error) {
       console.warn('Failed to get positions:', error);
@@ -229,13 +257,24 @@ export class AspisAdapter implements TradingAdapter {
       });
 
       // Convert Aspis balance format to our format
-      const balances = Object.entries(response.data).map(([asset, balance]) => ({
-        asset,
-        free: parseFloat(balance.scaled || '0'),
-        locked: 0 // Aspis doesn't have locked balances concept
-      }));
+      console.log('Raw API response:', JSON.stringify(response.data, null, 2));
+
+      const balances = Object.entries(response.data).map(([asset, balance]) => {
+        const scaledBalance = parseFloat(balance.scaled || '0');
+        const nonScaledBalance = parseFloat(balance.non_scaled || '0');
+
+        console.log(`Balance for ${asset}: scaled=${scaledBalance}, non_scaled=${nonScaledBalance}`);
+
+        return {
+          asset,
+          free: nonScaledBalance, // Use non_scaled instead of scaled
+          locked: 0 // Aspis doesn't have locked balances concept
+        };
+      });
 
       const totalValue = balances.reduce((sum, balance) => sum + balance.free, 0);
+      console.log('Total portfolio value:', totalValue);
+      console.log('Processed balances:', balances);
 
       return {
         balances,
@@ -391,4 +430,102 @@ export class AspisAdapter implements TradingAdapter {
     return supported.includes(symbol.toUpperCase());
   }
 
+  async getTokenPrice(symbol: string): Promise<number> {
+    try {
+      // Get all prices at once (API returns all available prices)
+      const response = await axios.get(`https://v2api.aspis.finance/api/rates`, {
+        headers: { 'accept': 'application/json' }
+      });
+
+      if (response.data?.data?.[symbol]?.USD) {
+        return response.data.data[symbol].USD;
+      }
+
+      // If symbol not found, try with common variations
+      const variations = this.getSymbolVariations(symbol);
+      for (const variation of variations) {
+        if (response.data?.data?.[variation]?.USD) {
+          console.log(`Found price for ${symbol} using variation: ${variation}`);
+          return response.data.data[variation].USD;
+        }
+      }
+
+      throw new Error(`Price not found for ${symbol} (tried variations: ${variations.join(', ')})`);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Price not found')) {
+        throw error;
+      }
+      throw new Error(`Failed to get price for ${symbol}: ${error}`);
+    }
+  }
+
+  async getTokenPrices(symbols: string[]): Promise<Record<string, number>> {
+    try {
+      // Get all prices at once (API returns all available prices)
+      const response = await axios.get(`https://v2api.aspis.finance/api/rates`, {
+        headers: { 'accept': 'application/json' }
+      });
+
+      const prices: Record<string, number> = {};
+
+      if (response.data?.data) {
+        for (const symbol of symbols) {
+          // Try exact match first
+          if (response.data.data[symbol]?.USD) {
+            prices[symbol] = response.data.data[symbol].USD;
+            continue;
+          }
+
+          // Try variations if exact match not found
+          const variations = this.getSymbolVariations(symbol);
+          for (const variation of variations) {
+            if (response.data.data[variation]?.USD) {
+              console.log(`Found price for ${symbol} using variation: ${variation}`);
+              prices[symbol] = response.data.data[variation].USD;
+              break;
+            }
+          }
+        }
+      }
+
+      return prices;
+    } catch (error) {
+      throw new Error(`Failed to get prices for ${symbols.join(',')}: ${error}`);
+    }
+  }
+
+  /**
+   * Get common symbol variations for fallback matching
+   */
+  private getSymbolVariations(symbol: string): string[] {
+    const upperSymbol = symbol.toUpperCase();
+
+    // Common variations mapping
+    const variations: Record<string, string[]> = {
+      'ARB': ['ARB', 'aArbARB'],
+      'ETH': ['ETH', 'WETH', 'aBnbETH'],
+      'BTC': ['BTC', 'WBTC', 'cbBTC', 'aBnbBTCB'],
+      'MATIC': ['MATIC', 'WMATIC', 'MIMATIC'],
+      'BNB': ['BNB', 'WBNB', 'aBnbWBNB'],
+      'USDC': ['USDC', 'USDC.e', 'aBnbUSDC', 'aPolUSDC'],
+      'USDT': ['USDT', 'aArbUSDT', 'aBnbUSDT', 'aPolUSDT'],
+      'DAI': ['DAI', 'aArbDAI', 'aPolDAI'],
+      'LINK': ['LINK', 'aArbLINK', 'aPolLINK'],
+      'AAVE': ['AAVE', 'aArbAAVE', 'aPolAAVE'],
+      'WBTC': ['WBTC', 'aArbWBTC', 'aPolWBTC'],
+      'WETH': ['WETH', 'aArbWETH', 'aPolWETH'],
+      'WMATIC': ['WMATIC', 'aPolWMATIC'],
+      'CAKE': ['CAKE', 'aBnbCAKE'],
+      'FDUSD': ['FDUSD', 'aBnbFDUSD'],
+      'wstETH': ['wstETH', 'aBnbwstETH', 'aPolwstETH'],
+      'BAL': ['BAL', 'aPolBAL'],
+      'CRV': ['CRV', 'aPolCRV'],
+      'SUSHI': ['SUSHI', 'aPolSUSHI'],
+      'DPI': ['DPI', 'aPolDPI'],
+      'AGEUR': ['agEUR', 'aPolAGEUR']
+    };
+
+    // Return variations if found, otherwise return original symbol
+    return variations[upperSymbol] || [upperSymbol];
+  }
 }

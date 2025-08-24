@@ -41,7 +41,7 @@ async function telegramIntegrationTest() {
         console.log('\n🚀 Step 2: Testing round start notification...');
 
         const roundId = 'test-round-' + Date.now();
-        const universe = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'];
+        const universe = ['BTC', 'ETH', 'SOL'];
 
         await telegramAdapter.postRoundStart(roundId, universe);
         console.log('✅ Round start notification sent');
@@ -52,9 +52,9 @@ async function telegramIntegrationTest() {
         const mockClaims: Claim[] = [
             {
                 id: 'claim-1',
-                ticker: 'BTCUSDT',
+                ticker: 'BTC',
                 agentRole: 'fundamental',
-                claim: 'Strong volume of 1,234,567 indicates high market activity for BTCUSDT with positive momentum',
+                claim: 'Strong volume of 1,234,567 indicates high market activity for BTC with positive momentum',
                 confidence: 0.85,
                 evidence: ['evidence-1'],
                 timestamp: Date.now(),
@@ -62,9 +62,9 @@ async function telegramIntegrationTest() {
             },
             {
                 id: 'claim-2',
-                ticker: 'ETHUSDT',
+                ticker: 'ETH',
                 agentRole: 'fundamental',
-                claim: 'Price change of 3.2% shows positive momentum for ETHUSDT with strong fundamentals',
+                claim: 'Price change of 3.2% shows positive momentum for ETH with strong fundamentals',
                 confidence: 0.78,
                 evidence: ['evidence-2'],
                 timestamp: Date.now(),
@@ -87,7 +87,7 @@ async function telegramIntegrationTest() {
 
         const mockConsensus: ConsensusRec[] = [
             {
-                ticker: 'BTCUSDT',
+                ticker: 'BTC',
                 avgConfidence: 0.82,
                 coverage: 1.0,
                 liquidity: 0.95,
@@ -95,7 +95,7 @@ async function telegramIntegrationTest() {
                 claims: ['claim-1', 'claim-2']
             },
             {
-                ticker: 'ETHUSDT',
+                ticker: 'ETH',
                 avgConfidence: 0.75,
                 coverage: 1.0,
                 liquidity: 0.88,
@@ -106,7 +106,7 @@ async function telegramIntegrationTest() {
 
         const mockConflicts = [
             {
-                ticker: 'SOLUSDT',
+                ticker: 'SOL',
                 severity: 'medium' as const,
                 claims: mockClaims
             }
@@ -122,7 +122,7 @@ async function telegramIntegrationTest() {
             ok: true,
             violations: [],
             warnings: [
-                { type: 'position_size', message: 'Position size approaching limit for BTCUSDT' }
+                { type: 'position_size', message: 'Position size approaching limit for BTC' }
             ]
         };
 
@@ -135,7 +135,7 @@ async function telegramIntegrationTest() {
         const mockOrders: Order[] = [
             {
                 id: 'order-1',
-                symbol: 'BTCUSDT',
+                symbol: 'BTC',
                 side: 'buy',
                 type: 'market',
                 quantity: 0.01,
@@ -145,7 +145,7 @@ async function telegramIntegrationTest() {
             },
             {
                 id: 'order-2',
-                symbol: 'ETHUSDT',
+                symbol: 'ETH',
                 side: 'sell',
                 type: 'market',
                 quantity: 0.5,
@@ -157,7 +157,7 @@ async function telegramIntegrationTest() {
 
         const mockPositions: Position[] = [
             {
-                symbol: 'BTCUSDT',
+                symbol: 'BTC',
                 quantity: 0.15,
                 avgPrice: 44500,
                 unrealizedPnL: 750,
@@ -165,7 +165,7 @@ async function telegramIntegrationTest() {
                 timestamp: Date.now()
             },
             {
-                symbol: 'ETHUSDT',
+                symbol: 'ETH',
                 quantity: 2.0,
                 avgPrice: 3150,
                 unrealizedPnL: 300,
@@ -212,9 +212,9 @@ async function telegramIntegrationTest() {
         console.log('\n📅 Step 9: Testing daily report...');
 
         const topPerformers = [
-            { symbol: 'BTCUSDT', pnl: 1250 },
-            { symbol: 'ETHUSDT', pnl: 850 },
-            { symbol: 'SOLUSDT', pnl: -200 }
+            { symbol: 'BTC', pnl: 1250 },
+            { symbol: 'ETH', pnl: 850 },
+            { symbol: 'SOL', pnl: -200 }
         ];
 
         await telegramAdapter.postDailyReport(12, 10, 1900, topPerformers);

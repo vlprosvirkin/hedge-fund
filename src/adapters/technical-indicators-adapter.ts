@@ -17,7 +17,7 @@ import type {
 } from '../types/index.js';
 import { INDICATOR_THRESHOLDS, SIGNAL_WEIGHTS } from '../types/index.js';
 import { API_CONFIG } from '../config.js';
-import { addUSDSuffix } from '../utils.js';
+import { addUSDSuffixForAPI } from '../utils.js';
 import axios from 'axios';
 
 export class TechnicalIndicatorsAdapter {
@@ -72,7 +72,7 @@ export class TechnicalIndicatorsAdapter {
       this.validateTimeframe(timeframe);
 
       // Add USD suffix for technical analysis API
-      const symbol = addUSDSuffix(asset);
+      const symbol = addUSDSuffixForAPI(asset);
 
       const response = await axios.post<StatsResponse>(`${this.baseUrl}/stats`, {
         symbol: symbol,
@@ -104,7 +104,7 @@ export class TechnicalIndicatorsAdapter {
       this.validateTimeframe(timeframe);
 
       // Add USD suffix for technical analysis API
-      const symbol = addUSDSuffix(asset);
+      const symbol = addUSDSuffixForAPI(asset);
 
       const response = await axios.post(`${this.baseUrl}/indicators`, {
         symbol: symbol,
@@ -128,6 +128,7 @@ export class TechnicalIndicatorsAdapter {
    */
   async getAssetMetadata(asset: string, timeframe: string): Promise<AssetMetadata> {
     try {
+      // getIndicators already handles USD conversion, so pass the clean ticker
       const data = await this.getIndicators(asset, timeframe);
 
       return {
@@ -152,7 +153,7 @@ export class TechnicalIndicatorsAdapter {
     try {
       const response = await axios.post(`${this.baseUrl}/indicators/batch`, {
         requests: requests.map(req => ({
-          symbol: req.symbol.toUpperCase(),
+          symbol: addUSDSuffixForAPI(req.symbol).toUpperCase(),
           timeframe: req.timeframe,
           indicator: req.indicator,
           parameters: req.parameters || {},
@@ -208,7 +209,7 @@ export class TechnicalIndicatorsAdapter {
   async getNews(asset: string): Promise<TechnicalNewsResult> {
     try {
       // Add USD suffix for technical analysis API
-      const symbol = addUSDSuffix(asset);
+      const symbol = addUSDSuffixForAPI(asset);
 
       const response = await axios.get<TechnicalNewsItem[]>(`${this.baseUrl}/news/${symbol}`);
       return { items: response.data };
@@ -235,8 +236,8 @@ export class TechnicalIndicatorsAdapter {
  */
   async getPrice(symbol: string): Promise<number> {
     try {
-      // Get price from indicators endpoint which contains lp (last price)
-      const data = await this.getIndicators(symbol, '5m');
+      // getIndicators already handles USD conversion, so pass the clean ticker
+      const data = await this.getIndicators(symbol, '4h');
       return data.lp || 0;
     } catch (error: any) {
       throw new Error(`Failed to fetch price for ${symbol}: ${error.message}`);

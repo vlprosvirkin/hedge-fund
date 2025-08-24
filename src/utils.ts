@@ -3,10 +3,45 @@
  */
 
 /**
- * Add USD suffix for technical analysis API (BTC -> BTCUSD)
+ * Add USD suffix for technical analysis API (BTC -> BTCUSD, BTCUSDT -> BTCUSD)
+ * @deprecated Use addUSDSuffixForAPI instead
  */
 export function addUSDSuffix(ticker: string): string {
+    return addUSDSuffixForAPI(ticker);
+}
+
+/**
+ * Add USD suffix for external APIs that require it (BTC -> BTCUSD)
+ * Use this only in adapters when calling external APIs
+ */
+export function addUSDSuffixForAPI(ticker: string): string {
+    // If ticker already ends with USDT, remove it and add USD
+    if (ticker.endsWith('USDT')) {
+        return ticker.slice(0, -4) + 'USD';
+    }
+    // If ticker already ends with USD, return as is
+    if (ticker.endsWith('USD')) {
+        return ticker;
+    }
+    // Otherwise add USD suffix
     return `${ticker}USD`;
+}
+
+/**
+ * Add USDT suffix for Binance API (BTC -> BTCUSDT)
+ * Use this only in Binance adapter when calling Binance API
+ */
+export function addUSDTSuffixForBinance(ticker: string): string {
+    // If ticker already ends with USDT, return as is
+    if (ticker.endsWith('USDT')) {
+        return ticker;
+    }
+    // If ticker ends with USD, replace with USDT
+    if (ticker.endsWith('USD')) {
+        return ticker.slice(0, -3) + 'USDT';
+    }
+    // Otherwise add USDT suffix
+    return `${ticker}USDT`;
 }
 
 /**

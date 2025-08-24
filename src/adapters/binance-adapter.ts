@@ -1,6 +1,7 @@
 import type { MarketDataAdapter } from '../interfaces/adapters.js';
 import type { Candle, OrderBook, MarketStats } from '../types/index.js';
 import { API_CONFIG } from '../config.js';
+import { addUSDTSuffixForBinance } from '../utils.js';
 import axios from 'axios';
 
 export class BinanceAdapter implements MarketDataAdapter {
@@ -45,9 +46,12 @@ export class BinanceAdapter implements MarketDataAdapter {
     end: number
   ): Promise<Candle[]> {
     try {
+      // Convert clean ticker to Binance format (BTC -> BTCUSDT)
+      const binanceSymbol = addUSDTSuffixForBinance(symbol);
+
       const response = await axios.get(`${this.baseUrl}/api/v3/klines`, {
         params: {
-          symbol: symbol.toUpperCase(),
+          symbol: binanceSymbol,
           interval: this.mapTimeframe(timeframe),
           startTime: start,
           endTime: end,
@@ -56,7 +60,7 @@ export class BinanceAdapter implements MarketDataAdapter {
       });
 
       return response.data.map((candle: any[]) => ({
-        symbol: symbol.toUpperCase(),
+        symbol: symbol.toUpperCase(), // Return clean ticker
         timestamp: candle[0],
         open: parseFloat(candle[1]),
         high: parseFloat(candle[2]),
@@ -71,15 +75,18 @@ export class BinanceAdapter implements MarketDataAdapter {
 
   async getOrderBook(symbol: string): Promise<OrderBook> {
     try {
+      // Convert clean ticker to Binance format (BTC -> BTCUSDT)
+      const binanceSymbol = addUSDTSuffixForBinance(symbol);
+
       const response = await axios.get(`${this.baseUrl}/api/v3/depth`, {
         params: {
-          symbol: symbol.toUpperCase(),
+          symbol: binanceSymbol,
           limit: 100
         }
       });
 
       return {
-        symbol: symbol.toUpperCase(),
+        symbol: symbol.toUpperCase(), // Return clean ticker
         timestamp: Date.now(),
         bids: response.data.bids.map((bid: string[]) => [
           parseFloat(bid[0] || '0'),
@@ -97,23 +104,27 @@ export class BinanceAdapter implements MarketDataAdapter {
 
   async getMarketStats(symbol: string): Promise<MarketStats> {
     try {
+      // Convert clean ticker to Binance format (BTC -> BTCUSDT)
+      const binanceSymbol = addUSDTSuffixForBinance(symbol);
+      console.log(`Fetching market stats for ${symbol} (Binance: ${binanceSymbol})`);
+
       const [tickerResponse, exchangeInfoResponse] = await Promise.all([
         axios.get(`${this.baseUrl}/api/v3/ticker/24hr`, {
-          params: { symbol: symbol.toUpperCase() }
+          params: { symbol: binanceSymbol }
         }),
         axios.get(`${this.baseUrl}/api/v3/exchangeInfo`)
       ]);
 
       const ticker = tickerResponse.data;
       const symbolInfo = exchangeInfoResponse.data.symbols.find(
-        (s: any) => s.symbol === symbol.toUpperCase()
+        (s: any) => s.symbol === binanceSymbol
       );
 
       const lotSizeFilter = symbolInfo?.filters?.find((f: any) => f.filterType === 'LOT_SIZE');
       const priceFilter = symbolInfo?.filters?.find((f: any) => f.filterType === 'PRICE_FILTER');
 
       return {
-        symbol: symbol.toUpperCase(),
+        symbol: symbol.toUpperCase(), // Return clean ticker
         volume24h: parseFloat(ticker.volume),
         spread: this.calculateSpread(ticker.bidPrice, ticker.askPrice),
         tickSize: parseFloat(priceFilter?.tickSize || '0.01'),

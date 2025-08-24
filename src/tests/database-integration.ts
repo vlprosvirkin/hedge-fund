@@ -73,7 +73,7 @@ async function databaseIntegrationTest() {
         const mockEvidence: Evidence[] = [
             {
                 id: uuidv4(),
-                ticker: 'BTCUSDT',
+                ticker: 'BTC',
                 newsItemId: mockNews[0]?.id || 'unknown',
                 relevance: 0.95,
                 quote: 'Bitcoin has reached a new all-time high of $50,000',
@@ -82,7 +82,7 @@ async function databaseIntegrationTest() {
             },
             {
                 id: uuidv4(),
-                ticker: 'ETHUSDT',
+                ticker: 'ETH',
                 newsItemId: mockNews[1]?.id || 'unknown',
                 relevance: 0.87,
                 quote: 'Ethereum 2.0 development continues with promising results',
@@ -97,15 +97,15 @@ async function databaseIntegrationTest() {
         // 6. Тестирование поиска evidence
         console.log('\n🔎 Step 6: Testing evidence search...');
 
-        const btcEvidence = await postgresAdapter.findEvidence('BTCUSDT', {
+        const btcEvidence = await postgresAdapter.findEvidence('BTC', {
             since: Date.now() - 86400000, // Last 24 hours
             minRelevance: 0.8
         });
 
         if (btcEvidence && btcEvidence.length > 0) {
-            console.log(`✅ Found ${btcEvidence.length} evidence items for BTCUSDT`);
+            console.log(`✅ Found ${btcEvidence.length} evidence items for BTC`);
         } else {
-            throw new Error('No evidence found for BTCUSDT');
+            throw new Error('No evidence found for BTC');
         }
 
         // 7. Тестирование хранения claims
@@ -114,9 +114,9 @@ async function databaseIntegrationTest() {
         const mockClaims: Claim[] = [
             {
                 id: uuidv4(),
-                ticker: 'BTCUSDT',
+                ticker: 'BTC',
                 agentRole: 'fundamental',
-                claim: 'Strong volume indicates high market activity for BTCUSDT',
+                claim: 'Strong volume indicates high market activity for BTC',
                 confidence: 0.85,
                 evidence: [mockEvidence[0]?.id || 'unknown'],
                 riskFlags: ['market_volatility'],
@@ -124,7 +124,7 @@ async function databaseIntegrationTest() {
             },
             {
                 id: uuidv4(),
-                ticker: 'ETHUSDT',
+                ticker: 'ETH',
                 agentRole: 'sentiment',
                 claim: 'Positive sentiment around Ethereum 2.0 development',
                 confidence: 0.78,
@@ -153,7 +153,7 @@ async function databaseIntegrationTest() {
 
         const mockConsensus: ConsensusRec[] = [
             {
-                ticker: 'BTCUSDT',
+                ticker: 'BTC',
                 avgConfidence: 0.82,
                 coverage: 1.0,
                 liquidity: 0.95,
@@ -161,7 +161,7 @@ async function databaseIntegrationTest() {
                 claims: [mockClaims[0]?.id || 'unknown']
             },
             {
-                ticker: 'ETHUSDT',
+                ticker: 'ETH',
                 avgConfidence: 0.75,
                 coverage: 1.0,
                 liquidity: 0.88,
@@ -179,7 +179,7 @@ async function databaseIntegrationTest() {
         const mockOrders: Order[] = [
             {
                 id: uuidv4(),
-                symbol: 'BTCUSDT',
+                symbol: 'BTC',
                 side: 'buy',
                 type: 'market',
                 quantity: 0.01,
@@ -189,7 +189,7 @@ async function databaseIntegrationTest() {
             },
             {
                 id: uuidv4(),
-                symbol: 'ETHUSDT',
+                symbol: 'ETH',
                 side: 'sell',
                 type: 'market',
                 quantity: 0.5,
@@ -207,7 +207,7 @@ async function databaseIntegrationTest() {
 
         const mockPositions: Position[] = [
             {
-                symbol: 'BTCUSDT',
+                symbol: 'BTC',
                 quantity: 0.15,
                 avgPrice: 44500,
                 unrealizedPnL: 750,
@@ -215,7 +215,7 @@ async function databaseIntegrationTest() {
                 timestamp: Date.now()
             },
             {
-                symbol: 'ETHUSDT',
+                symbol: 'ETH',
                 quantity: 2.0,
                 avgPrice: 3150,
                 unrealizedPnL: 300,
@@ -251,7 +251,7 @@ async function databaseIntegrationTest() {
             roundId,
             'position_size',
             'medium',
-            'Position size approaching limit for BTCUSDT'
+            'Position size approaching limit for BTC'
         );
 
         console.log('✅ Risk violations storage test passed');
@@ -279,7 +279,7 @@ async function databaseIntegrationTest() {
             {
                 name: 'Evidence Storage',
                 passed: btcEvidence.length > 0,
-                details: `${btcEvidence.length} evidence items found for BTCUSDT`
+                details: `${btcEvidence.length} evidence items found for BTC`
             },
             {
                 name: 'Claims Storage',

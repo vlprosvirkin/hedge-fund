@@ -36,6 +36,8 @@ export const OrderBookSchema = z.object({
 export const MarketStatsSchema = z.object({
   symbol: z.string(),
   volume24h: z.number(),
+  volumeChange24h: z.number().optional(),
+  priceChange24h: z.number().optional(),
   spread: z.number(),
   tickSize: z.number(),
   stepSize: z.number(),
@@ -82,6 +84,10 @@ export const ClaimSchema = z.object({
   evidence: z.array(z.string()), // Evidence IDs
   timestamp: z.number(),
   riskFlags: z.array(z.string()).optional(),
+  signals: z.array(z.object({
+    name: z.string(),
+    value: z.number()
+  })).optional(),
 });
 
 export const ConsensusRecSchema = z.object({
@@ -204,6 +210,37 @@ export const PipelineArtifactSchema = z.object({
   orders: z.array(OrderSchema),
   riskViolations: z.array(RiskViolationSchema),
 });
+
+// ===== Signal Processing Types =====
+export const SignalAnalysisSchema = z.object({
+  ticker: z.string(),
+  overallSignal: z.number(), // -1 to 1 (sell to buy)
+  confidence: z.number(), // 0 to 1
+  volatility: z.number(), // 0 to 1
+  momentum: z.number(), // -1 to 1
+  sentiment: z.number(), // -1 to 1
+  fundamental: z.number(), // -1 to 1
+  technical: z.number(), // -1 to 1
+  riskScore: z.number(), // 0 to 1 (higher = more risky)
+  recommendation: z.enum(['BUY', 'HOLD', 'SELL']),
+  rationale: z.string(),
+  timeHorizon: z.enum(['short', 'medium', 'long']),
+  positionSize: z.number() // 0 to 1 (recommended position size)
+});
+
+export const SignalMetricsSchema = z.object({
+  signalStrength: z.number(), // -1 to 1
+  confidence: z.number(), // 0 to 1
+  volatility: z.number(), // 0 to 1
+  momentum: z.number(), // -1 to 1
+  riskAdjustedReturn: z.number(), // Sharpe-like ratio
+  maxDrawdown: z.number(), // 0 to 1
+  correlation: z.number(), // -1 to 1 (with market)
+  liquidity: z.number() // 0 to 1
+});
+
+export type SignalAnalysis = z.infer<typeof SignalAnalysisSchema>;
+export type SignalMetrics = z.infer<typeof SignalMetricsSchema>;
 
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
 export type PipelineArtifact = z.infer<typeof PipelineArtifactSchema>;

@@ -3,6 +3,8 @@
 import { HedgeFundOrchestrator } from './orchestrator.js';
 import { BinanceAdapter } from './adapters/binance-adapter.js';
 import { AspisAdapter } from './adapters/aspis-adapter.js';
+import { TechnicalIndicatorsAdapter } from './adapters/technical-indicators-adapter.js';
+import { TechnicalAnalysisService } from './services/technical-analysis.service.js';
 import { AgentsService } from './services/agents.js';
 import type { SystemConfig } from './types/index.js';
 
@@ -56,6 +58,35 @@ async function startProductionSystem() {
     // Import config
     const { SYSTEM_CONFIG } = await import('./config.js');
 
+    // Log configuration
+    logger.info('System configuration loaded:', {
+      riskProfile: SYSTEM_CONFIG.riskProfile,
+      debateInterval: SYSTEM_CONFIG.debateInterval,
+      rebalanceInterval: SYSTEM_CONFIG.rebalanceInterval,
+      maxPositions: SYSTEM_CONFIG.maxPositions,
+      killSwitchEnabled: SYSTEM_CONFIG.killSwitchEnabled,
+      environment: SYSTEM_CONFIG.environment
+    });
+
+    // Validate configuration
+    const { validateConfig, validateAPIConfig } = await import('./config.js');
+    const configErrors = validateConfig(SYSTEM_CONFIG);
+    const apiValidation = validateAPIConfig();
+
+    if (configErrors.length > 0) {
+      logger.error('Configuration errors:', configErrors);
+      throw new Error(`Configuration errors: ${configErrors.join(', ')}`);
+    }
+
+    if (apiValidation.errors.length > 0) {
+      logger.error('API configuration errors:', apiValidation.errors);
+      throw new Error(`API configuration errors: ${apiValidation.errors.join(', ')}`);
+    }
+
+    if (apiValidation.warnings.length > 0) {
+      logger.warn('API configuration warnings:', apiValidation.warnings);
+    }
+
     // Import adapters
     const { BinanceAdapter } = await import('./adapters/binance-adapter.js');
     const { AspisAdapter } = await import('./adapters/aspis-adapter.js');
@@ -68,7 +99,13 @@ async function startProductionSystem() {
     const trading = new AspisAdapter(); // Uses config values automatically
     const news = new NewsAPIAdapter();
     const factStore = new PostgresAdapter();
-    const agents = new AgentsService();
+
+    // Create technical services
+    const technicalIndicators = new TechnicalIndicatorsAdapter();
+    const technicalAnalysis = new TechnicalAnalysisService();
+
+    // Create agents service with shared technical services
+    const agents = new AgentsService(technicalIndicators, technicalAnalysis);
 
     // Create orchestrator
     const orchestrator = new HedgeFundOrchestrator(

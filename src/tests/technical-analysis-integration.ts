@@ -13,6 +13,10 @@ import type {
 /**
  * Интеграционный тест технического анализа
  * Проверяет полный цикл: получение данных → анализ → передача агентам → интерпретация
+ * 
+ * Конвенция тикеров:
+ * - Внутри проекта используем чистые тикеры (BTC, ETH, LINK)
+ * - Адаптер автоматически конвертирует в USD формат для API (BTC → BTCUSD)
  */
 async function technicalAnalysisIntegrationTest() {
   const adapter = new TechnicalIndicatorsAdapter();
@@ -36,7 +40,7 @@ async function technicalAnalysisIntegrationTest() {
 
     console.log(`📋 Available tokens: ${supportedTokens.slice(0, 10).join(', ')}...`);
 
-    // 3. Тестирование для BTC
+    // 3. Тестирование для BTC (чистый тикер, адаптер конвертирует в BTCUSD)
     console.log(`\n📊 Step 2: Testing BTC technical analysis...`);
     let btcTechnicalData: IndicatorData | null = null;
     let btcMetadata: AssetMetadata | null = null;
@@ -61,7 +65,7 @@ async function technicalAnalysisIntegrationTest() {
       console.log('⚠️ BTC not supported, skipping...');
     }
 
-    // 4. Тестирование для ETH
+    // 4. Тестирование для ETH (чистый тикер, адаптер конвертирует в ETHUSD)
     console.log(`\n📊 Step 3: Testing ETH technical analysis...`);
     let ethTechnicalData: IndicatorData | null = null;
     let ethMetadata: AssetMetadata | null = null;
@@ -82,7 +86,7 @@ async function technicalAnalysisIntegrationTest() {
     }
 
     // Выбираем актив для дальнейшего тестирования
-    // Если BTC и ETH не поддерживаются, попробуем один из доступных токенов
+    // Приоритет: BTC → ETH → другие токены из whitelist
     let testAsset = btcTechnicalData ? 'BTC' : ethTechnicalData ? 'ETH' : 'BTC';
     let technicalData = btcTechnicalData || ethTechnicalData;
     let metadata = btcMetadata || ethMetadata;
@@ -92,9 +96,11 @@ async function technicalAnalysisIntegrationTest() {
       const preferredTokens = ['LINK', 'MKR', 'COMP', 'SNX', 'GRT', 'YFI'];
 
       // Найдем пересечение между предпочтительными токенами и доступными
-      const availablePreferred = preferredTokens.filter(token =>
-        supportedTokens.includes(`${token}USDT`) || supportedTokens.includes(token)
-      );
+      // API возвращает тикеры с USD суффиксом, но мы работаем с чистыми тикерами
+      const availablePreferred = preferredTokens.filter(token => {
+        const usdToken = `${token}USD`;
+        return supportedTokens.includes(usdToken) || supportedTokens.includes(token);
+      });
 
       for (const token of availablePreferred) {
         try {
@@ -114,9 +120,10 @@ async function technicalAnalysisIntegrationTest() {
         const firstFewTokens = supportedTokens.slice(0, 5);
         for (const fullToken of firstFewTokens) {
           try {
-            // Преобразуем LINKUSDT -> LINK
-            const cleanToken = fullToken.replace('USDT', '').replace('USD', '');
-            console.log(`\n🔄 Trying ${cleanToken} (from ${fullToken}) as fallback...`);
+            // API возвращает тикеры с USD суффиксом (например, LINKUSD), 
+            // но адаптер автоматически конвертирует чистые тикеры в USD формат
+            const cleanToken = fullToken.replace('USD', '').replace('USDT', '');
+            console.log(`\n🔄 Trying ${cleanToken} (API supports ${fullToken}) as fallback...`);
             technicalData = await adapter.getTechnicalIndicators(cleanToken, '1d');
             metadata = await adapter.getAssetMetadata(cleanToken, '1d');
             testAsset = cleanToken;
@@ -218,7 +225,7 @@ async function technicalAnalysisIntegrationTest() {
       adapter.getAssetMetadata(testAsset, '1D'),
       adapter.getNews(testAsset)
     ]);
-    
+
     const analysis: ComprehensiveAnalysis = technicalAnalysis.createComprehensiveAnalysis(technicalForAnalysis, metadataForAnalysis, newsForAnalysis);
 
     console.log('✅ Comprehensive analysis completed');
