@@ -37,12 +37,7 @@ jobs:
       run: npm ci
 
     - name: Run tests
-      run: |
-        npm run test:technical-analysis
-        npm run test:news
-        npm run test:services
-        npm run test:telegram
-        npm run test:database
+      run: npm test
       env:
         DB_HOST: localhost
         DB_PORT: 5432

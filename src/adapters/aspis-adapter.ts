@@ -1,45 +1,24 @@
 import type { TradingAdapter } from '../interfaces/adapters.js';
-import type { Position, Order, FillEvent } from '../types/index.js';
+import type {
+  Position,
+  Order,
+  FillEvent,
+  ExecuteOrderInput,
+  ExecuteOrderResponse,
+  GetBalanceResponse,
+  GetVaultByApiKeyResponse,
+  TradingFees,
+  TradeHistoryItem,
+  SymbolInfo,
+  ConditionalOrderParams,
+  PortfolioMetrics,
+  OrderValidationParams,
+  OrderValidationResult,
+  AccountInfo
+} from '../types/index.js';
 import { API_CONFIG } from '../config.js';
 import { v4 as uuidv4 } from 'uuid';
 import axios, { AxiosError } from 'axios';
-
-// Types based on the provided API client
-interface ExecuteOrderInput {
-  chainId: string;
-  vault: string;
-  srcToken: string;
-  dstToken: string;
-  amountIn: string;
-  exchange: string;
-  slippage: string;
-  srcTokenSymbol?: string;
-  dstTokenSymbol?: string;
-}
-
-interface ExecuteOrderResponse {
-  exchange: string;
-  srcToken: string;
-  dstToken: string;
-  inputAmount: number;
-  outputAmount: string;
-  outputAmountScaled: string;
-  status: string;
-  tx_hash: string;
-}
-
-interface GetBalanceResponse {
-  [key: string]: {
-    scaled: string;
-    non_scaled: string;
-  };
-}
-
-interface GetVaultByApiKeyResponse {
-  apiKey: string;
-  tgId: string;
-  vaultAddress: string;
-}
 
 export class AspisAdapter implements TradingAdapter {
   private isConnectedFlag = false;
@@ -236,11 +215,7 @@ export class AspisAdapter implements TradingAdapter {
   }
 
   // Additional methods for Aspis API integration
-  async getAccountInfo(): Promise<{
-    balances: Array<{ asset: string; free: number; locked: number }>;
-    totalValue: number;
-    marginLevel?: number;
-  }> {
+  async getAccountInfo(): Promise<AccountInfo> {
     try {
       const response = await axios.get<GetBalanceResponse>(`${this.baseUrl}/get_balance`, {
         headers: {
@@ -274,11 +249,7 @@ export class AspisAdapter implements TradingAdapter {
     }
   }
 
-  async getTradingFees(symbol?: string): Promise<{
-    makerFee: number;
-    takerFee: number;
-    symbol?: string;
-  }> {
+  async getTradingFees(symbol?: string): Promise<TradingFees> {
     const response = await fetch(`${this.baseUrl}/trading/fees${symbol ? `?symbol=${symbol}` : ''}`, {
       method: 'GET',
       headers: {
@@ -294,17 +265,7 @@ export class AspisAdapter implements TradingAdapter {
     return await response.json();
   }
 
-  async getTradeHistory(symbol?: string, limit = 100): Promise<Array<{
-    id: string;
-    orderId: string;
-    symbol: string;
-    side: 'buy' | 'sell';
-    quantity: number;
-    price: number;
-    fee: number;
-    feeAsset: string;
-    timestamp: number;
-  }>> {
+  async getTradeHistory(symbol?: string, limit = 100): Promise<TradeHistoryItem[]> {
     const params = new URLSearchParams();
     if (symbol) params.append('symbol', symbol);
     params.append('limit', limit.toString());
@@ -324,16 +285,7 @@ export class AspisAdapter implements TradingAdapter {
     return await response.json();
   }
 
-  async getSymbolInfo(symbol: string): Promise<{
-    symbol: string;
-    status: string;
-    minQty: number;
-    maxQty: number;
-    stepSize: number;
-    tickSize: number;
-    minPrice: number;
-    maxPrice: number;
-  }> {
+  async getSymbolInfo(symbol: string): Promise<SymbolInfo> {
     // Aspis API doesn't have symbol info endpoint
     // Return default values for supported symbols
     if (!this.isSupportedSymbol(symbol)) {
@@ -352,15 +304,7 @@ export class AspisAdapter implements TradingAdapter {
     };
   }
 
-  async placeConditionalOrder(params: {
-    symbol: string;
-    side: 'buy' | 'sell';
-    quantity: number;
-    type: 'stop_loss' | 'take_profit' | 'trailing_stop';
-    triggerPrice: number;
-    price?: number;
-    trailingAmount?: number;
-  }): Promise<string> {
+  async placeConditionalOrder(params: ConditionalOrderParams): Promise<string> {
     const response = await fetch(`${this.baseUrl}/trading/conditional-order`, {
       method: 'POST',
       headers: {
@@ -378,15 +322,7 @@ export class AspisAdapter implements TradingAdapter {
     return result.orderId;
   }
 
-  async getPortfolioMetrics(): Promise<{
-    totalValue: number;
-    availableBalance: number;
-    usedMargin: number;
-    freeMargin: number;
-    marginLevel: number;
-    unrealizedPnL: number;
-    realizedPnL: number;
-  }> {
+  async getPortfolioMetrics(): Promise<PortfolioMetrics> {
     const response = await fetch(`${this.baseUrl}/portfolio/metrics`, {
       method: 'GET',
       headers: {
@@ -407,14 +343,7 @@ export class AspisAdapter implements TradingAdapter {
 
 
   // Additional utility methods
-  async validateOrder(params: {
-    symbol: string;
-    quantity: number;
-    price?: number;
-  }): Promise<{
-    valid: boolean;
-    errors: string[];
-  }> {
+  async validateOrder(params: OrderValidationParams): Promise<OrderValidationResult> {
     const errors: string[] = [];
 
     // Check if symbol is supported

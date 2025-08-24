@@ -153,8 +153,11 @@ cp .env.example .env
 # Build the project
 npm run build
 
-# Run mock pipeline (recommended for testing)
-npm run mock
+# Run CI tests (no API keys required)
+npm test
+
+# Run full test suite (requires API keys)
+npm run test:all
 ```
 
 ### Docker Deployment
@@ -182,13 +185,11 @@ Create a `.env` file with the variables as in env.example:
 # Start production system (requires real API keys)
 npm start
 
-# Run comprehensive integration tests
-npm run test:technical-analysis    # Technical analysis pipeline
-npm run test:news                  # News API and sentiment analysis  
-npm run test:services              # Multi-agent system
-npm run test:decision              # Full decision-execution cycle
-npm run test:telegram              # Telegram notifications and transparency
-npm run test:database              # PostgreSQL database and storage
+# Run CI tests (no API keys required)
+npm test
+
+# Run comprehensive integration tests (requires API keys)
+npm run test:all
 
 # Development mode with hot reload
 npm run dev
@@ -362,17 +363,40 @@ Each trading round produces:
 
 ## 🧪 Testing
 
-### Integration Test Suite
+### Test Suite
 
-The system includes comprehensive integration tests that validate the entire pipeline:
+The system includes comprehensive testing with both CI/CD and full integration tests:
 
-**[Complete Testing Guide →](src/tests/README.md)**
+#### CI/CD Tests (No API Keys Required)
+```bash
+# Run CI tests that verify core functionality
+npm test
 
-#### Available Tests
+# Tests include:
+# ✅ Core services instantiation
+# ✅ Type system validation
+# ✅ Module imports and compilation
+# ✅ Basic functionality without external APIs
+```
 
+#### Full Integration Tests (Requires API Keys)
+```bash
+# Run complete test suite with real APIs
+npm run test:all
+
+# Tests include:
+# ✅ Technical Analysis Pipeline Test
+# ✅ News API Integration Test  
+# ✅ Multi-Agent System Test
+# ✅ Full Decision-Execution Cycle Test
+# ✅ Telegram Integration Test
+# ✅ Database Integration Test
+```
+
+#### Individual Test Commands
 ```bash
 # Technical Analysis Pipeline Test
-npm run test:integration
+npm run test:technical-analysis
 # ✅ Tests 45+ technical indicators, signal analysis, and API integration
 # ✅ Validates RSI, MACD, Bollinger Bands, and comprehensive analysis
 # ✅ Covers supported timeframes and asset metadata
@@ -394,6 +418,18 @@ npm run test:decision
 # ✅ Tests complete pipeline: Agents → Consensus → Risk → Execution
 # ✅ Validates order placement through AspisAdapter
 # ✅ Covers portfolio rebalancing and position tracking
+```
+
+#### Test Scripts
+```bash
+# Run all tests with smart detection of API keys
+./scripts/run-tests.sh
+
+# Run with verbose output
+./scripts/run-tests.sh --verbose
+
+# Show help
+./scripts/run-tests.sh --help
 ```
 
 #### Integration Testing
@@ -423,20 +459,30 @@ src/
 ├── services/                   # Core business logic
 │   ├── agents.ts              # Multi-agent system (Fundamental, Sentiment, Valuation)
 │   ├── consensus.ts           # Consensus building and conflict resolution
-│   └── verifier.ts            # Claim verification and validation
+│   ├── verifier.ts            # Claim verification and validation
+│   ├── technical-analysis.service.ts  # Technical indicator analysis logic
+│   └── news-analysis.service.ts       # News processing and sentiment analysis
+├── controllers/               # Business logic controllers
+│   └── vault.controller.ts    # Portfolio management and order conversion
 ├── types/                     # TypeScript type definitions
 │   ├── index.ts              # Core system types
 │   ├── technical-analysis.ts # Technical indicator types
-│   └── news.ts               # News and sentiment types
+│   ├── news.ts               # News and sentiment types
+│   ├── aspis.ts              # Aspis API types
+│   ├── binance.ts            # Binance API types
+│   └── telegram.ts           # Telegram API types
 ├── tests/                     # Integration test suite
+│   ├── ci-integration.ts     # CI/CD tests (no API keys required)
 │   ├── technical-analysis-integration.ts  # Technical analysis pipeline test
 │   ├── news-integration.ts               # News API integration test
 │   ├── services-integration.ts           # Multi-agent system test
 │   └── decision-execution-integration.ts # Full cycle test
 ├── interfaces/               # Service interfaces
 ├── orchestrator.ts          # Main orchestration logic
-
 └── index.ts                # Application entry point
+
+scripts/                     # Utility scripts
+├── run-tests.sh            # Test runner script
 
 docs/                        # Comprehensive documentation
 ├── TECHNICAL_INDICATORS.md # Technical analysis guide
@@ -447,21 +493,39 @@ docs/                        # Comprehensive documentation
 └── ASPIS_API_METHODS.md    # API reference
 ```
 
+### Type System Architecture
+
+The project uses a comprehensive type system with Zod schemas for runtime validation:
+
+#### Type Categories
+- **Core Types** (`src/types/index.ts`): Main system types (Position, Order, Claim, etc.)
+- **API Types** (`src/types/aspis.ts`, `src/types/binance.ts`, `src/types/telegram.ts`): External API interfaces
+- **Domain Types** (`src/types/technical-analysis.ts`, `src/types/news.ts`): Domain-specific types
+- **Service Types**: Business logic types for services and controllers
+
+#### Type Safety Features
+- **Zod Schemas**: Runtime validation for all external data
+- **Strict TypeScript**: `exactOptionalPropertyTypes: true` for precise type checking
+- **Interface Contracts**: Clear contracts between services and adapters
+- **Type Exports**: Centralized type exports for easy imports
+
 ### Adding New Features
 1. **Define types** in `src/types/` with Zod schemas for runtime validation
 2. **Create interfaces** in `src/interfaces/` for service contracts
 3. **Implement adapters** in `src/adapters/` for external API integration
 4. **Add business logic** in `src/services/` with proper error handling
-5. **Update orchestrator** as needed for pipeline integration
-6. **Add integration tests** in `src/tests/` to validate functionality
-7. **Update documentation** in `docs/` with API references and guides
+5. **Create controllers** in `src/controllers/` for complex business logic
+6. **Update orchestrator** as needed for pipeline integration
+7. **Add integration tests** in `src/tests/` to validate functionality
+8. **Update documentation** in `docs/` with API references and guides
 
 ### Key Development Principles
 - **Type Safety**: Full TypeScript coverage with strict mode
 - **Real Data Integration**: All agents work with live API data
 - **Comprehensive Testing**: Integration tests for all major components
-- **Error Handling**: Graceful fallbacks and mock data when APIs unavailable
+- **Error Handling**: Graceful fallbacks and proper error management
 - **Documentation**: Complete API references and setup guides
+- **Separation of Concerns**: Clear separation between API calls and business logic
 
 ### Code Style
 - TypeScript with strict mode
@@ -483,12 +547,16 @@ This is a research and educational project. **Do not use with real money without
 - **Telegram Integration**: Real-time transparency and monitoring
 - **Risk Management**: Comprehensive risk controls and kill-switch
 - **Integration Tests**: Complete test suite covering all components
+- **Type System**: Comprehensive type definitions with Zod validation
+- **CI/CD Tests**: Tests that work without API keys
+- **Architecture Refactoring**: Clean separation of concerns
 
 ### Ready for Production 🚀
 - **Architecture**: Production-ready with proper error handling
 - **API Integration**: All external APIs properly integrated
 - **Data Flow**: Complete pipeline from data ingestion to execution
 - **Monitoring**: Comprehensive logging and transparency
+- **Testing**: Both CI/CD and full integration test suites
 
 ### Development Mode 🔧
 - **Integration Tests**: Comprehensive testing with real APIs
@@ -518,7 +586,7 @@ MIT License - see LICENSE file for details.
 - Follow TypeScript strict mode standards
 - Add comprehensive integration tests
 - Update relevant documentation in `docs/`
-- Ensure all tests pass: `npm run test:integration && npm run test:news && npm run test:services && npm run test:decision`
+- Ensure all tests pass: `npm test && npm run test:all`
 
 ## 📞 Support
 
@@ -526,7 +594,7 @@ For questions or issues:
 - **Create an issue** on GitHub with detailed reproduction steps
 - **Check the documentation** in the `docs/` folder for API references
 - **Review the integration tests** in `src/tests/` for usage examples
-- **Run the mock pipeline** with `npm run mock` for safe testing
+- **Run the CI tests** with `npm test` for basic functionality verification
 
 ### Quick Links
 - **[Technical Analysis Setup](docs/TECHNICAL_INDICATORS.md)**

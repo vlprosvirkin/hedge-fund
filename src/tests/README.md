@@ -1,367 +1,388 @@
-# Integration Tests
+# 🧪 Integration Testing Guide
 
-This directory contains integration tests that verify the complete functionality of the hedge fund system.
+This document provides comprehensive information about the testing infrastructure for the Hedge Fund MVP system.
 
-## Available Tests
+## 📋 Test Overview
 
-1. **Technical Analysis Integration Test** - Tests the technical indicators API and analysis pipeline
-2. **News API Integration Test** - Tests the news API and sentiment analysis pipeline
-3. **Services Integration Test** - Tests the services layer and data interpretation capabilities
+The system includes two types of tests:
 
-## Technical Analysis Integration Test
+1. **CI/CD Tests** - Run without external API dependencies
+2. **Full Integration Tests** - Require API keys and test real external services
 
-**File:** `technical-analysis-integration.ts`
+## 🚀 Quick Start
 
-### Purpose
-
-This integration test validates the complete technical analysis pipeline, ensuring that:
-
-1. **API Integration** - Technical indicators API is accessible and returns valid data
-2. **Data Quality** - All required indicators and metadata are present and valid
-3. **Agent Integration** - Data can be properly formatted for agent consumption
-4. **Type Safety** - All data flows maintain proper TypeScript typing
-5. **Error Handling** - System gracefully handles various error scenarios
-
-### Test Flow
-
-The test follows this 10-step process:
-
-1. **API Connection** - Establishes connection to technical indicators API
-2. **Technical Indicators** - Retrieves and validates RSI, MACD, Stochastic, and other indicators
-3. **Asset Metadata** - Gets price, volume, change, and sentiment data
-4. **Signal Analysis** - Calculates overall market sentiment from multiple indicators
-5. **News Data** - Retrieves relevant news articles for the asset
-6. **Comprehensive Analysis** - Combines all data for final recommendation
-7. **Agent Claims** - Creates test claims that agents can process
-8. **Evidence Creation** - Generates evidence objects for claim validation
-9. **Data Quality Validation** - Verifies data completeness and validity
-10. **Integration Verification** - Confirms all systems work together
-
-### Running the Test
+### Running Tests
 
 ```bash
-# Run the integration test
-npm run test:integration
+# Run CI tests (no API keys required)
+npm test
 
-# Or directly with tsx
-npx tsx src/tests/technical-analysis-integration.ts
-```
+# Run full test suite (requires API keys)
+npm run test:all
 
-### Expected Output
-
-When successful, you should see:
-
-```
-🚀 Starting Technical Analysis Integration Test...
-
-✅ Connected to Technical Indicators API
-
-📊 Step 1: Getting technical indicators for BTC...
-✅ Technical indicators received successfully
-   RSI: 45.23
-   MACD: 0.0012
-   Stochastic K: 65.4
-   Close Price: 43250.50
-
-💰 Step 2: Getting asset metadata...
-✅ Asset metadata received successfully
-   Price: $43,250.50
-   Volume: 1,234,567
-   Change %: 2.45%
-   Sentiment: 65/100
-
-📈 Step 3: Getting signal strength analysis...
-✅ Signal strength analysis completed
-   Overall Strength: 0.234
-   Number of signals: 4
-   - rsi: 45.23 (neutral) - weight: 0.3
-   - macd: 0.0012 (bullish) - weight: 0.3
-   - stochastic: 65.40 (neutral) - weight: 0.2
-   - williams_r: -45.67 (neutral) - weight: 0.2
-
-...
-
-🎉 Technical Analysis Integration Test PASSED!
-
-📊 Summary:
-   - Technical indicators: 45 data points
-   - Asset metadata: Complete
-   - Signal analysis: 4 signals
-   - News items: 12 articles
-   - Agent claims: 3 generated
-   - Data quality: 5/5 checks passed
-```
-
-## News API Integration Test
-
-**File:** `news-integration.ts`
-
-### Purpose
-
-This integration test validates the complete news API pipeline, ensuring that:
-
-1. **API Integration** - News API is accessible and returns valid data
-2. **Data Quality** - News articles are properly formatted and contain required fields
-3. **Sentiment Analysis** - Sentiment scoring works accurately
-4. **Caching System** - News caching functionality works properly
-5. **Error Handling** - System gracefully handles various error scenarios
-
-### Test Flow
-
-The test follows this 10-step process:
-
-1. **API Connection** - Establishes connection to news API
-2. **Supported Tokens** - Fetches list of supported news assets
-3. **General News Digest** - Gets general news feed
-4. **News Search** - Tests search functionality with "Bitcoin" query
-5. **Asset-Specific News** - Gets news for specific assets (BTC/ETH)
-6. **Latest News** - Retrieves most recent news items
-7. **Ticker News** - Gets news for multiple tickers
-8. **Caching Test** - Verifies caching functionality
-9. **Data Quality Validation** - Verifies data integrity and sentiment analysis
-10. **Error Handling** - Tests error handling with invalid requests
-11. **Integration Verification** - Ensures all components work together
-
-### Running the Test
-
-```bash
-# Run the news integration test
-npm run test:news
-
-# Or directly with tsx
-npx tsx src/tests/news-integration.ts
-```
-
-### Expected Output
-
-When successful, you should see:
-
-```
-🚀 Starting News API Integration Test...
-
-✅ Connected to News API
-
-🪙 Step 1: Getting supported tokens...
-✅ Supported tokens received successfully
-   Primary assets: 3
-   Additional assets: 167
-   Total count: 170
-   Primary assets: BTC, ETH, SOL
-
-📰 Step 2: Getting general news digest...
-✅ General digest received successfully
-   News items: 10
-   Total count: 10
-   Latest news: Kanye West's YZY Token Launches on Solana with Extreme Volatility...
-   Source: Decrypt
-   Assets: SOL
-
-🔍 Step 3: Testing news search...
-✅ News search completed successfully
-   Search results: 5 items
-   First result: Kanye West's YZY Token Launches on Solana with Extreme Volatility...
-   Sentiment: 0.50
-   Published: 8/21/2025, 5:22:21 AM
-
-...
-
-🎉 News API Integration Test PASSED!
-
-📊 Summary:
-   - Supported tokens: 170 total
-   - General news: 10 items
-   - Search results: 5 items
-   - Latest news: 5 items
-   - Ticker news: 5 items
-   - Data quality: 6/6 checks passed
-```
-
-## Services Integration Test
-
-**File:** `services-integration.ts`
-
-### Purpose
-
-This integration test validates the complete services layer, ensuring that:
-
-1. **Data Interpretation** - Services can properly interpret data from all adapters
-2. **Agent Functionality** - All agent roles (fundamental, sentiment, valuation) work correctly
-3. **Consensus Building** - Consensus service can process claims and build recommendations
-4. **Verification System** - Verifier service can validate claims and evidence
-5. **Type Safety** - All data flows maintain proper TypeScript typing throughout the pipeline
-
-### Test Flow
-
-The test follows this 10-step process:
-
-1. **API Connections** - Establishes connections to all APIs and services
-2. **Data Fetching** - Retrieves data from technical indicators and news adapters
-3. **Technical Analysis** - Gets comprehensive technical analysis data
-4. **News Data** - Retrieves news articles and sentiment analysis
-5. **Test Data Preparation** - Prepares universe, market stats, and evidence for services
-6. **Agent Testing** - Tests all three agent roles (fundamental, sentiment, valuation)
-7. **Consensus Building** - Tests consensus service with generated claims
-8. **Verification** - Tests verifier service with claims and evidence
-9. **Data Quality Validation** - Verifies data completeness and validity
-10. **Integration Verification** - Confirms all services work together
-
-### Running the Test
-
-```bash
-# Run the services integration test
-npm run test:services
-
-# Or directly with tsx
-npx tsx src/tests/services-integration.ts
-```
-
-### Expected Output
-
-When successful, you should see:
-
-```
-🚀 Starting Services Integration Test...
-
-🔌 Step 1: Connecting to APIs...
-✅ All services connected successfully
-
-📊 Step 2: Fetching data from adapters...
-✅ Technical tokens: 58 supported
-✅ News tokens: 170 supported
-🎯 Using test asset: BTC
-
-📈 Step 3: Getting technical analysis data...
-✅ Technical data retrieved successfully
-   RSI: 40.21
-   MACD: -605.7065
-   Price: $112386.90
-   Volume: 10,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000
-   Signal Strength: 0.10
-
-📰 Step 4: Getting news data...
-✅ News data retrieved successfully: 5 articles
-   Average sentiment: 0.80
-   Sample title: Hong Kong's Ming Shing Enters Agreement to Purchase 4,250 BT...
-
-🤖 Step 6: Testing AgentsService...
-   Testing fundamental agent...
-   ✅ fundamental agent generated 3 claims
-   Sample claim: Strong on-chain metrics for BTC with increasing active addresses...
-   Confidence: 0.89
-   Testing sentiment agent...
-   ✅ sentiment agent generated 3 claims
-   Sample claim: News sentiment score improving for BTC in last 24h...
-   Confidence: 0.75
-   Testing valuation agent...
-   ✅ valuation agent generated 3 claims
-   Sample claim: RSI at 41.6 indicates neutral conditions for BTC...
-   Confidence: 0.96
-
-🎯 Step 7: Testing ConsensusService...
-✅ Consensus built successfully: 3 recommendations
-   Top recommendation: ETH
-   Final score: 0.895
-   Average confidence: 0.928
-   Coverage: 1.00
-   Liquidity: 0.913
-   Conflicts detected: 0
-   Risk-adjusted recommendations: 3
-
-🔍 Step 8: Testing VerifierService...
-✅ Verification completed:
-   Verified claims: 0
-   Rejected claims: 9
-   Violations: 11
-   Evidence relevance valid: true
-   Evidence freshness valid: false
-
-🎉 Services Integration Test PASSED!
-
-📊 Summary:
-   - Technical data: Available
-   - News data: 5 articles
-   - Agent claims: 9 generated
-   - Data quality: 6/6 checks passed
-   - Integration: 4/4 checks passed
-```
-
-### Key Features Tested
-
-- **Multi-Agent System** - All three agent roles generate claims with proper confidence scores
-- **Technical Integration** - Valuation agent uses real technical analysis data
-- **News Integration** - Sentiment agent processes news sentiment data
-- **Consensus Algorithm** - Builds recommendations based on agent claims and market stats
-- **Conflict Detection** - Identifies conflicting recommendations across agents
-- **Risk Adjustments** - Applies different risk profiles to recommendations
-- **Claim Verification** - Validates claims against evidence and time constraints
-- **Evidence Validation** - Checks evidence relevance and freshness
-
-### Service Architecture
-
-The test validates the complete service architecture:
-
-```
-Adapters → Services → Integration
-├── TechnicalIndicatorsAdapter → AgentsService → ConsensusService
-├── NewsAPIAdapter → VerifierService
-└── Data Flow: Raw Data → Claims → Consensus → Verification
-```
-
-This ensures that the entire pipeline from data ingestion to final recommendations works correctly.
-
-## Running All Tests
-
-To run all integration tests:
-
-```bash
-# Run all tests sequentially
-npm run test:integration
+# Run individual tests
+npm run test:technical-analysis
 npm run test:news
 npm run test:services
+npm run test:decision
+npm run test:telegram
+npm run test:database
 
-# Or run them in parallel (if you have multiple terminals)
-npm run test:integration & npm run test:news & npm run test:services
+# Run with test script (smart API key detection)
+./scripts/run-tests.sh
 ```
 
-## Troubleshooting
+## 🔧 CI/CD Tests
+
+### Purpose
+CI/CD tests verify core functionality without requiring external API access. They are designed to run in automated environments like GitHub Actions.
+
+### What They Test
+- ✅ **Core Services**: TechnicalAnalysisService, NewsAnalysisService, ConsensusService
+- ✅ **Type System**: All type imports and instantiation
+- ✅ **Module Imports**: All services and adapters can be imported
+- ✅ **Basic Functionality**: Core business logic without external dependencies
+
+### Running CI Tests
+```bash
+npm test
+# or
+npm run test:ci
+```
+
+### Example Output
+```
+🚀 Starting CI/CD Integration Tests
+====================================
+These tests verify core functionality without external API dependencies
+
+📝 Testing Basic Imports (CI Mode)
+==================================
+🔍 Testing module imports...
+✅ All service imports successful
+✅ All adapter imports successful
+✅ Types import successful
+🎉 All Basic Imports tests passed!
+
+🧪 Testing Core Services (CI Mode)
+===================================
+📈 Testing Technical Analysis Service...
+✅ Technical Analysis Service tests passed
+   RSI overbought (75): true
+   RSI oversold (25): true
+
+📰 Testing News Analysis Service...
+✅ News Analysis Service tests passed
+   Calculated sentiment: 0.75
+
+🎯 Testing Consensus Service...
+✅ Consensus Service tests passed
+   Consensus recommendations: 1
+
+🎉 All Core Services tests passed!
+
+🎉 All CI/CD Integration Tests Passed!
+✅ Core functionality is working correctly
+✅ All modules can be imported
+✅ Services can be instantiated
+```
+
+## 🔌 Full Integration Tests
+
+### Purpose
+Full integration tests validate the complete system with real external APIs. They require API keys and test actual data flows.
+
+### Required Environment Variables
+```bash
+# Technical Indicators API
+TECHNICAL_INDICATORS_API_KEY=your_key_here
+
+# News API
+NEWS_API_KEY=your_key_here
+
+# Binance API
+BINANCE_API_KEY=your_key_here
+BINANCE_SECRET_KEY=your_secret_here
+
+# Aspis Trading API
+ASPIS_API_KEY=your_key_here
+ASPIS_VAULT_ADDRESS=your_vault_address
+
+# Telegram Bot
+TELEGRAM_BOT_TOKEN=your_token_here
+TELEGRAM_CHAT_ID=your_chat_id
+
+# PostgreSQL Database
+DATABASE_URL=postgresql://user:password@localhost:5432/hedge_fund
+```
+
+### Available Tests
+
+#### 1. Technical Analysis Integration Test
+**File**: `src/tests/technical-analysis-integration.ts`
+
+Tests the complete technical analysis pipeline:
+- ✅ 45+ technical indicators (RSI, MACD, Stochastic, Bollinger Bands, etc.)
+- ✅ Real-time price data via `/prices` endpoint
+- ✅ Unified data fetching via `/all-data` endpoint
+- ✅ Signal strength analysis and trading recommendations
+- ✅ Asset metadata and market sentiment scoring
+- ✅ Supported timeframes: 1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w
+
+**Run**: `npm run test:technical-analysis`
+
+#### 2. News API Integration Test
+**File**: `src/tests/news-integration.ts`
+
+Tests the complete news and sentiment analysis pipeline:
+- ✅ News ingestion from 170+ crypto assets
+- ✅ Real-time sentiment analysis (0.0-1.0 scoring)
+- ✅ News digest and asset-specific filtering
+- ✅ Time-lock validation for anti-leak protection
+- ✅ Intelligent caching and fallback mechanisms
+
+**Run**: `npm run test:news`
+
+#### 3. Services Integration Test
+**File**: `src/tests/services-integration.ts`
+
+Tests the multi-agent system and consensus building:
+- ✅ All three agents (Fundamental, Sentiment, Valuation) with real data
+- ✅ Consensus building and conflict resolution
+- ✅ Claim verification and risk assessment
+- ✅ Agent claim generation with evidence-based analysis
+
+**Run**: `npm run test:services`
+
+#### 4. Decision Execution Integration Test
+**File**: `src/tests/decision-execution-integration.ts`
+
+Tests the complete trading pipeline:
+- ✅ Complete pipeline: Agents → Consensus → Risk → Execution
+- ✅ Order placement through AspisAdapter
+- ✅ Portfolio rebalancing and position tracking
+- ✅ Real trading execution with Aspis infrastructure
+
+**Run**: `npm run test:decision`
+
+#### 5. Telegram Integration Test
+**File**: `src/tests/telegram-integration.ts`
+
+Tests the transparency and monitoring system:
+- ✅ Real-time Telegram notifications
+- ✅ Complete process transparency
+- ✅ Agent analysis reports with confidence scores
+- ✅ Risk assessment and violation alerts
+
+**Run**: `npm run test:telegram`
+
+#### 6. Database Integration Test
+**File**: `src/tests/database-integration.ts`
+
+Tests the data storage and analytics system:
+- ✅ PostgreSQL database with ACID transactions
+- ✅ Complete audit trail for all trading decisions
+- ✅ News, evidence, claims, and consensus storage
+- ✅ Round tracking and performance analytics
+
+**Run**: `npm run test:database`
+
+## 🛠️ Test Scripts
+
+### Main Test Runner
+**File**: `scripts/run-tests.sh`
+
+A smart test runner that detects API keys and runs appropriate tests:
+
+```bash
+# Run with smart API key detection
+./scripts/run-tests.sh
+
+# Run with verbose output
+./scripts/run-tests.sh --verbose
+
+# Show help
+./scripts/run-tests.sh --help
+```
+
+**Features**:
+- ✅ Automatically detects API keys in environment
+- ✅ Runs CI tests if no API keys are available
+- ✅ Runs full integration tests if API keys are present
+- ✅ Colored output and progress tracking
+- ✅ Comprehensive test summary
+
+### Package.json Scripts
+```json
+{
+  "test": "tsx src/tests/ci-integration.ts",
+  "test:technical-analysis": "tsx src/tests/technical-analysis-integration.ts",
+  "test:news": "tsx src/tests/news-integration.ts",
+  "test:services": "tsx src/tests/services-integration.ts",
+  "test:decision": "tsx src/tests/decision-execution-integration.ts",
+  "test:telegram": "tsx src/tests/telegram-integration.ts",
+  "test:database": "tsx src/tests/database-integration.ts",
+  "test:all": "./scripts/run-tests.sh"
+}
+```
+
+## 📊 Test Coverage
+
+### API Integration Coverage
+- **Technical Indicators API**: 45+ indicators, price data, metadata
+- **News API**: 170+ assets, sentiment analysis, caching
+- **Binance API**: Market data, order books, real-time feeds
+- **Aspis API**: Order execution, position tracking, portfolio management
+- **Telegram API**: Notifications, transparency, monitoring
+- **PostgreSQL**: Data storage, audit trail, analytics
+
+### Data Flow Coverage
+- **Data Ingestion**: Market data, news, technical indicators
+- **Agent Processing**: Fundamental, sentiment, valuation analysis
+- **Consensus Building**: Multi-agent claim aggregation
+- **Risk Management**: Position limits, drawdown protection
+- **Order Execution**: Portfolio rebalancing, order placement
+- **Monitoring**: Real-time notifications, performance tracking
+
+### Error Handling Coverage
+- **API Failures**: Graceful handling of external API errors
+- **Network Issues**: Retry logic and fallback mechanisms
+- **Data Validation**: Zod schema validation for all external data
+- **Type Safety**: Strict TypeScript checking with `exactOptionalPropertyTypes: true`
+
+## 🔍 Debugging Tests
 
 ### Common Issues
 
-1. **API Connection Failures**
-   - Check API keys in `.env` file
-   - Verify network connectivity
-   - Ensure API endpoints are accessible
+#### 1. API Key Errors
+```
+Error: Failed to fetch digest: Request failed with status code 401
+```
+**Solution**: Ensure all required API keys are set in environment variables.
 
-2. **Data Validation Errors**
-   - Check if API response format has changed
-   - Verify TypeScript types match actual data
-   - Ensure all required fields are present
+#### 2. Network Timeouts
+```
+Error: Request timeout after 30000ms
+```
+**Solution**: Check network connectivity and API endpoint availability.
 
-3. **Service Integration Issues**
-   - Check that all services are properly initialized
-   - Verify data flow between adapters and services
-   - Ensure proper error handling is in place
+#### 3. Type Errors
+```
+Type 'undefined' is not assignable to type 'string'
+```
+**Solution**: Check TypeScript configuration and ensure `exactOptionalPropertyTypes: true`.
 
 ### Debug Mode
-
-To run tests with more verbose output, you can modify the test files to include additional logging or run with Node.js debug flags:
-
 ```bash
-# Run with debug logging
-DEBUG=* npm run test:services
+# Run tests with verbose output
+./scripts/run-tests.sh --verbose
 
-# Run with additional console output
-NODE_ENV=development npm run test:services
+# Run individual test with debug logging
+DEBUG=* npm run test:technical-analysis
 ```
 
-## Continuous Integration
+### Test Logs
+All tests use structured logging with Pino. Logs include:
+- Test progress and status
+- API request/response details
+- Error messages and stack traces
+- Performance metrics
 
-These integration tests are designed to be run in CI/CD pipelines to ensure:
+## 🚀 CI/CD Integration
 
-- API endpoints remain functional
-- Data schemas haven't changed unexpectedly
-- Service integration continues to work
-- Type safety is maintained across updates
-- Error handling works correctly
+### GitHub Actions
+The tests are designed to work in CI/CD environments:
 
-The tests provide comprehensive coverage of the hedge fund system's core functionality and can be used to validate deployments and catch regressions early.
+```yaml
+# .github/workflows/test.yml
+name: Tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: npm ci
+      - run: npm run build
+      - run: npm test  # CI tests (no API keys required)
+      # Full tests run only on main branch with secrets
+      - run: npm run test:all
+        if: github.ref == 'refs/heads/main'
+        env:
+          TECHNICAL_INDICATORS_API_KEY: ${{ secrets.TECHNICAL_INDICATORS_API_KEY }}
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
+          # ... other API keys
+```
+
+### Environment Variables in CI
+- **CI Tests**: No environment variables required
+- **Full Tests**: All API keys must be set as GitHub secrets
+
+## 📈 Performance Testing
+
+### Test Performance Metrics
+- **CI Tests**: ~5-10 seconds
+- **Full Integration Tests**: ~30-60 seconds (depending on API response times)
+- **Individual Tests**: ~5-15 seconds each
+
+### Performance Monitoring
+Tests include performance metrics:
+- API response times
+- Data processing speed
+- Memory usage
+- Error rates
+
+## 🔧 Customizing Tests
+
+### Adding New Tests
+1. Create test file in `src/tests/`
+2. Follow naming convention: `*-integration.ts`
+3. Add to package.json scripts
+4. Update `scripts/run-tests.sh` if needed
+5. Add to documentation
+
+### Test Structure
+```typescript
+async function testFeature() {
+    console.log('🧪 Testing Feature...');
+    
+    try {
+        // Test implementation
+        console.log('✅ Feature test passed');
+    } catch (error) {
+        console.error('❌ Feature test failed:', error);
+        throw error;
+    }
+}
+
+async function main() {
+    console.log('🚀 Starting Feature Tests');
+    
+    try {
+        await testFeature();
+        console.log('🎉 All Feature Tests Passed!');
+    } catch (error) {
+        console.error('❌ Feature Tests Failed!');
+        process.exit(1);
+    }
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+    main().catch(console.error);
+}
+```
+
+## 📚 Additional Resources
+
+- **[Technical Analysis Guide](docs/TECHNICAL_INDICATORS.md)**
+- **[News API Guide](docs/NEWS_API.md)**
+- **[Aspis Setup Guide](docs/ASPIS_SETUP.md)**
+- **[Database Schema](docs/DATABASE_SCHEMA.md)**
+- **[Decision Process](docs/DECISION_PROCESS.md)**
+
+---
+
+**Built with ❤️ for reliable crypto trading systems**

@@ -6,6 +6,15 @@ export * from './technical-analysis.js';
 // Re-export news types
 export * from './news.js';
 
+// Re-export aspis types
+export * from './aspis.js';
+
+// Re-export binance types
+export * from './binance.js';
+
+// Re-export telegram types
+export * from './telegram.js';
+
 // ===== Market Data Types =====
 export const CandleSchema = z.object({
   symbol: z.string(),
