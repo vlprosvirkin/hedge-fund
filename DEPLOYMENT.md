@@ -10,16 +10,15 @@
 
 ### 1. Setup Environment
 
-Create `.env` file with your configuration:
+Create `.env` file with your configuration. Docker Compose will automatically load all variables from this file:
 
 ```bash
 # Database (AWS RDS)
-DB_HOST=dbhost
-DB_PORT=port
-DB_NAME=postgres
+DB_HOST=your-rds-host.amazonaws.com
+DB_PORT=5432
+DB_NAME=hedge_fund
 DB_USER=postgres
-DB_PASSWORD=password
-DB_SSL=true
+DB_PASSWORD=your_secure_password
 
 # Port (optional, defaults to 4500)
 PORT=4500
@@ -28,7 +27,7 @@ PORT=4500
 BINANCE_API_KEY=your_binance_api_key
 BINANCE_SECRET_KEY=your_binance_secret_key
 ASPIS_API_KEY=your_aspis_api_key
-ASPIS_VAULT_ADDRESS=your_vault_address
+ASPIS_VAULT_ADDRESS=0x8898DB79ecB10be8F66C48e1F9bbD1DEFEAa3354
 OPENAI_API_KEY=your_openai_api_key
 NEWS_API_KEY=your_news_api_key
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
@@ -36,9 +35,27 @@ TELEGRAM_CHAT_ID=your_telegram_chat_id
 
 # External APIs
 TECHNICAL_INDICATORS_URL=http://63.176.129.185:8000
+NEWS_API_URL=http://3.79.47.238:4500
+
+# System Configuration
+RISK_PROFILE=neutral
+DEBATE_INTERVAL=3600
+MAX_POSITIONS=8
+KILL_SWITCH_ENABLED=true
 ```
 
-### 2. Deploy Application
+**Note**: Docker Compose uses `env_file: - .env` to automatically load all variables from the `.env` file. No need to manually specify each variable in the docker-compose.yml.
+
+### 2. Verify Configuration
+
+```bash
+# Check if Docker Compose can read the .env file
+docker-compose config
+
+# This should show all environment variables loaded from .env
+```
+
+### 3. Deploy Application
 
 ```bash
 # Build and start the application
@@ -87,8 +104,12 @@ docker-compose down
 # Check logs for errors
 docker-compose logs
 
-# Verify environment variables
+# Verify environment variables are loaded
 docker-compose config
+
+# Check if .env file exists and is readable
+ls -la .env
+cat .env | grep -E "(ASPIS_|BINANCE_|OPENAI_)"
 ```
 
 ### Database connection issues

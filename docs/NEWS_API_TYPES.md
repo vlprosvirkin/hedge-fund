@@ -1,92 +1,112 @@
-# News API Types Documentation
+# 📰 News API Types
 
-This document describes the TypeScript types and Zod schemas used for the News API integration.
+This document provides comprehensive type definitions for the News and Sentiment Analysis system in the Hedge Fund MVP.
 
-## Overview
+## 📁 File Structure
 
-The News API types are defined in `src/types/news.ts` and provide type safety for:
-- News article data structures
-- API response formats
-- Sentiment analysis results
-- Caching mechanisms
+The news types are organized in the following files:
 
-## Core Types
+- **`src/types/news.ts`** - Core news and sentiment analysis types
+- **`src/types/index.ts`** - Re-exports and core system types
+- **`src/types/telegram.ts`** - Telegram notification types
 
-### DigestItem
+## 🔧 Core News Types
 
-Represents a single news article in the digest format.
+### API Response Types
 
+#### DigestItem
 ```typescript
-interface DigestItem {
-  id: string;                    // Unique article identifier
-  title: string;                 // Article headline
-  description: string;           // Article summary
-  significance: string;          // Market significance description
-  implications: string;          // Trading implications
-  assets: string[];             // Related cryptocurrency assets
-  source: string;               // News source (e.g., "CoinDesk")
-  url: string;                  // Article URL
-  created_at: Date;             // Publication timestamp
-  updated_at: Date;             // Last update timestamp
+export interface DigestItem {
+  id: string;
+  title: string;
+  description: string;
+  significance: string;
+  implications: string;
+  assets: string[];
+  source: string;
+  url: string;
+  created_at: Date;
+  updated_at: Date;
 }
 ```
 
-### DigestResponse
-
-Container for multiple news articles.
-
+#### DigestResponse
 ```typescript
-interface DigestResponse {
-  items: DigestItem[];          // Array of news articles
-  count: number;                // Total number of articles
-  timestamp: Date;              // Response timestamp
+export interface DigestResponse {
+  items: DigestItem[];
+  count: number;
+  timestamp: Date;
 }
 ```
 
-### NewsItem
-
-Simplified news item format for internal use.
-
+#### NewsSupportedTokensResponse
 ```typescript
-interface NewsItem {
-  id: string;                   // Unique identifier
-  title: string;                // Article title
-  url: string;                  // Article URL
-  source: string;               // News source
-  publishedAt: number;          // Unix timestamp
-  sentiment: number;            // Sentiment score (0.0 - 1.0)
-  description?: string;         // Optional description
-  assets?: string[];            // Optional related assets
-}
-```
-
-### NewsSupportedTokensResponse
-
-Response from the supported tokens endpoint.
-
-```typescript
-interface NewsSupportedTokensResponse {
-  primary_assets: Array<{       // Main cryptocurrency assets
-    text: string;               // Asset symbol (e.g., "BTC")
-    callback_data: string;      // Internal callback identifier
+export interface NewsSupportedTokensResponse {
+  primary_assets: Array<{
+    text: string;
+    callback_data: string;
   }>;
-  additional_assets: Array<{    // Secondary cryptocurrency assets
-    text: string;               // Asset symbol
-    callback_data: string;      // Internal callback identifier
+  additional_assets: Array<{
+    text: string;
+    callback_data: string;
   }>;
-  total_count: number;          // Total number of supported assets
-  primary_count: number;        // Number of primary assets
-  additional_count: number;     // Number of additional assets
-  timestamp: string;            // Response timestamp
+  total_count: number;
+  primary_count: number;
+  additional_count: number;
+  timestamp: string;
 }
 ```
 
-## Zod Schemas
+### News Item Types
+
+#### NewsItem
+```typescript
+export interface NewsItem {
+  id: string;
+  title: string;
+  url: string;
+  source: string;
+  publishedAt: number;
+  sentiment: number; // -1 to 1
+  description?: string;
+  assets?: string[];
+}
+```
+
+### Evidence Types
+
+#### Evidence
+```typescript
+export interface Evidence {
+  id: string;
+  ticker: string;
+  newsItemId: string;
+  relevance: number; // 0 to 1
+  timestamp: number;
+  source: string;
+  quote?: string;
+}
+```
+
+## 🔧 Zod Schemas
+
+### NewsItemSchema
+```typescript
+export const NewsItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  url: z.string(),
+  source: z.string(),
+  publishedAt: z.number(),
+  sentiment: z.number(),
+  description: z.string().optional().or(z.undefined()),
+  assets: z.array(z.string()).optional().or(z.undefined()),
+});
+```
 
 ### DigestItemSchema
-
 ```typescript
-const DigestItemSchema = z.object({
+export const DigestItemSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string(),
@@ -101,162 +121,271 @@ const DigestItemSchema = z.object({
 ```
 
 ### DigestResponseSchema
-
 ```typescript
-const DigestResponseSchema = z.object({
+export const DigestResponseSchema = z.object({
   items: z.array(DigestItemSchema),
   count: z.number(),
   timestamp: z.date(),
 });
 ```
 
-### NewsItemSchema
+## 🔌 Integration with Other Type Systems
+
+### Telegram Notification Types
+The news system integrates with Telegram notifications through:
 
 ```typescript
-const NewsItemSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  url: z.string(),
-  source: z.string(),
-  publishedAt: z.number(),
-  sentiment: z.number(),
-  description: z.string().optional(),
-  assets: z.array(z.string()).optional(),
-});
+// From src/types/telegram.ts
+export interface TradingAlert {
+  type: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  message: string;
+  timestamp: number;
+  data?: any;
+}
+
+export interface ConsensusReport {
+  roundId: string;
+  timestamp: number;
+  recommendations: Array<{
+    ticker: string;
+    confidence: number;
+    recommendation: 'BUY' | 'SELL' | 'HOLD';
+    reasoning: string;
+  }>;
+  conflicts: Array<{
+    ticker: string;
+    conflictType: string;
+    description: string;
+  }>;
+}
 ```
 
-### NewsSupportedTokensResponseSchema
+### Agent Integration Types
+News data integrates with the multi-agent system:
 
 ```typescript
-const NewsSupportedTokensResponseSchema = z.object({
-  primary_assets: z.array(z.object({
-    text: z.string(),
-    callback_data: z.string(),
-  })),
-  additional_assets: z.array(z.object({
-    text: z.string(),
-    callback_data: z.string(),
-  })),
-  total_count: z.number(),
-  primary_count: z.number(),
-  additional_count: z.number(),
-  timestamp: z.string(),
-});
+// From src/types/index.ts
+export interface Claim {
+  id: string;
+  ticker: string;
+  agentRole: 'fundamental' | 'sentiment' | 'valuation';
+  claim: string;
+  confidence: number; // 0 to 1
+  evidence: string[]; // Evidence IDs
+  timestamp: number;
+  riskFlags?: string[];
+}
 ```
 
-## Usage Examples
+## 🛠️ Usage Examples
 
-### Fetching News Digest
-
+### Working with News Data
 ```typescript
-import { NewsAPIAdapter } from '../adapters/news-adapter.js';
-import type { DigestResponse } from '../types/index.js';
+import { 
+  NewsAnalysisService,
+  type NewsItem,
+  type DigestItem 
+} from '../types/index.js';
 
-const adapter = new NewsAPIAdapter();
-await adapter.connect();
+const newsAnalysis = new NewsAnalysisService();
 
-const digest: DigestResponse = await adapter.getDigest();
-console.log(`Found ${digest.count} news articles`);
+// Convert digest items to news items
+const digestItems: DigestItem[] = [
+  {
+    id: '1',
+    title: 'Bitcoin reaches new highs',
+    description: 'Bitcoin has reached new all-time highs',
+    significance: 'High',
+    implications: 'Positive for crypto market',
+    assets: ['BTC'],
+    source: 'test.com',
+    url: 'https://test.com/1',
+    created_at: new Date(),
+    updated_at: new Date()
+  }
+];
+
+const newsItems: NewsItem[] = newsAnalysis.convertDigestToNewsItems(digestItems);
+console.log(`Converted ${newsItems.length} news items`);
 ```
 
-### Getting Asset-Specific News
-
+### Sentiment Analysis
 ```typescript
-import type { NewsItem } from '../types/index.js';
+import { NewsAnalysisService } from '../services/news-analysis.service.js';
 
-const btcNews: NewsItem[] = await adapter.search('Bitcoin', 10);
-btcNews.forEach(news => {
-  console.log(`${news.title} - Sentiment: ${news.sentiment}`);
-});
+const newsAnalysis = new NewsAnalysisService();
+
+// Calculate sentiment from significance and implications
+const sentiment = newsAnalysis.calculateSentiment('High', 'Positive for crypto market');
+console.log(`Sentiment score: ${sentiment.toFixed(2)}`);
+
+// Filter news by asset
+const btcNews = newsAnalysis.filterNewsByAsset(newsItems, 'BTC');
+console.log(`Found ${btcNews.length} BTC-related news items`);
 ```
 
-### Working with Supported Tokens
-
+### News API Integration
 ```typescript
-import type { NewsSupportedTokensResponse } from '../types/index.js';
+import { 
+  NewsAPIAdapter,
+  type DigestResponse,
+  type NewsItem 
+} from '../types/index.js';
 
-const tokens: NewsSupportedTokensResponse = await adapter.getSupportedTokens();
-console.log(`Supported assets: ${tokens.total_count}`);
-console.log(`Primary: ${tokens.primary_assets.map(a => a.text).join(', ')}`);
+const newsAdapter = new NewsAPIAdapter();
+
+// Get general news digest
+const digest: DigestResponse = await newsAdapter.getDigest();
+console.log(`Retrieved ${digest.items.length} news items`);
+
+// Search for specific news
+const now = Date.now();
+const searchResults: NewsItem[] = await newsAdapter.search('Bitcoin', now - 3600000, now);
+console.log(`Found ${searchResults.length} Bitcoin news items`);
 ```
 
-## Sentiment Analysis
+## 🔍 Type Safety Features
 
-The News API includes automatic sentiment analysis that returns scores between 0.0 and 1.0:
-
-- **0.0 - 0.3**: Negative sentiment
-- **0.3 - 0.7**: Neutral sentiment  
-- **0.7 - 1.0**: Positive sentiment
-
-Sentiment is calculated based on keywords in the article's significance and implications fields.
-
-## Caching
-
-The News API adapter implements in-memory caching with configurable TTL:
-
-- **Digest data**: 5 minutes cache
-- **Supported tokens**: 1 hour cache
-- **Asset-specific news**: 5 minutes cache
-
-## Error Handling
-
-All API calls include fallback mechanisms:
-
-1. **Network errors**: Return mock data
-2. **Authentication errors**: Use fallback token lists
-3. **Rate limiting**: Implement exponential backoff
-4. **Invalid responses**: Validate with Zod schemas
-
-## Integration with Other Systems
-
-### Technical Analysis Integration
-
-News data is integrated with technical analysis to provide comprehensive market insights:
+### Strict TypeScript Configuration
+The project uses strict TypeScript settings with `exactOptionalPropertyTypes: true`:
 
 ```typescript
-const comprehensiveAnalysis = {
-  technical: technicalData,
-  metadata: assetMetadata,
-  news: newsResults,           // NewsItem[] from News API
-  signalStrength: sentimentScore,
-  recommendation: 'BUY' | 'HOLD' | 'SELL'
+// This ensures optional properties are explicitly undefined or present
+const newsItem: NewsItem = {
+  id: '1',
+  title: 'Test News',
+  url: 'https://test.com',
+  source: 'test',
+  publishedAt: Date.now(),
+  sentiment: 0.5,
+  // description and assets are explicitly optional
+  description: undefined, // Must be explicitly undefined
+  assets: undefined       // Must be explicitly undefined
 };
 ```
 
-### Agent System Integration
-
-News data flows to the agent system for sentiment analysis:
+### Zod Schema Validation
+All external API responses are validated using Zod schemas:
 
 ```typescript
-const sentimentClaim: Claim = {
-  id: 'sentiment-claim-1',
-  ticker: 'BTC',
-  agentRole: 'sentiment',
-  claim: `News sentiment for BTC is ${averageSentiment}`,
-  confidence: averageSentiment,
-  evidence: newsArticles.map(article => ({
-    type: 'news_article',
-    source: article.source,
-    content: article.title,
-    sentiment: article.sentiment
-  })),
-  timestamp: Date.now(),
-  riskFlags: []
-};
+import { 
+  DigestResponseSchema,
+  NewsItemSchema 
+} from '../types/news.js';
+
+// Validate API response
+const response = await fetch('/api/news/digest');
+const data = await response.json();
+const validatedDigest = DigestResponseSchema.parse(data);
+
+// Validate individual news items
+const validatedNewsItem = NewsItemSchema.parse(newsItemData);
 ```
 
-## Type Safety Benefits
+## 📊 Sentiment Analysis
 
-1. **Compile-time validation** of API responses
-2. **IntelliSense support** for all news-related operations
-3. **Runtime validation** with Zod schemas
-4. **Consistent data structures** across the application
-5. **Easy refactoring** when API changes occur
+### Sentiment Scoring
+The system uses a sentiment scoring system from -1 to 1:
 
-## Best Practices
+- **-1.0 to -0.3**: Bearish sentiment
+- **-0.3 to 0.3**: Neutral sentiment  
+- **0.3 to 1.0**: Bullish sentiment
 
-1. **Always use typed imports** from `../types/index.js`
-2. **Validate API responses** with Zod schemas
-3. **Handle optional fields** appropriately
-4. **Use sentiment scores** for quantitative analysis
-5. **Implement proper error handling** with fallbacks
+### Sentiment Calculation
+```typescript
+// From NewsAnalysisService
+calculateSentiment(significance: string, implications: string): number {
+  let score = 0.5; // Base neutral score
+  
+  // Significance scoring
+  if (significance.toLowerCase().includes('high')) score += 0.2;
+  if (significance.toLowerCase().includes('low')) score -= 0.2;
+  
+  // Implications scoring
+  if (implications.toLowerCase().includes('positive')) score += 0.3;
+  if (implications.toLowerCase().includes('negative')) score -= 0.3;
+  
+  return Math.max(-1, Math.min(1, score));
+}
+```
+
+## 🔧 News Processing Features
+
+### Asset Filtering
+```typescript
+// Filter news by specific assets
+const btcNews = newsAnalysis.filterNewsByAsset(newsItems, 'BTC');
+const ethNews = newsAnalysis.filterNewsByAsset(newsItems, 'ETH');
+
+// Filter by multiple assets
+const cryptoNews = newsAnalysis.filterNewsByAsset(newsItems, ['BTC', 'ETH', 'SOL']);
+```
+
+### Time-based Filtering
+```typescript
+// Calculate time range for news
+const oneHourAgo = Date.now() - 3600000;
+const oneDayAgo = Date.now() - 86400000;
+
+// Get recent news
+const recentNews = newsItems.filter(item => item.publishedAt > oneHourAgo);
+const dailyNews = newsItems.filter(item => item.publishedAt > oneDayAgo);
+```
+
+### News Merging and Deduplication
+```typescript
+// Merge news from multiple sources
+const mergedNews = newsAnalysis.mergeNewsItems(newsItems1, newsItems2);
+
+// Sort by timestamp
+const sortedNews = newsAnalysis.sortNewsByTimestamp(newsItems);
+
+// Calculate average sentiment
+const avgSentiment = newsAnalysis.calculateAverageSentiment(newsItems);
+```
+
+## 📚 Related Documentation
+
+- **[News API Guide](NEWS_API.md)** - Complete guide to news API integration
+- **[Technical Analysis Types](TECHNICAL_ANALYSIS_TYPES.md)** - Technical indicator types
+- **[Aspis API Methods](ASPIS_API_METHODS.md)** - Trading execution API reference
+- **[Integration Tests](../src/tests/README.md)** - Testing documentation
+
+## 🔧 Development
+
+### Adding New News Sources
+1. Add source-specific types to `src/types/news.ts`
+2. Create Zod schemas for validation
+3. Update `NewsAnalysisService` with processing logic
+4. Add integration tests
+5. Update documentation
+
+### Type Migration
+When migrating from inline types to dedicated type files:
+
+1. **Create type file**: `src/types/news.ts`
+2. **Define Zod schemas**: For runtime validation
+3. **Export types**: Using `z.infer<typeof Schema>`
+4. **Update imports**: In consuming files
+5. **Update index**: Add re-export in `src/types/index.ts`
+
+### Error Handling
+The news system includes comprehensive error handling:
+
+```typescript
+try {
+  const digest = await newsAdapter.getDigest();
+  // Process digest
+} catch (error) {
+  if (error instanceof Error) {
+    console.error('News API error:', error.message);
+    // Handle specific error types
+  }
+  // Fallback to cached data or throw
+}
+```
+
+---
+
+**Built with ❤️ for comprehensive news analysis**

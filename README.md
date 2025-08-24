@@ -18,6 +18,7 @@ This system implements a complete crypto trading pipeline with:
 
 - **[Technical Analysis Types](docs/TECHNICAL_ANALYSIS_TYPES.md)** - Complete type definitions for technical indicators
 - **[News API Types](docs/NEWS_API_TYPES.md)** - Type definitions for news and sentiment analysis
+- **[API Types](docs/API_TYPES.md)** - Complete type definitions for all external APIs (Aspis, Binance, Telegram)
 - **[Aspis API Methods](docs/ASPIS_API_METHODS.md)** - Trading execution API reference
 - **[Database Schema](docs/DATABASE_SCHEMA.md)** - PostgreSQL schema and storage architecture
 - **[Decision Process](docs/DECISION_PROCESS.md)** - Complete decision-making process and Telegram integration
@@ -177,7 +178,8 @@ Create a `.env` file with the variables as in env.example:
 1. Visit [https://v2.aspis.finance/create-vault](https://v2.aspis.finance/create-vault)
 2. Select **Agent Fund** option
 3. Complete the vault creation process
-4. Use the provided API key and vault address in your configuration
+4. Use the provided **API key** and **vault address** in your configuration
+5. Both `ASPIS_API_KEY` and `ASPIS_VAULT_ADDRESS` are required environment variables
 
 ### Running the System
 
