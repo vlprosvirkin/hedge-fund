@@ -26,30 +26,46 @@ This system implements a complete crypto trading pipeline with:
 ## 🏗️ Architecture
 
 ```
-┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌─────────────────┐    ┌─────────────┐
-│  Scheduler  │───▶│ Agents       │───▶│ Verifier    │───▶│ Consensus       │───▶│ Execution   │
-│             │    │ Service      │    │             │    │ Engine          │    │ Engine      │
-└─────────────┘    └──────────────┘    └─────────────┘    └─────────────────┘    └─────────────┘
-       │                   │                   │                    │                     │
-       ▼                   ▼                   ▼                    ▼                     ▼
-┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌─────────────────┐    ┌─────────────┐
-│ Market Data │◀───│ News Ingest  │◀───│ Fact Store  │◀───│ Evidence        │◀───│ Orders      │
-│             │    │              │    │             │    │                 │    │             │
-└─────────────┘    └──────────────┘    └─────────────┘    └─────────────────┘    └─────────────┘
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Orchestrator  │───▶│  VaultController│───▶│  AspisAdapter   │───▶│  Aspis Trading  │
+│                 │    │                 │    │                 │    │     API         │
+└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │                       │
+         ▼                       ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Agents Service │    │ TechnicalIndic. │    │  Order Conversion│    │  Real Trading   │
+│                 │    │    Adapter      │    │  (Token→USDT)   │    │  Execution      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │                       │
+         ▼                       ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Consensus      │    │  Price Data     │    │  Portfolio      │    │  Position       │
+│  Engine         │    │  (Real-time)    │    │  Management     │    │  Tracking       │
+└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
+
+### Core Components
+
+1. **Orchestrator** - Main trading pipeline coordinator
+2. **VaultController** - Portfolio management and order conversion
+3. **TechnicalIndicatorsAdapter** - Real-time price and technical data
+4. **AspisAdapter** - Clean trading execution interface
 
 ### Core Services
 
-1. **Market Data Service** (BinanceAdapter)
-   - Live OHLCV data and order books
-   - Market statistics and liquidity metrics
-   - Real-time ticker subscriptions
+1. **VaultController** - Portfolio Management & Order Conversion
+   - Real-time portfolio balance analysis
+   - Token quantity to USDT conversion for Aspis API
+   - Position sizing based on available USDT
+   - Rebalancing calculations and order generation
+   - Integration with TechnicalIndicatorsAdapter for real-time prices
 
 2. **Technical Analysis Service** ([TechnicalIndicatorsAdapter](docs/TECHNICAL_INDICATORS.md))
    - 45+ comprehensive technical indicators (RSI, MACD, Stochastic, Bollinger Bands, etc.)
+   - **Real-time price data** via `/prices` endpoint
+   - **Unified data fetching** via `/all-data` endpoint (stats, indicators, price, news)
    - Signal strength analysis and trading recommendations
    - Asset metadata and market sentiment scoring
-   - Real-time price and volume analysis
    - Supported timeframes: 1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w
    - **[View Technical Analysis Types →](docs/TECHNICAL_ANALYSIS_TYPES.md)**
 
@@ -87,6 +103,7 @@ This system implements a complete crypto trading pipeline with:
    - Portfolio metrics tracking (PnL, margin levels, drawdown)
 
 8. **Execution Gateway** ([AspisAdapter](docs/ASPIS_SETUP.md))
+   - **Clean trading interface** - receives USDT amounts from VaultController
    - Professional order placement and management
    - Real-time fill event handling and position tracking
    - Account balance and portfolio metrics monitoring
@@ -151,39 +168,13 @@ docker-compose up --build -d
 
 ### Environment Variables
 
-Create a `.env` file with the following variables:
+Create a `.env` file with the variables as in env.example:
 
 **Note:** For Aspis Trading API, you need to:
 1. Visit [https://v2.aspis.finance/create-vault](https://v2.aspis.finance/create-vault)
 2. Select **Agent Fund** option
 3. Complete the vault creation process
 4. Use the provided API key and vault address in your configuration
-
-```env
-# API Keys
-BINANCE_API_KEY=your_binance_api_key
-BINANCE_SECRET_KEY=your_binance_secret_key
-ASPIS_API_KEY=your_aspis_api_key
-ASPIS_VAULT_ADDRESS=your_vault_address
-OPENAI_API_KEY=your_openai_api_key
-
-# External APIs
-TECHNICAL_INDICATORS_URL=http://63.176.129.185:8000
-NEWS_API_KEY=your_news_api_key
-
-# Database Configuration
-DB_HOST=your_postgres_host
-DB_PORT=5432
-DB_NAME=postgres
-DB_USER=postgres
-DB_PASSWORD=your_db_password
-
-# Configuration
-LOG_LEVEL=info
-RISK_PROFILE=neutral
-DEBATE_INTERVAL=3600
-MAX_POSITIONS=8
-```
 
 ### Running the System
 

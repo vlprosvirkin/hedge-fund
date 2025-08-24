@@ -330,7 +330,7 @@ export class PostgresAdapter implements FactStore {
         `, [
                     item.id,
                     item.title,
-                    item.content || '',
+                    item.description || '',
                     item.url,
                     item.source,
                     new Date(item.publishedAt),

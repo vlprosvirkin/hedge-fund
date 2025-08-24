@@ -45,8 +45,9 @@ export const NewsItemSchema = z.object({
   url: z.string(),
   source: z.string(),
   publishedAt: z.number(),
-  sentiment: z.number().optional(), // -1 to 1
-  content: z.string().optional(),
+  sentiment: z.number(), // -1 to 1
+  description: z.string().optional(),
+  assets: z.array(z.string()).optional(),
 });
 
 export const EvidenceSchema = z.object({

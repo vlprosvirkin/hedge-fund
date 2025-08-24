@@ -1,5 +1,6 @@
 import type { NewsAdapter } from '../interfaces/adapters.js';
 import { API_CONFIG } from '../config.js';
+import { NewsAnalysisService } from '../services/news-analysis.service.js';
 
 import axios from 'axios';
 
@@ -48,11 +49,13 @@ export class NewsAPIAdapter implements NewsAdapter {
     private timeout: number;
     private isConnectedFlag = false;
     private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+    private newsAnalysis: NewsAnalysisService;
 
     constructor(apiKey?: string, baseUrl?: string) {
         this.baseUrl = baseUrl || 'http://3.79.47.238:4500';
         this.apiKey = apiKey || API_CONFIG.news.apiKeys.newsapi || '';
         this.timeout = 30000;
+        this.newsAnalysis = new NewsAnalysisService();
 
         // Debug: Log API key (first 10 chars only)
         if (this.apiKey) {
@@ -132,8 +135,7 @@ export class NewsAPIAdapter implements NewsAdapter {
 
             return data;
         } catch (error: any) {
-            console.warn('Failed to fetch digest, returning mock data:', error.message);
-            return this.getMockDigest();
+            throw new Error(`Failed to fetch digest: ${error.message}`);
         }
     }
 
@@ -197,13 +199,11 @@ export class NewsAPIAdapter implements NewsAdapter {
                     this.setCache(cacheKey, retryData, 300);
                     return retryData;
                 } catch (retryError: any) {
-                    console.warn(`Retry failed for ${asset}, returning mock data:`, retryError.message);
-                    return this.getMockDigestByAsset(asset, limit);
+                    throw new Error(`Retry failed for ${asset}: ${retryError.message}`);
                 }
             }
 
-            console.warn(`Failed to fetch digest for ${asset}, returning mock data:`, error.message);
-            return this.getMockDigestByAsset(asset, limit);
+            throw new Error(`Failed to fetch digest for ${asset}: ${error.message}`);
         }
     }
 
@@ -262,38 +262,15 @@ export class NewsAPIAdapter implements NewsAdapter {
                 const asset = matchingAssets[0].text;
                 const digest = await this.getDigestByAsset(asset, limit);
 
-                return digest.items.map(item => ({
-                    id: item.id,
-                    title: item.title,
-                    url: item.url,
-                    source: item.source,
-                    publishedAt: new Date(item.created_at).getTime(),
-                    sentiment: this.calculateSentiment(item.significance, item.implications),
-                    description: item.description,
-                    assets: item.assets
-                }));
+                return this.newsAnalysis.convertDigestToNewsItems(digest.items) as NewsItem[];
             } else {
                 // Get general digest
                 const digest = await this.getDigest();
 
-                return digest.items
-                    .slice(0, limit)
-                    .map(item => ({
-                        id: item.id,
-                        title: item.title,
-                        url: item.url,
-                        source: item.source,
-                        publishedAt: new Date(item.created_at).getTime(),
-                        sentiment: this.calculateSentiment(item.significance, item.implications),
-                        description: item.description,
-                        assets: item.assets
-                    }));
+                return this.newsAnalysis.convertDigestToNewsItems(digest.items.slice(0, limit)) as NewsItem[];
             }
         } catch (error) {
-            console.warn('Failed to search news, returning mock data:', error);
-            const timeRangeHours = Math.max(1, Math.floor((until - since) / (1000 * 60 * 60)));
-            const limit = Math.min(20, Math.max(5, timeRangeHours));
-            return this.getMockNews(query, limit);
+            throw new Error(`Failed to search news: ${error}`);
         }
     }
 
@@ -307,128 +284,16 @@ export class NewsAPIAdapter implements NewsAdapter {
     async getLatest(limit: number = 10): Promise<NewsItem[]> {
         const digest = await this.getDigest();
 
-        return digest.items
-            .slice(0, limit)
-            .map(item => ({
-                id: item.id,
-                title: item.title,
-                url: item.url,
-                source: item.source,
-                publishedAt: new Date(item.created_at).getTime(),
-                sentiment: this.calculateSentiment(item.significance, item.implications),
-                description: item.description,
-                assets: item.assets
-            }));
+        return this.newsAnalysis.convertDigestToNewsItems(digest.items.slice(0, limit)) as NewsItem[];
     }
 
     // Helper methods
 
-    /**
-     * Calculate sentiment score from significance and implications
-     */
-    private calculateSentiment(significance: string, implications: string): number {
-        const text = (significance + ' ' + implications).toLowerCase();
 
-        // Simple sentiment analysis based on keywords
-        const positiveWords = ['bullish', 'positive', 'growth', 'increase', 'surge', 'rally', 'gain', 'up', 'rise', 'strong'];
-        const negativeWords = ['bearish', 'negative', 'decline', 'decrease', 'drop', 'fall', 'crash', 'loss', 'down', 'weak'];
 
-        let positiveCount = 0;
-        let negativeCount = 0;
 
-        positiveWords.forEach(word => {
-            if (text.includes(word)) positiveCount++;
-        });
 
-        negativeWords.forEach(word => {
-            if (text.includes(word)) negativeCount++;
-        });
 
-        if (positiveCount > negativeCount) {
-            return 0.6 + (positiveCount - negativeCount) * 0.1;
-        } else if (negativeCount > positiveCount) {
-            return 0.4 - (negativeCount - positiveCount) * 0.1;
-        } else {
-            return 0.5; // Neutral
-        }
-    }
-
-    /**
-     * Get mock digest for development/fallback
-     */
-    private getMockDigest(): DigestResponse {
-        return {
-            items: [
-                {
-                    id: 'mock-1',
-                    title: 'Bitcoin Reaches New All-Time High Amid Institutional Adoption',
-                    description: 'Bitcoin price surges to unprecedented levels as major institutions continue to adopt cryptocurrency.',
-                    significance: 'Major bullish signal for the crypto market',
-                    implications: 'Increased institutional confidence could drive further growth',
-                    assets: ['BTC', 'BTCUSDT'],
-                    source: 'CoinDesk',
-                    url: 'https://example.com/btc-ath',
-                    created_at: new Date(),
-                    updated_at: new Date()
-                },
-                {
-                    id: 'mock-2',
-                    title: 'Ethereum Network Upgrade Shows Promising Results',
-                    description: 'Recent Ethereum network improvements demonstrate significant efficiency gains.',
-                    significance: 'Positive technical development',
-                    implications: 'Could improve network scalability and reduce fees',
-                    assets: ['ETH', 'ETHUSDT'],
-                    source: 'CoinTelegraph',
-                    url: 'https://example.com/eth-upgrade',
-                    created_at: new Date(),
-                    updated_at: new Date()
-                }
-            ],
-            count: 2,
-            timestamp: new Date()
-        };
-    }
-
-    /**
-     * Get mock digest by asset
-     */
-    private getMockDigestByAsset(asset: string, limit: number): DigestResponse {
-        const mockDigest = this.getMockDigest();
-
-        // Filter items that mention the asset
-        const filteredItems = mockDigest.items
-            .filter(item =>
-                item.assets.some(a => a.toLowerCase().includes(asset.toLowerCase())) ||
-                item.title.toLowerCase().includes(asset.toLowerCase())
-            )
-            .slice(0, limit);
-
-        return {
-            ...mockDigest,
-            items: filteredItems,
-            count: filteredItems.length
-        };
-    }
-
-    /**
-     * Get mock news items
-     */
-    private getMockNews(query: string, limit: number): NewsItem[] {
-        const mockDigest = this.getMockDigest();
-
-        return mockDigest.items
-            .slice(0, limit)
-            .map(item => ({
-                id: item.id,
-                title: item.title,
-                url: item.url,
-                source: item.source,
-                publishedAt: new Date(item.created_at).getTime(),
-                sentiment: this.calculateSentiment(item.significance, item.implications),
-                description: item.description,
-                assets: item.assets
-            }));
-    }
 
     /**
      * Get fallback supported tokens
@@ -467,18 +332,9 @@ export class NewsAPIAdapter implements NewsAdapter {
                 const asset = ticker;
                 const digest = await this.getDigestByAsset(asset, Math.ceil(limit / tickers.length));
 
-                const newsItems = digest.items.map(item => ({
-                    id: item.id,
-                    title: item.title,
-                    url: item.url,
-                    source: item.source,
-                    publishedAt: new Date(item.created_at).getTime(),
-                    sentiment: this.calculateSentiment(item.significance, item.implications),
-                    description: item.description,
-                    assets: item.assets
-                }));
+                const newsItems = this.newsAnalysis.convertDigestToNewsItems(digest.items);
 
-                allNews.push(...newsItems);
+                allNews.push(...(newsItems as NewsItem[]));
             } catch (error) {
                 console.warn(`Failed to get news for ${ticker}:`, error);
             }

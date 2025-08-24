@@ -70,7 +70,15 @@ async function servicesIntegrationTest() {
         try {
             technicalData = await technicalAdapter.getTechnicalIndicators(testAsset, '1d');
             assetMetadata = await technicalAdapter.getAssetMetadata(testAsset, '1d');
-            comprehensiveAnalysis = await technicalAdapter.getComprehensiveAnalysis(testAsset, '1d');
+            // Get technical data and create comprehensive analysis
+            const [technical, metadata, news] = await Promise.all([
+              technicalAdapter.getTechnicalIndicators(testAsset, '1d'),
+              technicalAdapter.getAssetMetadata(testAsset, '1d'),
+              technicalAdapter.getNews(testAsset)
+            ]);
+            
+            const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService();
+            comprehensiveAnalysis = technicalAnalysis.createComprehensiveAnalysis(technical, metadata, news);
 
             console.log('✅ Technical data retrieved successfully');
             console.log(`   RSI: ${technicalData.RSI?.toFixed(2) || 'N/A'}`);
@@ -129,7 +137,7 @@ async function servicesIntegrationTest() {
                     source: 'MockNews',
                     publishedAt: Date.now() - 3600000,
                     sentiment: 0.75,
-                    content: 'Mock news description',
+                    description: 'Mock news description',
 
                 }
             ];

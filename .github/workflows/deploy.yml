@@ -59,7 +59,7 @@ jobs:
         host: ${{ secrets.AWS_HOST }}
         username: ${{ secrets.AWS_USERNAME }}
         key: ${{ secrets.AWS_SSH_KEY }}
-        port: 4500
+        port: 22
         script: |
           cd /home/ubuntu/hedge-fund
           git pull origin main

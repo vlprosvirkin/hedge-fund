@@ -62,16 +62,8 @@ export class AgentsService implements LLMService {
       const systemPrompt = this.buildSystemPrompt(role, context);
       const userPrompt = this.buildUserPrompt(role, context);
 
-      // Mock LLM response for now
-      const mockClaims = await this.generateMockClaims(role, context);
-
-      for (const claim of mockClaims) {
-        if (this.validateClaim(claim)) {
-          claims.push(claim as Claim);
-        } else {
-          errors.push(`Invalid claim format for ${claim.ticker}`);
-        }
-      }
+      // TODO: Implement real LLM integration
+      throw new Error('LLM integration not implemented yet');
     } catch (error) {
       errors.push(`Failed to run role ${role}: ${error}`);
     }
@@ -142,89 +134,7 @@ ${context.facts.map((fact: any) =>
 Generate claims for the most promising tickers based on ${role} analysis.`;
   }
 
-  private async generateMockClaims(
-    role: 'fundamental' | 'sentiment' | 'valuation',
-    context: any
-  ): Promise<any[]> {
-    const claims = [];
-    const timestamp = context.timestamp;
 
-    // Generate claims for top 3 tickers
-    const topTickers = context.universe.slice(0, 3);
-
-    for (const ticker of topTickers) {
-      const evidence = context.facts
-        .filter((f: any) => f.ticker === ticker)
-        .map((f: any) => f.id)
-        .slice(0, 2);
-
-      let claimText: string;
-      let confidence: number;
-
-      // Generate claims based on role with real data
-      switch (role) {
-        case 'fundamental':
-          const fundamentalData = await this.getFundamentalData(ticker);
-          claimText = this.generateFundamentalClaim(ticker, fundamentalData);
-          confidence = this.calculateFundamentalConfidence(fundamentalData);
-          break;
-
-        case 'sentiment':
-          const newsData = await this.getNewsData(ticker, 10);
-          claimText = this.generateSentimentClaim(ticker, newsData);
-          confidence = this.calculateSentimentConfidence(newsData);
-          break;
-
-        case 'valuation':
-          const technicalData = await this.getTechnicalAnalysis(ticker);
-          claimText = await this.generateValuationClaim(ticker);
-          confidence = this.calculateValuationConfidence(technicalData);
-          break;
-
-        default:
-          claimText = this.generateMockClaim(role, ticker);
-          confidence = 0.7 + Math.random() * 0.3;
-      }
-
-      const claim = {
-        id: uuidv4(),
-        ticker,
-        agentRole: role,
-        claim: claimText,
-        confidence,
-        evidence,
-        timestamp,
-        riskFlags: this.calculateRiskFlags(ticker, role)
-      };
-
-      claims.push(claim);
-    }
-
-    return claims;
-  }
-
-  private generateMockClaim(role: string, ticker: string): string {
-    const claims = {
-      fundamental: [
-        `Strong on-chain metrics for ${ticker} with increasing active addresses`,
-        `Network hash rate showing bullish divergence for ${ticker}`,
-        `Institutional adoption accelerating for ${ticker} based on wallet analysis`
-      ],
-      sentiment: [
-        `Positive social sentiment trending for ${ticker} across major platforms`,
-        `News sentiment score improving for ${ticker} in last 24h`,
-        `Reddit/Twitter buzz increasing for ${ticker} with positive sentiment`
-      ],
-      valuation: [
-        `Price-to-NVT ratio indicates undervaluation for ${ticker}`,
-        `MVRV ratio suggests ${ticker} is oversold relative to fundamentals`,
-        `Risk-adjusted return metrics favor ${ticker} in current market`
-      ]
-    };
-
-    const roleClaims = claims[role as keyof typeof claims] || claims.fundamental;
-    return roleClaims[Math.floor(Math.random() * roleClaims.length)] || 'No claim available';
-  }
 
   /**
    * Get technical analysis for valuation agent (using real API)
@@ -245,7 +155,16 @@ Generate claims for the most promising tickers based on ${role} analysis.`;
       const asset = ticker;
 
       // Get comprehensive analysis
-      const analysis = await this.technicalIndicators.getComprehensiveAnalysis(asset, timeframe);
+      // Get technical data and create comprehensive analysis
+      const [technical, metadata, news] = await Promise.all([
+        this.technicalIndicators.getTechnicalIndicators(asset, timeframe),
+        this.technicalIndicators.getAssetMetadata(asset, timeframe),
+        this.technicalIndicators.getNews(asset)
+      ]);
+
+      // Create comprehensive analysis using TechnicalAnalysisService
+      const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService();
+      const analysis = technicalAnalysis.createComprehensiveAnalysis(technical, metadata, news);
 
       return {
         rsi: analysis.technical.RSI || 50,
@@ -395,8 +314,8 @@ Generate claims for the most promising tickers based on ${role} analysis.`;
 
       return claims[Math.floor(Math.random() * claims.length)] || 'Technical analysis unavailable';
     } catch (error) {
-      // Fallback to mock claim if technical analysis fails
-      return this.generateMockClaim('valuation', ticker);
+      // Fallback if technical analysis fails
+      throw new Error(`Failed to generate valuation claim for ${ticker}`);
     }
   }
 

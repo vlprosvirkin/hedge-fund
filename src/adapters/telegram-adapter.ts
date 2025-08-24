@@ -50,7 +50,7 @@ export class TelegramAdapter {
     async connect(): Promise<void> {
         try {
             if (!this.botToken || !this.chatId) {
-                console.warn('Telegram bot token or chat ID not configured - running in mock mode');
+                throw new Error('Telegram bot token or chat ID not configured');
                 this.isConnectedFlag = true;
                 return;
             }
@@ -65,8 +65,7 @@ export class TelegramAdapter {
                 throw new Error('Failed to connect to Telegram bot');
             }
         } catch (error) {
-            console.warn('Telegram connection failed, running in mock mode:', error);
-            this.isConnectedFlag = true; // Continue in mock mode
+            throw new Error(`Telegram connection failed: ${error}`);
         }
     }
 
@@ -83,7 +82,8 @@ export class TelegramAdapter {
      */
     async sendMessage(message: TelegramMessage): Promise<void> {
         if (!this.botToken || !this.chatId) {
-            console.log('📱 [TELEGRAM MOCK]', message.text.substring(0, 100) + '...');
+            // TODO: Implement real Telegram message sending
+        throw new Error('Telegram message sending not implemented');
             return;
         }
 

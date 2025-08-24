@@ -461,4 +461,5 @@ export class AspisAdapter implements TradingAdapter {
     const supported = ['BTC', 'ETH', 'ADA', 'DOT', 'LINK'];
     return supported.includes(symbol.toUpperCase());
   }
+
 }

@@ -85,7 +85,7 @@ async function startProductionSystem() {
         validateSymbol: () => Promise.resolve(true),
         validateOrder: () => Promise.resolve({ valid: true, errors: [] }),
         refreshUniverse: () => Promise.resolve()
-      }, // mock universe service
+      }, // TODO: implement universe service
       agents,
       {
         checkLimits: () => Promise.resolve({ ok: true, violations: [] }),
@@ -93,7 +93,7 @@ async function startProductionSystem() {
         updateLimits: () => Promise.resolve(),
         triggerKillSwitch: () => Promise.resolve(),
         isKillSwitchActive: () => false
-      }, // mock risk service
+      }, // TODO: implement risk service
     );
 
     logger.info('✅ Orchestrator created successfully');

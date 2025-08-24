@@ -65,8 +65,7 @@ export class BinanceAdapter implements MarketDataAdapter {
         volume: parseFloat(candle[5])
       }));
     } catch (error) {
-      // Return mock data for development
-      return this.generateMockOHLCV(symbol, timeframe, start, end);
+      throw new Error(`Failed to fetch OHLCV data for ${symbol}: ${error}`);
     }
   }
 
@@ -92,8 +91,7 @@ export class BinanceAdapter implements MarketDataAdapter {
         ])
       };
     } catch (error) {
-      // Return mock data for development
-      return this.generateMockOrderBook(symbol);
+      throw new Error(`Failed to fetch order book for ${symbol}: ${error}`);
     }
   }
 
@@ -124,8 +122,7 @@ export class BinanceAdapter implements MarketDataAdapter {
         maxQty: parseFloat(lotSizeFilter?.maxQty || '1000000')
       };
     } catch (error) {
-      // Return mock data for development
-      return this.generateMockMarketStats(symbol);
+      throw new Error(`Failed to fetch market stats for ${symbol}: ${error}`);
     }
   }
 
@@ -162,66 +159,7 @@ export class BinanceAdapter implements MarketDataAdapter {
     return ((ask - bid) / bid) * 100;
   }
 
-  // Mock data generators for development
-  private generateMockOHLCV(
-    symbol: string,
-    timeframe: string,
-    start: number,
-    end: number
-  ): Candle[] {
-    const candles: Candle[] = [];
-    const interval = this.getIntervalMs(timeframe);
-    let current = start;
 
-    while (current < end) {
-      const basePrice = 50000 + Math.random() * 10000;
-      const volatility = 0.02;
-
-      candles.push({
-        symbol: symbol.toUpperCase(),
-        timestamp: current,
-        open: basePrice,
-        high: basePrice * (1 + Math.random() * volatility),
-        low: basePrice * (1 - Math.random() * volatility),
-        close: basePrice * (1 + (Math.random() - 0.5) * volatility),
-        volume: 1000 + Math.random() * 5000
-      });
-
-      current += interval;
-    }
-
-    return candles;
-  }
-
-  private generateMockOrderBook(symbol: string): OrderBook {
-    const basePrice = 50000 + Math.random() * 10000;
-    const bids: [number, number][] = [];
-    const asks: [number, number][] = [];
-
-    for (let i = 0; i < 10; i++) {
-      bids.push([basePrice - i * 10, 1 + Math.random() * 5]);
-      asks.push([basePrice + i * 10, 1 + Math.random() * 5]);
-    }
-
-    return {
-      symbol: symbol.toUpperCase(),
-      timestamp: Date.now(),
-      bids,
-      asks
-    };
-  }
-
-  private generateMockMarketStats(symbol: string): MarketStats {
-    return {
-      symbol: symbol.toUpperCase(),
-      volume24h: 1000000 + Math.random() * 5000000,
-      spread: 0.1 + Math.random() * 0.2,
-      tickSize: 0.01,
-      stepSize: 0.00001,
-      minQty: 0.00001,
-      maxQty: 1000000
-    };
-  }
 
   private getIntervalMs(timeframe: string): number {
     const mapping: Record<string, number> = {

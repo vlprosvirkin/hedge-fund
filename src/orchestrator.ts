@@ -21,6 +21,7 @@ import { AgentsService } from './services/agents.js';
 import { VerifierService } from './services/verifier.js';
 import { ConsensusService } from './services/consensus.js';
 import { TelegramAdapter } from './adapters/telegram-adapter.js';
+import { VaultController } from './controllers/vault.controller.js';
 import { v4 as uuidv4 } from 'uuid';
 import pino from 'pino';
 
@@ -30,6 +31,7 @@ export class HedgeFundOrchestrator {
   private isRunning = false;
   private killSwitchActive = false;
   private telegram: TelegramAdapter;
+  private vaultController: VaultController;
 
   constructor(
     private config: SystemConfig,
@@ -53,6 +55,7 @@ export class HedgeFundOrchestrator {
     });
     this.roundId = uuidv4();
     this.telegram = telegram || new TelegramAdapter();
+    this.vaultController = new VaultController(this.trading, this.marketData);
   }
 
   async start(): Promise<void> {
@@ -301,19 +304,34 @@ export class HedgeFundOrchestrator {
     const maxPositions = this.getMaxPositionsByRisk(riskProfile);
     const topConsensus = consensus.slice(0, maxPositions);
 
+    this.logger.info('🎯 Building target weights', {
+      riskProfile,
+      maxPositions,
+      totalConsensus: consensus.length,
+      topConsensus: topConsensus.map(c => ({ ticker: c.ticker, avgConfidence: c.avgConfidence, finalScore: c.finalScore }))
+    });
+
     if (topConsensus.length === 0) {
+      this.logger.warn('⚠️ No consensus recommendations found');
       return [];
     }
 
     // Equal weight distribution
     const weightPerPosition = 1 / topConsensus.length;
 
-    return topConsensus.map(rec => ({
+    const targetWeights = topConsensus.map(rec => ({
       symbol: rec.ticker,
       weight: weightPerPosition,
       quantity: 0, // Will be calculated during execution
-      side: 'buy' // Default to buy for new positions
+      side: 'buy' as const // Default to buy for new positions
     }));
+
+    this.logger.info('📊 Target weights calculated', {
+      weightPerPosition,
+      targetWeights: targetWeights.map(tw => ({ symbol: tw.symbol, weight: tw.weight }))
+    });
+
+    return targetWeights;
   }
 
   private getMaxPositionsByRisk(riskProfile: string): number {
@@ -329,60 +347,45 @@ export class HedgeFundOrchestrator {
     targetWeights: TargetWeight[],
     currentPositions: Position[]
   ): Promise<any[]> {
-    const orders = [];
+    try {
+      // Get available USDT balance
+      const accountInfo = await (this.trading as any).getAccountInfo();
+      const availableUsdt = accountInfo.balances.find((b: any) => b.asset === 'USDT')?.free || 0;
 
-    for (const target of targetWeights) {
-      const currentPosition = currentPositions.find(p => p.symbol === target.symbol);
+      this.logger.info('💰 Available USDT for trading', { availableUsdt });
 
-      if (!currentPosition) {
-        // New position - buy
-        const orderId = await this.trading.placeOrder({
-          symbol: target.symbol,
-          side: 'buy',
-          quantity: this.calculateQuantity(target.weight, target.symbol),
-          type: 'market'
-        });
+      // Calculate rebalancing orders using VaultController
+      const rebalancingOrders = await this.vaultController.calculateRebalancingOrders(
+        targetWeights.map(tw => ({ symbol: tw.symbol, weight: tw.weight })),
+        availableUsdt
+      );
 
-        const order = await this.trading.getOrder(orderId);
-        if (order) orders.push(order);
-      } else {
-        // Existing position - check if rebalancing needed
-        const currentWeight = this.calculateCurrentWeight(currentPosition, currentPositions);
-        const weightDiff = target.weight - currentWeight;
+      this.logger.info('📊 Rebalancing orders calculated', {
+        totalOrders: rebalancingOrders.length,
+        orders: rebalancingOrders.map(o => ({
+          symbol: o.symbol,
+          side: o.side,
+          quantity: o.quantity,
+          usdtAmount: o.usdtAmount
+        }))
+      });
 
-        if (Math.abs(weightDiff) > 0.05) { // 5% threshold
-          const side = weightDiff > 0 ? 'buy' : 'sell';
-          const quantity = Math.abs(this.calculateQuantity(Math.abs(weightDiff), target.symbol));
+      // Execute rebalancing orders
+      const orderIds = await this.vaultController.executeRebalancing(rebalancingOrders);
 
-          const orderId = await this.trading.placeOrder({
-            symbol: target.symbol,
-            side,
-            quantity,
-            type: 'market'
-          });
+      this.logger.info('✅ Trade execution completed', {
+        totalOrders: orderIds.length,
+        orderIds
+      });
 
-          const order = await this.trading.getOrder(orderId);
-          if (order) orders.push(order);
-        }
-      }
+      return orderIds;
+    } catch (error) {
+      this.logger.error('Failed to execute trades:', error);
+      throw error;
     }
-
-    return orders;
   }
 
-  private calculateQuantity(weight: number, symbol: string): number {
-    // Mock calculation - in real implementation would use portfolio value and current price
-    const baseQuantities: Record<string, number> = {
-      'BTC': 0.01,
-      'ETH': 0.1,
-      'ADA': 1000,
-      'DOT': 10,
-      'LINK': 50
-    };
 
-    const baseQty = baseQuantities[symbol] || 1;
-    return baseQty * weight * 10; // Scale by weight
-  }
 
   private calculateCurrentWeight(position: Position, allPositions: Position[]): number {
     const totalValue = allPositions.reduce((sum, p) => sum + Math.abs(p.quantity * p.avgPrice), 0);

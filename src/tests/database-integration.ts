@@ -36,7 +36,7 @@ async function databaseIntegrationTest() {
             {
                 id: uuidv4(),
                 title: 'Bitcoin Reaches New All-Time High',
-                content: 'Bitcoin has reached a new all-time high of $50,000, driven by institutional adoption.',
+                description: 'Bitcoin has reached a new all-time high of $50,000, driven by institutional adoption.',
                 url: 'https://example.com/bitcoin-news-1',
                 source: 'coindesk.com',
                 publishedAt: Date.now() - 3600000, // 1 hour ago
@@ -45,7 +45,7 @@ async function databaseIntegrationTest() {
             {
                 id: uuidv4(),
                 title: 'Ethereum 2.0 Update Progress',
-                content: 'Ethereum 2.0 development continues with promising results from testnet.',
+                description: 'Ethereum 2.0 development continues with promising results from testnet.',
                 url: 'https://example.com/ethereum-news-1',
                 source: 'cointelegraph.com',
                 publishedAt: Date.now() - 7200000, // 2 hours ago

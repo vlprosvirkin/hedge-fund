@@ -43,8 +43,8 @@ export const NewsItemSchema = z.object({
   source: z.string(),
   publishedAt: z.number(),
   sentiment: z.number(),
-  description: z.string().optional(),
-  assets: z.array(z.string()).optional(),
+  description: z.string().optional().or(z.undefined()),
+  assets: z.array(z.string()).optional().or(z.undefined()),
 });
 
 // ===== Type Exports =====

@@ -179,7 +179,10 @@ async function technicalAnalysisIntegrationTest() {
 
     // 6. Получение силы сигнала
     console.log(`\n📈 Step 5: Getting signal strength analysis for ${testAsset}...`);
-    const signalStrength: SignalStrength = await adapter.getSignalStrength(`${testAsset}USD`, '1D');
+    // Get technical indicators and calculate signal strength
+    const technicalDataForSignal = await adapter.getTechnicalIndicators(testAsset, '1D');
+    const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService();
+    const signalStrength: SignalStrength = technicalAnalysis.calculateSignalStrength(technicalDataForSignal);
 
     if (signalStrength.strength < -1 || signalStrength.strength > 1) {
       throw new Error('Invalid signal strength value');
@@ -209,7 +212,14 @@ async function technicalAnalysisIntegrationTest() {
 
     // 8. Комплексный анализ
     console.log(`\n🔍 Step 7: Getting comprehensive analysis for ${testAsset}...`);
-    const analysis: ComprehensiveAnalysis = await adapter.getComprehensiveAnalysis(testAsset, '1D');
+    // Get all data and create comprehensive analysis
+    const [technicalForAnalysis, metadataForAnalysis, newsForAnalysis] = await Promise.all([
+      adapter.getTechnicalIndicators(testAsset, '1D'),
+      adapter.getAssetMetadata(testAsset, '1D'),
+      adapter.getNews(testAsset)
+    ]);
+    
+    const analysis: ComprehensiveAnalysis = technicalAnalysis.createComprehensiveAnalysis(technicalForAnalysis, metadataForAnalysis, newsForAnalysis);
 
     console.log('✅ Comprehensive analysis completed');
     console.log(`   Recommendation: ${analysis.recommendation}`);
