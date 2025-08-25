@@ -10,29 +10,38 @@ export class SentimentAgent extends BaseAgent {
   }
 
   async processData(context: AgentContext): Promise<any> {
+    console.log(`🔍 SentimentAgent: Starting processData for universe: ${context.universe.join(', ')}`);
+
     // Get sentiment data from NewsAPIAdapter
     const sentimentData = await Promise.all(
       context.universe.map(async (ticker) => {
         try {
+          console.log(`📰 SentimentAgent: Fetching news for ${ticker}...`);
           const news = await this.newsAdapter.search(ticker, Date.now() - 86400000, Date.now());
+          console.log(`📰 SentimentAgent: Got ${news.length} news articles for ${ticker}`);
 
           // Calculate actual sentiment from news data
           const sentiment = this.calculateSentimentFromNews(news);
+          const freshness = this.calculateFreshness(news);
 
-          return {
+          const result = {
             ticker,
             news: news.slice(0, 10), // Top 10 news articles
             sentiment,
             coverage: news.length,
-            freshness: this.calculateFreshness(news)
+            freshness
           };
+
+          console.log(`📊 SentimentAgent: ${ticker} - Sentiment: ${sentiment.toFixed(3)}, Coverage: ${news.length}, Freshness: ${freshness.toFixed(3)}`);
+          return result;
         } catch (error) {
-          console.error(`Failed to get sentiment data for ${ticker}:`, error);
+          console.error(`❌ SentimentAgent: Failed to get sentiment data for ${ticker}:`, error);
           return { ticker, error: true };
         }
       })
     );
 
+    console.log(`✅ SentimentAgent: processData completed with ${sentimentData.length} results`);
     return sentimentData;
   }
 
@@ -52,7 +61,7 @@ export class SentimentAgent extends BaseAgent {
 
     const now = Date.now();
     const avgAge = news.reduce((sum, article) => {
-      const age = now - new Date(article.timestamp).getTime();
+      const age = now - article.publishedAt;
       return sum + age;
     }, 0) / news.length;
 
@@ -60,6 +69,8 @@ export class SentimentAgent extends BaseAgent {
     const hoursOld = avgAge / (1000 * 60 * 60);
     return Math.min(1, hoursOld / 72); // 72 hours = 3 days max
   }
+
+
 
   buildSystemPrompt(context: AgentContext): string {
     const riskProfile = context.riskProfile || 'neutral';
@@ -105,7 +116,6 @@ Return ONLY a valid JSON object with this exact structure:
 {
   "claims": [
     {
-      "id": "unique_id",
       "ticker": "BTC",
       "agentRole": "sentiment",
       "claim": "BUY|HOLD|SELL",
@@ -117,7 +127,6 @@ Return ONLY a valid JSON object with this exact structure:
         {"name": "freshness_score", "value": 0.85}
       ],
       "evidence": ["evidence_id_1"],
-      "timestamp": "${context.timestamp}",
       "riskFlags": ["low_coverage", "old_news"],
       "notes": "Brief reasoning for the recommendation"
     }
@@ -128,6 +137,13 @@ CRITICAL: Return ONLY the JSON object, no additional text, markdown, or explanat
   }
 
   buildUserPrompt(context: AgentContext, processedData?: any[]): string {
+    console.log(`🔍 SentimentAgent: buildUserPrompt called with ${processedData?.length || 0} processed data items`);
+    if (processedData) {
+      processedData.forEach((data, index) => {
+        console.log(`📊 SentimentAgent: Data ${index} - ${data.ticker}: ${data.news?.length || 0} news, sentiment: ${data.sentiment?.toFixed(3) || 'N/A'}`);
+      });
+    }
+
     return `ANALYSIS REQUEST:
 Role: SENTIMENT Analyst
 Risk Profile: ${context.riskProfile}
@@ -135,10 +151,12 @@ Timestamp: ${context.timestamp}
 Universe: ${context.universe.join(', ')}
 
 SENTIMENT DATA:
-News Articles (${context.facts.length} items):
-${context.facts.map((fact: any, index: number) =>
-      `• ${index + 1}. [${fact.id}] ${fact.content.substring(0, 100)}...`
-    ).join('\n')}
+News Articles (${processedData ? processedData.reduce((sum, data) => sum + (data.news ? data.news.length : 0), 0) : 0} items):
+${processedData ? processedData.map((data: any) =>
+      data.news ? data.news.map((article: any, index: number) =>
+        `• ${data.ticker} - ${index + 1}. [${article.id}] ${(article.title || 'No title').substring(0, 100)}... (sentiment: ${(article.sentiment || 0).toFixed(2)})`
+      ).join('\n') : `• ${data.ticker}: No news available`
+    ).join('\n') : 'No news data available'}
 
 PROCESSED SENTIMENT DATA:
 ${processedData ? processedData.map((data: any) =>

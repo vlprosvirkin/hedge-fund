@@ -4,9 +4,12 @@ import type {
     ConsensusRec,
     Position,
     Order,
-    PipelineArtifact
+    PipelineArtifact,
+    Evidence,
+    NewsItem
 } from '../types/index.js';
 import { API_CONFIG } from '../config.js';
+import { formatEvidenceForDisplay, createEvidenceMap, createNewsMap } from '../utils/evidence-utils.js';
 
 export interface TelegramMessage {
     text: string;
@@ -135,11 +138,11 @@ export class TelegramAdapter {
         text += `⏱️ Processing time: ${processingTime}ms\n`;
         text += `📋 Generated ${claims.length} claims\n\n`;
 
-        // Show OpenAI response analysis if available
-        if (openaiResponse) {
-            text += `🧠 <b>AI REASONING:</b>\n`;
-            const responsePreview = openaiResponse.substring(0, 300);
-            text += `<code>${responsePreview}${openaiResponse.length > 300 ? '...' : ''}</code>\n\n`;
+        // Show claims summary instead of AI reasoning
+        if (claims.length > 0) {
+            text += `📋 <b>GENERATED CLAIMS:</b>\n`;
+            const claimsSummary = this.generateClaimsSummary(claims);
+            text += `<i>${claimsSummary}</i>\n\n`;
         }
 
         // Show debate context if available
@@ -171,8 +174,9 @@ export class TelegramAdapter {
             // Show evidence if available
             if (claim.evidence && claim.evidence.length > 0) {
                 text += `🔍 Evidence (${claim.evidence.length} sources):\n`;
-                claim.evidence.slice(0, 2).forEach(evidenceId => {
-                    text += `  • Evidence ID: ${evidenceId}\n`;
+                const readableEvidence = formatEvidenceForDisplay(claim.evidence, undefined, undefined, claim.claim);
+                readableEvidence.slice(0, 2).forEach(evidenceName => {
+                    text += `  • ${evidenceName}\n`;
                 });
                 if (claim.evidence.length > 2) {
                     text += `  • ... and ${claim.evidence.length - 2} more sources\n`;
@@ -249,7 +253,7 @@ export class TelegramAdapter {
             text += `🔄 <b>DEBATE ROUNDS:</b>\n`;
             debateRounds.forEach((round, i) => {
                 text += `Round ${i + 1}:\n`;
-                text += `   🤖 ${round.agent}: ${round.argument.substring(0, 100)}${round.argument.length > 100 ? '...' : ''}\n`;
+                text += `   🤖 ${round.agent}: ${(round.argument || '').substring(0, 100)}${(round.argument || '').length > 100 ? '...' : ''}\n`;
                 if (round.confidence) {
                     text += `   💪 Confidence: ${(round.confidence * 100).toFixed(1)}%\n`;
                 }
@@ -706,5 +710,406 @@ export class TelegramAdapter {
         };
 
         await this.sendMessage(message);
+    }
+
+    /**
+     * Enhanced agent analysis with AI reasoning and debate context
+     */
+    async postEnhancedAgentAnalysis(
+        roundId: string,
+        agentRole: string,
+        claims: Claim[],
+        processingTime: number,
+        openaiResponse?: string,
+        debateContext?: any,
+        evidence?: Evidence[],
+        newsItems?: NewsItem[]
+    ): Promise<void> {
+        const agentConfig = {
+            fundamental: {
+                emoji: '📊',
+                name: 'FUNDAMENTAL ANALYST',
+                color: '🔵',
+                expertise: 'Market fundamentals, volume analysis, liquidity assessment'
+            },
+            sentiment: {
+                emoji: '📰',
+                name: 'SENTIMENT ANALYST',
+                color: '🟡',
+                expertise: 'News sentiment, social media trends, market psychology'
+            },
+            valuation: {
+                emoji: '📈',
+                name: 'TECHNICAL ANALYST',
+                color: '🟢',
+                expertise: 'Technical indicators, chart patterns, price action'
+            }
+        }[agentRole] || {
+            emoji: '🤖',
+            name: 'AI AGENT',
+            color: '⚪',
+            expertise: 'General analysis'
+        };
+
+        let text = `${agentConfig.emoji} <b>${agentConfig.name}</b>\n`;
+        text += `${agentConfig.color} <i>${agentConfig.expertise}</i>\n\n`;
+        text += `🆔 Round: <code>${roundId}</code>\n`;
+        text += `⏱️ Analysis time: ${processingTime}ms\n\n`;
+
+        // Show claims summary instead of AI reasoning
+        if (claims.length > 0) {
+            text += `📋 <b>GENERATED CLAIMS:</b>\n`;
+            const claimsSummary = this.generateClaimsSummary(claims);
+            text += `<i>${claimsSummary}</i>\n\n`;
+        }
+
+        // Create maps for evidence lookup
+        const evidenceMap = evidence ? createEvidenceMap(evidence) : undefined;
+        const newsMap = newsItems ? createNewsMap(newsItems) : undefined;
+
+        // Show detailed analysis for each claim with more context
+        const topClaims = claims.slice(0, 3);
+        for (let i = 0; i < topClaims.length; i++) {
+            const claim = topClaims[i];
+            if (!claim) continue;
+
+            const confidenceEmoji = claim.confidence > 0.7 ? '🟢' : claim.confidence > 0.4 ? '🟡' : '🔴';
+            const actionEmoji = claim.claim.includes('BUY') ? '🚀' : claim.claim.includes('SELL') ? '📉' : '⏸️';
+
+            text += `${i + 1}. ${actionEmoji} <b>${claim.ticker}</b>\n`;
+            text += `   ${confidenceEmoji} Confidence: ${(claim.confidence * 100).toFixed(1)}%\n`;
+            text += `   📝 <i>${claim.claim}</i>\n`;
+
+            // Show evidence with human-readable names and claim context
+            if (claim.evidence && claim.evidence.length > 0) {
+                text += `   🔍 <b>Supporting Evidence:</b>\n`;
+                const readableEvidence = formatEvidenceForDisplay(claim.evidence, evidenceMap, newsMap, claim.claim);
+                readableEvidence.slice(0, 2).forEach((evidenceName, idx) => {
+                    text += `      ${idx + 1}. ${evidenceName}\n`;
+                });
+                if (claim.evidence.length > 2) {
+                    text += `      ... +${claim.evidence.length - 2} more sources\n`;
+                }
+            }
+
+            // Show risk assessment
+            if (claim.riskFlags && claim.riskFlags.length > 0) {
+                const riskLevel = claim.riskFlags.length > 2 ? '🔴' : claim.riskFlags.length > 1 ? '🟡' : '🟢';
+                text += `   ${riskLevel} Risk Level: ${claim.riskFlags.join(', ')}\n`;
+            }
+
+            text += '\n';
+        }
+
+        // Enhanced summary with insights
+        if (claims.length > 0) {
+            const avgConfidence = claims.reduce((sum, c) => sum + c.confidence, 0) / claims.length;
+            const highConfidenceClaims = claims.filter(c => c.confidence > 0.7).length;
+            const buySignals = claims.filter(c => c.claim.includes('BUY')).length;
+            const sellSignals = claims.filter(c => c.claim.includes('SELL')).length;
+
+            text += `📊 <b>ANALYSIS SUMMARY:</b>\n`;
+            text += `• 🎯 Average Confidence: ${(avgConfidence * 100).toFixed(1)}%\n`;
+            text += `• 🚀 Buy Signals: ${buySignals}\n`;
+            text += `• 📉 Sell Signals: ${sellSignals}\n`;
+            text += `• 💪 High Confidence: ${highConfidenceClaims}/${claims.length}\n`;
+
+            // Add market sentiment
+            if (buySignals > sellSignals) {
+                text += `• 📈 Market Sentiment: Bullish\n`;
+            } else if (sellSignals > buySignals) {
+                text += `• 📉 Market Sentiment: Bearish\n`;
+            } else {
+                text += `• ⏸️ Market Sentiment: Neutral\n`;
+            }
+        }
+
+        const message: TelegramMessage = {
+            text,
+            parse_mode: 'HTML',
+            disable_web_page_preview: true
+        };
+
+        await this.sendMessage(message);
+    }
+
+    /**
+     * Enhanced agent debate with real conversation flow
+     */
+    async postEnhancedAgentDebate(
+        roundId: string,
+        conflicts: any[],
+        debateRounds: any[],
+        finalConsensus: any
+    ): Promise<void> {
+        let text = `🎭 <b>AI AGENT DEBATE</b>\n`;
+        text += `🆔 Round: <code>${roundId}</code>\n\n`;
+
+        if (conflicts.length === 0) {
+            text += `🤝 <b>UNANIMOUS AGREEMENT</b>\n`;
+            text += `All agents reached consensus without conflicts.\n\n`;
+        } else {
+            text += `⚔️ <b>CONFLICTS DETECTED: ${conflicts.length}</b>\n\n`;
+
+            // Show conflicts as a debate
+            conflicts.forEach((conflict, i) => {
+                text += `🔴 <b>Conflict ${i + 1}: ${conflict.ticker}</b>\n`;
+                text += `   📊 Fundamental: "${conflict.claim1}" (${(conflict.confidence1 * 100).toFixed(1)}%)\n`;
+                text += `   📈 Technical: "${conflict.claim2}" (${(conflict.confidence2 * 100).toFixed(1)}%)\n`;
+                text += `   ⚡ Severity: ${conflict.severity}\n\n`;
+            });
+
+            // Show debate rounds as conversation
+            if (debateRounds.length > 0) {
+                text += `💬 <b>DEBATE CONVERSATION:</b>\n\n`;
+                debateRounds.forEach((round, i) => {
+                    const agentEmoji = round.agent === 'fundamental' ? '📊' :
+                        round.agent === 'sentiment' ? '📰' : '📈';
+                    text += `${agentEmoji} <b>${round.agent.toUpperCase()}:</b>\n`;
+                    text += `"${round.argument.substring(0, 150)}${round.argument.length > 150 ? '...' : ''}"\n`;
+                    if (round.confidence) {
+                        text += `💪 Confidence: ${(round.confidence * 100).toFixed(1)}%\n`;
+                    }
+                    text += '\n';
+                });
+            }
+        }
+
+        // Show final resolution
+        if (finalConsensus) {
+            text += `🎯 <b>FINAL RESOLUTION:</b>\n`;
+            const decisionEmoji = finalConsensus.decision === 'BUY' ? '🚀' :
+                finalConsensus.decision === 'SELL' ? '📉' : '⏸️';
+            text += `${decisionEmoji} Decision: ${finalConsensus.decision}\n`;
+            text += `💪 Confidence: ${(finalConsensus.confidence * 100).toFixed(1)}%\n`;
+            text += `🤝 Agreement: ${(finalConsensus.agreement * 100).toFixed(1)}%\n`;
+            if (finalConsensus.rationale) {
+                text += `💭 Rationale: "${finalConsensus.rationale.substring(0, 100)}${finalConsensus.rationale.length > 100 ? '...' : ''}"\n`;
+            }
+        }
+
+        const message: TelegramMessage = {
+            text,
+            parse_mode: 'HTML',
+            disable_web_page_preview: true
+        };
+
+        await this.sendMessage(message);
+    }
+
+    /**
+     * Enhanced signal processing with market insights
+     */
+    async postEnhancedSignalProcessing(
+        roundId: string,
+        signalAnalyses: any[],
+        riskProfile: string
+    ): Promise<void> {
+        let text = `🎯 <b>MARKET SIGNAL ANALYSIS</b>\n`;
+        text += `🆔 Round: <code>${roundId}</code>\n`;
+        text += `🎛️ Risk Profile: ${riskProfile.toUpperCase()}\n\n`;
+
+        // Show top signals with market context
+        const topSignals = signalAnalyses
+            .sort((a, b) => Math.abs(b.overallSignal) - Math.abs(a.overallSignal))
+            .slice(0, 3);
+
+        text += `🏆 <b>TOP MARKET OPPORTUNITIES:</b>\n\n`;
+        topSignals.forEach((signal, i) => {
+            const signalEmoji = signal.overallSignal > 0.1 ? '🚀' : signal.overallSignal < -0.1 ? '📉' : '⏸️';
+            const strength = Math.abs(signal.overallSignal);
+            const strengthText = strength > 0.5 ? 'STRONG' : strength > 0.2 ? 'MODERATE' : 'WEAK';
+
+            text += `${i + 1}. ${signalEmoji} <b>${signal.ticker}</b>\n`;
+            text += `   💪 Signal Strength: ${strengthText} (${(signal.overallSignal * 100).toFixed(1)}%)\n`;
+            text += `   🎯 Recommendation: ${signal.recommendation}\n`;
+            text += `   ⚠️ Risk Level: ${(signal.riskScore * 100).toFixed(1)}%\n`;
+            text += `   📊 Position Size: ${(signal.positionSize * 100).toFixed(1)}%\n\n`;
+
+            // Show component breakdown
+            text += `   📈 <b>Signal Components:</b>\n`;
+            const components = [
+                { name: 'Fundamental', value: signal.fundamental, emoji: '📊' },
+                { name: 'Sentiment', value: signal.sentiment, emoji: '📰' },
+                { name: 'Technical', value: signal.technical, emoji: '📈' },
+                { name: 'Momentum', value: signal.momentum, emoji: '⚡' },
+                { name: 'Volatility', value: signal.volatility, emoji: '📊' }
+            ];
+
+            components.forEach(comp => {
+                const compEmoji = comp.value > 0.5 ? '🟢' : comp.value < -0.5 ? '🔴' : '🟡';
+                text += `      ${compEmoji} ${comp.emoji} ${comp.name}: ${(comp.value * 100).toFixed(1)}%\n`;
+            });
+            text += '\n';
+        });
+
+        // Market overview
+        const buySignals = signalAnalyses.filter(s => s.recommendation === 'BUY').length;
+        const sellSignals = signalAnalyses.filter(s => s.recommendation === 'SELL').length;
+        const avgConfidence = signalAnalyses.reduce((sum, s) => sum + s.confidence, 0) / signalAnalyses.length;
+
+        text += `📊 <b>MARKET OVERVIEW:</b>\n`;
+        text += `• 🚀 Bullish Signals: ${buySignals}\n`;
+        text += `• 📉 Bearish Signals: ${sellSignals}\n`;
+        text += `• 💪 Average Confidence: ${(avgConfidence * 100).toFixed(1)}%\n`;
+
+        if (buySignals > sellSignals * 2) {
+            text += `• 📈 Market Bias: Strongly Bullish\n`;
+        } else if (buySignals > sellSignals) {
+            text += `• 📈 Market Bias: Moderately Bullish\n`;
+        } else if (sellSignals > buySignals * 2) {
+            text += `• 📉 Market Bias: Strongly Bearish\n`;
+        } else if (sellSignals > buySignals) {
+            text += `• 📉 Market Bias: Moderately Bearish\n`;
+        } else {
+            text += `• ⏸️ Market Bias: Neutral\n`;
+        }
+
+        const message: TelegramMessage = {
+            text,
+            parse_mode: 'HTML',
+            disable_web_page_preview: true
+        };
+
+        await this.sendMessage(message);
+    }
+
+    /**
+     * Enhanced consensus results with portfolio impact
+     */
+    async postEnhancedConsensusResults(
+        roundId: string,
+        consensus: ConsensusRec[],
+        conflicts: any[] = []
+    ): Promise<void> {
+        let text = `🎯 <b>FINAL TRADING DECISIONS</b>\n`;
+        text += `🆔 Round: <code>${roundId}</code>\n\n`;
+
+        if (consensus.length === 0) {
+            text += `⏸️ <b>NO TRADING OPPORTUNITIES</b>\n`;
+            text += `Market conditions don't warrant new positions.\n\n`;
+        } else {
+            text += `📋 <b>RECOMMENDED ACTIONS:</b>\n\n`;
+
+            consensus.forEach((rec, i) => {
+                const actionEmoji = rec.finalScore > 0.3 ? '🚀' : rec.finalScore < -0.3 ? '📉' : '⏸️';
+                const confidenceEmoji = rec.avgConfidence > 0.7 ? '🟢' : rec.avgConfidence > 0.4 ? '🟡' : '🔴';
+
+                text += `${i + 1}. ${actionEmoji} <b>${rec.ticker}</b>\n`;
+                text += `   💪 Confidence: ${confidenceEmoji} ${(rec.avgConfidence * 100).toFixed(1)}%\n`;
+                text += `   📊 Final Score: ${(rec.finalScore * 100).toFixed(1)}%\n`;
+                text += `   💧 Liquidity: ${(rec.liquidity * 100).toFixed(1)}%\n`;
+                text += `   📈 Coverage: ${(rec.coverage * 100).toFixed(1)}%\n\n`;
+            });
+
+            // Portfolio impact summary
+            const avgScore = consensus.reduce((sum, r) => sum + r.finalScore, 0) / consensus.length;
+            const highConfidenceRecs = consensus.filter(r => r.avgConfidence > 0.7).length;
+
+            text += `📊 <b>PORTFOLIO IMPACT:</b>\n`;
+            text += `• 🎯 Average Score: ${(avgScore * 100).toFixed(1)}%\n`;
+            text += `• 💪 High Confidence: ${highConfidenceRecs}/${consensus.length}\n`;
+            text += `• 📈 Total Recommendations: ${consensus.length}\n`;
+
+            if (avgScore > 0.2) {
+                text += `• 🚀 Portfolio Bias: Bullish\n`;
+            } else if (avgScore < -0.2) {
+                text += `• 📉 Portfolio Bias: Bearish\n`;
+            } else {
+                text += `• ⏸️ Portfolio Bias: Neutral\n`;
+            }
+        }
+
+        const message: TelegramMessage = {
+            text,
+            parse_mode: 'HTML',
+            disable_web_page_preview: true
+        };
+
+        await this.sendMessage(message);
+    }
+
+    /**
+     * Enhanced round completion with performance insights
+     */
+    async postEnhancedRoundCompletion(
+        roundId: string,
+        summary: DecisionSummary
+    ): Promise<void> {
+        const duration = Math.round((Date.now() - summary.timestamp) / 1000);
+
+        let text = `🎉 <b>TRADING ROUND COMPLETED</b>\n`;
+        text += `🆔 Round: <code>${roundId}</code>\n`;
+        text += `⏱️ Duration: ${duration}s\n`;
+        text += `🕐 Completed: ${new Date().toLocaleString()}\n\n`;
+
+        // Performance summary
+        text += `📊 <b>PERFORMANCE SUMMARY:</b>\n`;
+        text += `• 🤖 Claims Generated: ${summary.claims.length}\n`;
+        text += `• 🎯 Recommendations: ${summary.consensus.length}\n`;
+        text += `• 📈 Orders Placed: ${summary.orders.length}\n`;
+        text += `• 💼 Active Positions: ${summary.positions.length}\n\n`;
+
+        // Portfolio performance
+        const totalValue = summary.performance.totalValue;
+        const unrealizedPnL = summary.performance.unrealizedPnL;
+        const realizedPnL = summary.performance.realizedPnL;
+
+        text += `💰 <b>PORTFOLIO STATUS:</b>\n`;
+        text += `• 💼 Total Value: $${totalValue.toFixed(2)}\n`;
+        text += `• 📈 Unrealized PnL: $${unrealizedPnL.toFixed(2)}\n`;
+        text += `• 💵 Realized PnL: $${realizedPnL.toFixed(2)}\n\n`;
+
+        // Top positions
+        if (summary.positions.length > 0) {
+            const sortedPositions = summary.positions
+                .sort((a, b) => Math.abs(b.unrealizedPnL) - Math.abs(a.unrealizedPnL))
+                .slice(0, 3);
+
+            text += `🏆 <b>TOP POSITIONS:</b>\n`;
+            sortedPositions.forEach((pos, i) => {
+                const pnlEmoji = pos.unrealizedPnL > 0 ? '🟢' : pos.unrealizedPnL < 0 ? '🔴' : '🟡';
+                text += `${i + 1}. ${pnlEmoji} ${pos.symbol}: $${pos.unrealizedPnL.toFixed(2)}\n`;
+            });
+        }
+
+        // Market sentiment
+        const buyOrders = summary.orders.filter(o => o.side === 'buy').length;
+        const sellOrders = summary.orders.filter(o => o.side === 'sell').length;
+
+        if (buyOrders > 0 || sellOrders > 0) {
+            text += `\n📈 <b>TRADING ACTIVITY:</b>\n`;
+            text += `• 🚀 Buy Orders: ${buyOrders}\n`;
+            text += `• 📉 Sell Orders: ${sellOrders}\n`;
+
+            if (buyOrders > sellOrders) {
+                text += `• 🚀 Net Position: Bullish\n`;
+            } else if (sellOrders > buyOrders) {
+                text += `• 📉 Net Position: Bearish\n`;
+            } else {
+                text += `• ⏸️ Net Position: Neutral\n`;
+            }
+        }
+
+        const message: TelegramMessage = {
+            text,
+            parse_mode: 'HTML',
+            disable_web_page_preview: true
+        };
+
+        await this.sendMessage(message);
+    }
+
+    private generateClaimsSummary(claims: Claim[]): string {
+        if (claims.length === 0) {
+            return 'No claims generated';
+        }
+
+        const summary = claims.map(claim => {
+            const action = claim.claim.includes('BUY') ? '🚀' : claim.claim.includes('SELL') ? '📉' : '⏸️';
+            return `${action} ${claim.ticker}: ${claim.claim} (${(claim.confidence * 100).toFixed(0)}% confidence)`;
+        }).join(', ');
+
+        return summary;
     }
 }

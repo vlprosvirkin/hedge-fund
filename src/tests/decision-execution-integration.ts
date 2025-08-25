@@ -89,6 +89,8 @@ async function decisionExecutionIntegrationTest() {
             })
         };
 
+        const technicalIndicators = technicalAdapter;
+
         console.log('✅ All components initialized');
 
         // 2. Подключение к сервисам
@@ -114,7 +116,8 @@ async function decisionExecutionIntegrationTest() {
             mockFactStore as any,
             mockUniverse as any,
             agentsService,
-            mockRiskService as any
+            mockRiskService as any,
+            technicalIndicators
         );
 
         console.log('✅ Orchestrator created');

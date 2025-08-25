@@ -23,6 +23,7 @@ import { VerifierService } from './services/verifier.js';
 import { ConsensusService } from './services/consensus.js';
 import { SignalProcessorService } from './services/signal-processor.service.js';
 import { TelegramAdapter } from './adapters/telegram-adapter.js';
+import { TechnicalIndicatorsAdapter } from './adapters/technical-indicators-adapter.js';
 import { VaultController } from './controllers/vault.controller.js';
 import { v4 as uuidv4 } from 'uuid';
 import pino from 'pino';
@@ -44,6 +45,7 @@ export class HedgeFundOrchestrator {
     private universe: UniverseService,
     private agents: LLMService,
     private risk: RiskService,
+    private technicalIndicators: TechnicalIndicatorsAdapter,
     telegram?: TelegramAdapter
   ) {
     this.logger = pino({
@@ -195,8 +197,12 @@ export class HedgeFundOrchestrator {
 
       this.logger.info('Universe retrieved', { universeSize: universe.length, universe });
 
+      // Start round in database
+      this.logger.info('Step 1.1: Starting round in database');
+      await this.factStore.startRound(this.roundId);
+
       // 📱 Notify round start
-      this.logger.info('Step 1.1: Sending Telegram notification');
+      this.logger.info('Step 1.2: Sending Telegram notification');
       await this.telegram.postRoundStart(this.roundId, universe);
 
       this.logger.info('Step 1.2: Getting market stats');
@@ -220,6 +226,11 @@ export class HedgeFundOrchestrator {
         )
       ).then(results => results.flat());
       this.logger.info('Evidence retrieved', { evidenceCount: evidence.length });
+
+      // Store evidence in database
+      this.logger.info('Step 2.3: Storing evidence in database');
+      await this.factStore.putEvidence(evidence);
+      this.logger.info('Evidence stored in database', { evidenceCount: evidence.length });
 
       // Step 3: Generate claims from agents
       this.logger.info('Step 3: Generating claims from agents');
@@ -246,8 +257,17 @@ export class HedgeFundOrchestrator {
           processingTime
         });
 
-        // 📱 Notify agent analysis completion
-        await this.telegram.postAgentAnalysis(this.roundId, role, result.claims, processingTime);
+        // 📱 Notify agent analysis completion with enhanced format
+        await this.telegram.postEnhancedAgentAnalysis(
+          this.roundId,
+          role,
+          result.claims,
+          processingTime,
+          result.openaiResponse,
+          result.analysis,
+          evidence,
+          news
+        );
       }
 
       this.logger.info('All agents completed', {
@@ -264,6 +284,11 @@ export class HedgeFundOrchestrator {
           claim: c.claim.substring(0, 50) + '...'
         }))
       });
+
+      // Store claims in database
+      this.logger.info('Step 3.4: Storing claims in database');
+      await this.factStore.storeClaims(allClaims, this.roundId);
+      this.logger.info('Claims stored in database', { claimsCount: allClaims.length });
 
       // Step 4: Verify claims
       this.logger.info('Step 4: Verifying claims');
@@ -286,11 +311,24 @@ export class HedgeFundOrchestrator {
 
       // Step 5: Advanced Signal Processing
       this.logger.info('Step 5: Advanced Signal Processing');
+
+      // Collect technical data for signal processing
+      const technicalDataMap = new Map<string, any>();
+      for (const ticker of universe) {
+        try {
+          const technicalData = await this.technicalIndicators.getTechnicalIndicators(ticker, '4h');
+          technicalDataMap.set(ticker, technicalData);
+        } catch (error) {
+          console.warn(`Failed to get technical data for ${ticker}:`, error);
+        }
+      }
+
       const signalProcessor = new SignalProcessorService();
       const signalAnalyses = signalProcessor.processSignals(
         verifiedClaims,
         marketStats,
-        this.config.riskProfile
+        this.config.riskProfile,
+        technicalDataMap
       );
 
       this.logger.info('Signal processing completed', {
@@ -326,11 +364,38 @@ export class HedgeFundOrchestrator {
         }))
       });
 
-      // 📱 Post signal processing analysis
-      await this.telegram.postSignalProcessing(this.roundId, signalAnalyses, this.config.riskProfile);
+      // 📱 Post enhanced signal processing analysis
+      await this.telegram.postEnhancedSignalProcessing(this.roundId, signalAnalyses, this.config.riskProfile);
 
-      // 📱 Post agent debate details
-      await this.telegram.postAgentDebate(this.roundId, conflicts.conflicts, [], {});
+      // 📱 Post enhanced agent debate details
+      this.logger.info('Debug consensus data:', {
+        consensusLength: consensus.length,
+        consensusData: consensus,
+        conflicts: conflicts.conflicts
+      });
+
+      if (consensus.length > 0 && consensus[0]) {
+        const firstConsensus = consensus[0];
+        this.logger.info('First consensus data:', firstConsensus);
+
+        const consensusSummary = {
+          decision: firstConsensus.finalScore > 0.1 ? 'BUY' : firstConsensus.finalScore < -0.1 ? 'SELL' : 'HOLD',
+          confidence: Math.abs(firstConsensus.finalScore || 0.5),
+          agreement: firstConsensus.avgConfidence || 0.5,
+          rationale: `Consensus reached for ${firstConsensus.ticker} with score ${(firstConsensus.finalScore || 0).toFixed(3)}`
+        };
+
+        this.logger.info('Consensus summary:', consensusSummary);
+        await this.telegram.postEnhancedAgentDebate(this.roundId, conflicts.conflicts, [], consensusSummary);
+      } else {
+        this.logger.warn('No consensus data available, using fallback');
+        await this.telegram.postEnhancedAgentDebate(this.roundId, conflicts.conflicts, [], {
+          decision: 'HOLD',
+          confidence: 0.2,
+          agreement: 0.2,
+          rationale: 'No consensus reached - insufficient data'
+        });
+      }
 
       // 📱 Post decision process analysis
       await this.telegram.postDecisionProcess(
@@ -344,8 +409,13 @@ export class HedgeFundOrchestrator {
         rejected.length
       );
 
-      // 📱 Notify consensus results
-      await this.telegram.postConsensusResults(this.roundId, consensus, conflicts.conflicts);
+      // 📱 Notify enhanced consensus results
+      await this.telegram.postEnhancedConsensusResults(this.roundId, consensus, conflicts.conflicts);
+
+      // Store consensus in database
+      this.logger.info('Step 5.3: Storing consensus in database');
+      await this.factStore.storeConsensus(consensus, this.roundId);
+      this.logger.info('Consensus stored in database', { consensusCount: consensus.length });
 
       // Step 6: Build target weights
       const targetWeights = this.buildTargetWeights(consensus, signalAnalyses, this.config.riskProfile);
@@ -370,6 +440,11 @@ export class HedgeFundOrchestrator {
       const orders = [];
       if (riskCheck.ok && !this.killSwitchActive) {
         const executionOrders = await this.executeTrades(targetWeights, currentPositions);
+
+        // Store orders in database
+        this.logger.info('Step 8.1: Storing orders in database');
+        await this.factStore.storeOrders(executionOrders, this.roundId);
+        this.logger.info('Orders stored in database', { ordersCount: executionOrders.length });
         orders.push(...executionOrders);
 
         // Get updated positions after execution
@@ -415,8 +490,8 @@ export class HedgeFundOrchestrator {
       const finalPositions = await this.trading.getPositions();
       const portfolioMetrics = await this.getPortfolioMetrics();
 
-      // 📱 Send comprehensive round summary
-      await this.telegram.postRoundSummary({
+      // 📱 Send enhanced round summary
+      await this.telegram.postEnhancedRoundCompletion(this.roundId, {
         roundId: this.roundId,
         timestamp: startTime,
         claims: verifiedClaims,
@@ -429,6 +504,11 @@ export class HedgeFundOrchestrator {
           realizedPnL: portfolioMetrics?.realizedPnL || 0
         }
       });
+
+      // End round in database
+      this.logger.info('Step 8.2: Ending round in database');
+      await this.factStore.endRound(this.roundId, 'completed', verifiedClaims.length, orders.length, portfolioMetrics?.unrealizedPnL || 0);
+      this.logger.info('Round ended in database');
 
       return artifact;
     } catch (error) {
@@ -740,7 +820,19 @@ export class HedgeFundOrchestrator {
         orderIds
       });
 
-      return orderIds;
+      // Convert order IDs to Order objects for database storage
+      const orders = rebalancingOrders.map((order, index) => ({
+        id: orderIds[index] || `order_${Date.now()}_${index}`,
+        symbol: order.symbol,
+        side: order.side,
+        type: order.type,
+        quantity: order.usdtAmount,
+        price: order.price || 0,
+        status: 'filled',
+        timestamp: Date.now()
+      }));
+
+      return orders;
     } catch (error) {
       this.logger.error('Failed to execute trades:', error);
       throw error;

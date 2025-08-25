@@ -123,9 +123,19 @@ export class BinanceAdapter implements MarketDataAdapter {
       const lotSizeFilter = symbolInfo?.filters?.find((f: any) => f.filterType === 'LOT_SIZE');
       const priceFilter = symbolInfo?.filters?.find((f: any) => f.filterType === 'PRICE_FILTER');
 
+      // Calculate price change percentage
+      const priceChange24h = parseFloat(ticker.priceChangePercent || '0');
+      
+      // Calculate volume change (estimate based on current vs average volume)
+      const volume24h = parseFloat(ticker.volume);
+      const avgVolume = parseFloat(ticker.quoteVolume || ticker.volume);
+      const volumeChange24h = avgVolume > 0 ? ((volume24h - avgVolume) / avgVolume) * 100 : 0;
+
       return {
         symbol: symbol.toUpperCase(), // Return clean ticker
-        volume24h: parseFloat(ticker.volume),
+        volume24h: volume24h,
+        volumeChange24h: volumeChange24h,
+        priceChange24h: priceChange24h,
         spread: this.calculateSpread(ticker.bidPrice, ticker.askPrice),
         tickSize: parseFloat(priceFilter?.tickSize || '0.01'),
         stepSize: parseFloat(lotSizeFilter?.stepSize || '0.00001'),

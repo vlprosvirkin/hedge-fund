@@ -54,7 +54,7 @@ export class AgentsService implements LLMService {
       riskProfile: string;
       timestamp: number;
     }
-  ): Promise<{ claims: Claim[]; errors: string[] }> {
+  ): Promise<{ claims: Claim[]; errors: string[]; openaiResponse?: string; analysis?: string }> {
     // Convert context to AgentContext format
     const agentContext: AgentContext = {
       universe: context.universe,
@@ -70,10 +70,20 @@ export class AgentsService implements LLMService {
     // Filter claims by the requested role
     const roleClaims = result.claims.filter(claim => claim.agentRole === role);
 
-    return {
+    const response: any = {
       claims: roleClaims,
       errors: result.errors
     };
+    
+    if (result.openaiResponse) {
+      response.openaiResponse = result.openaiResponse;
+    }
+    
+    if (result.analysis) {
+      response.analysis = result.analysis;
+    }
+    
+    return response;
   }
 
   validateClaim(claim: any): boolean {

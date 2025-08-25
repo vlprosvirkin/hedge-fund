@@ -17,12 +17,16 @@ export class OpenAIService {
         });
     }
 
-    async generateClaims(
+    async generateClaimsWithReasoning(
         systemPrompt: string,
         userPrompt: string,
         context: any
-    ): Promise<Claim[]> {
+    ): Promise<{ claims: Claim[]; openaiResponse: string; analysis: string }> {
         try {
+            // Generate unique request ID
+            const requestId = `${context.agentRole || 'unknown'}_${context.timestamp}_${Math.random().toString(36).substr(2, 9)}`;
+            console.log(`🔍 OpenAI Request ID: ${requestId}`);
+
             const response = await this.client.chat.completions.create({
                 model: this.model,
                 messages: [
@@ -35,7 +39,7 @@ export class OpenAIService {
                         content: userPrompt
                     }
                 ],
-                temperature: 0.3, // Lower temperature for more consistent results
+                temperature: 0.3,
                 max_tokens: 2000
             });
 
@@ -46,14 +50,12 @@ export class OpenAIService {
 
             console.log('Raw OpenAI response:', content.substring(0, 200) + '...');
 
-            // Parse the JSON response with improved error handling
+            // Parse the JSON response
             const parsed = this.parseOpenAIResponse(content);
-
-            // Handle both array and object formats
             const claimsArray = Array.isArray(parsed) ? parsed : parsed.claims || [];
 
-            return claimsArray.map((claimData: any) => ({
-                id: claimData.id || crypto.randomUUID(),
+            const claims = claimsArray.map((claimData: any, index: number) => ({
+                id: `${claimData.ticker}_${claimData.agentRole}_${requestId}_${index}`,
                 ticker: claimData.ticker,
                 agentRole: claimData.agentRole,
                 claim: claimData.claim || claimData.action || 'HOLD',
@@ -63,6 +65,15 @@ export class OpenAIService {
                 riskFlags: claimData.riskFlags || []
             }));
 
+            // Extract human-readable analysis
+            const analysis = this.extractAnalysisFromResponse(content);
+
+            return {
+                claims,
+                openaiResponse: content,
+                analysis
+            };
+
         } catch (error) {
             console.error('OpenAI API error:', error);
             throw new Error(`Failed to generate claims: ${error}`);
@@ -70,59 +81,20 @@ export class OpenAIService {
     }
 
     private parseOpenAIResponse(content: string): any {
-        console.log('Raw OpenAI response:', content.substring(0, 500) + '...');
+        // Clean the content
+        let cleanedContent = content.trim()
+            .replace(/```json\s*/g, '')
+            .replace(/```\s*$/g, '')
+            .replace(/```\s*/g, '')
+            .replace(/```\s*$/g, '');
 
-        // Step 1: Clean the content
-        let cleanedContent = this.cleanContent(content);
-
-        // Step 2: Try multiple extraction strategies
-        const extractionStrategies = [
-            () => this.extractJSONWithBracketMatching(cleanedContent),
-            () => this.extractJSONWithRegex(cleanedContent),
-            () => this.extractJSONWithLineAnalysis(cleanedContent),
-            () => this.extractJSONWithManualParsing(cleanedContent)
-        ];
-
-        for (const strategy of extractionStrategies) {
-            try {
-                const result = strategy();
-                if (result) {
-                    console.log('✅ Successfully parsed JSON using strategy');
-                    return result;
-                }
-            } catch (error) {
-                console.log('Strategy failed:', error instanceof Error ? error.message : String(error));
-                continue;
-            }
+        // Try to extract JSON using bracket matching
+        const jsonStart = cleanedContent.search(/[{\[]/);
+        if (jsonStart === -1) {
+            return this.createDefaultStructure();
         }
 
-        // Step 3: Last resort - return default structure
-        console.warn('❌ All parsing strategies failed, returning default structure');
-        return this.createDefaultStructure();
-    }
-
-    private cleanContent(content: string): string {
-        let cleaned = content.trim();
-
-        // Remove markdown code blocks
-        cleaned = cleaned.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
-        cleaned = cleaned.replace(/```\s*/g, '').replace(/```\s*$/g, '');
-
-        // Remove common prefixes
-        cleaned = cleaned.replace(/^(SUMMARIZE:|REFLECT\/CRITICIZE:|REVISE:|AGGREGATE:)/g, '');
-
-        // Remove extra whitespace
-        cleaned = cleaned.replace(/\n\s*\n/g, '\n').trim();
-
-        return cleaned;
-    }
-
-    private extractJSONWithBracketMatching(content: string): any {
-        // Find the first JSON structure
-        const jsonStart = content.search(/[{\[]/);
-        if (jsonStart === -1) return null;
-
-        const startChar = content[jsonStart];
+        const startChar = cleanedContent[jsonStart];
         const isArray = startChar === '[';
         const isObject = startChar === '{';
 
@@ -131,8 +103,8 @@ export class OpenAIService {
         let inString = false;
         let escapeNext = false;
 
-        for (let i = jsonStart; i < content.length; i++) {
-            const char = content[i];
+        for (let i = jsonStart; i < cleanedContent.length; i++) {
+            const char = cleanedContent[i];
 
             if (escapeNext) {
                 escapeNext = false;
@@ -156,143 +128,66 @@ export class OpenAIService {
                 if (char === ']') bracketCount--;
 
                 if (isArray && bracketCount === 0 && i > jsonStart) {
-                    const jsonStr = content.substring(jsonStart, i + 1);
-                    return JSON.parse(jsonStr);
+                    const jsonStr = cleanedContent.substring(jsonStart, i + 1);
+                    try {
+                        return JSON.parse(jsonStr);
+                    } catch (error) {
+                        console.warn('Failed to parse JSON array:', error);
+                        break;
+                    }
                 }
                 if (isObject && braceCount === 0 && i > jsonStart) {
-                    const jsonStr = content.substring(jsonStart, i + 1);
-                    return JSON.parse(jsonStr);
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private extractJSONWithRegex(content: string): any {
-        // Try to find JSON objects or arrays
-        const patterns = [
-            /\{[\s\S]*?\}/,  // Non-greedy JSON object
-            /\[[\s\S]*?\]/,  // Non-greedy JSON array
-        ];
-
-        for (const pattern of patterns) {
-            const matches = content.match(pattern);
-            if (matches) {
-                for (const match of matches) {
+                    const jsonStr = cleanedContent.substring(jsonStart, i + 1);
                     try {
-                        return JSON.parse(match);
+                        return JSON.parse(jsonStr);
                     } catch (error) {
-                        // Try to fix common issues
-                        const fixed = this.fixJSONString(match);
-                        try {
-                            return JSON.parse(fixed);
-                        } catch (fixedError) {
-                            continue;
-                        }
+                        console.warn('Failed to parse JSON object:', error);
+                        break;
                     }
                 }
             }
         }
 
-        return null;
+        return this.createDefaultStructure();
     }
 
-    private extractJSONWithLineAnalysis(content: string): any {
+    private extractAnalysisFromResponse(content: string): string {
+        // First, try to find analysis before JSON
+        const jsonStart = content.search(/[{\[]/);
+        if (jsonStart > 0) {
+            const beforeJson = content.substring(0, jsonStart).trim();
+            if (beforeJson.length > 10) {
+                return beforeJson.substring(0, 500);
+            }
+        }
+
+        // If no analysis before JSON, try to extract from the whole content
         const lines = content.split('\n');
-        let jsonLines: string[] = [];
-        let inJson = false;
-        let bracketCount = 0;
+        let analysisLines: string[] = [];
 
         for (const line of lines) {
             const trimmed = line.trim();
 
-            if (!inJson && (trimmed.startsWith('{') || trimmed.startsWith('['))) {
-                inJson = true;
-                bracketCount = 0;
+            // Skip JSON blocks, empty lines, and markdown
+            if (trimmed.startsWith('{') || trimmed.startsWith('[') ||
+                trimmed === '' || trimmed.startsWith('#') || trimmed.startsWith('```') ||
+                trimmed.startsWith('"id"') || trimmed.startsWith('"ticker"') ||
+                trimmed.startsWith('"claim"') || trimmed.startsWith('"confidence"') ||
+                trimmed.startsWith('"agentRole"') || trimmed.startsWith('"horizon"') ||
+                trimmed.startsWith('"signals"') || trimmed.startsWith('"evidence"') ||
+                trimmed.startsWith('"riskFlags"') || trimmed.startsWith('"notes"') ||
+                trimmed.startsWith('"name"') || trimmed.startsWith('"value"')) {
+                continue;
             }
 
-            if (inJson) {
-                jsonLines.push(line);
-
-                // Count brackets
-                for (const char of line) {
-                    if (char === '{' || char === '[') bracketCount++;
-                    if (char === '}' || char === ']') bracketCount--;
-                }
-
-                if (bracketCount === 0 && (trimmed.endsWith('}') || trimmed.endsWith(']'))) {
-                    const jsonStr = jsonLines.join('\n');
-                    try {
-                        return JSON.parse(jsonStr);
-                    } catch (error) {
-                        // Try to fix and parse
-                        const fixed = this.fixJSONString(jsonStr);
-                        try {
-                            return JSON.parse(fixed);
-                        } catch (fixedError) {
-                            break;
-                        }
-                    }
-                }
+            // Collect non-JSON lines as analysis
+            if (trimmed.length > 0) {
+                analysisLines.push(trimmed);
             }
         }
 
-        return null;
-    }
-
-    private extractJSONWithManualParsing(content: string): any {
-        // Try to manually construct a valid JSON from the content
-        try {
-            // Look for claim-like structures
-            const claimMatches = content.match(/ticker["\s]*:["\s]*([A-Z]+)/g);
-            if (claimMatches) {
-                const claims = claimMatches.map((match, index) => {
-                    const ticker = match.match(/["\s]*:["\s]*([A-Z]+)/)?.[1] || 'UNKNOWN';
-                    return {
-                        id: `claim_${ticker.toLowerCase()}_${Date.now()}_${index}`,
-                        ticker: ticker,
-                        agentRole: 'sentiment',
-                        claim: 'HOLD',
-                        confidence: 0.2,
-                        evidence: [],
-                        timestamp: Date.now(),
-                        riskFlags: ['manual_parse']
-                    };
-                });
-
-                return { claims };
-            }
-        } catch (error) {
-            console.log('Manual parsing failed:', error instanceof Error ? error.message : String(error));
-        }
-
-        return null;
-    }
-
-    private fixJSONString(jsonStr: string): string {
-        let fixed = jsonStr;
-
-        // Fix trailing commas
-        fixed = fixed.replace(/,(\s*[}\]])/g, '$1');
-        fixed = fixed.replace(/,(\s*})/g, '$1');
-
-        // Fix missing quotes around property names
-        fixed = fixed.replace(/(\w+):/g, '"$1":');
-
-        // Fix single quotes to double quotes
-        fixed = fixed.replace(/'/g, '"');
-
-        // Fix unescaped quotes in strings
-        fixed = fixed.replace(/(?<!\\)"/g, '\\"');
-        fixed = fixed.replace(/\\"/g, '"');
-
-        // Fix newlines in strings
-        fixed = fixed.replace(/\n/g, '\\n');
-        fixed = fixed.replace(/\r/g, '\\r');
-        fixed = fixed.replace(/\t/g, '\\t');
-
-        return fixed;
+        const analysis = analysisLines.join(' ').substring(0, 500);
+        return analysis || 'Analysis not available';
     }
 
     private createDefaultStructure(): any {
@@ -310,7 +205,15 @@ export class OpenAIService {
         };
     }
 
-
+    // Backward compatibility method
+    async generateClaims(
+        systemPrompt: string,
+        userPrompt: string,
+        context: any
+    ): Promise<Claim[]> {
+        const result = await this.generateClaimsWithReasoning(systemPrompt, userPrompt, context);
+        return result.claims;
+    }
 
     async validateResponse(response: string): Promise<boolean> {
         try {

@@ -95,6 +95,14 @@ export const PortfolioMetricsSchema = z.object({
   marginLevel: z.number(),
   unrealizedPnL: z.number(),
   realizedPnL: z.number(),
+  // Additional fields for Aspis fund data
+  fundId: z.number().optional(),
+  fundName: z.string().optional(),
+  manager: z.string().optional(),
+  tradeVolume: z.number().optional(),
+  depositVolume: z.number().optional(),
+  assetCount: z.number().optional(),
+  lastUpdated: z.string().optional(),
 });
 
 // ===== Order Validation Types =====

@@ -13,6 +13,9 @@ This system implements a complete crypto trading pipeline with:
 - **Risk Management**: Comprehensive risk controls and kill-switch functionality
 - **Portfolio Optimization**: Automated rebalancing based on consensus scores
 - **Execution Engine**: Integration with Aspis for professional order execution ([Aspis Setup Guide](docs/ASPIS_SETUP.md))
+- **Enhanced Signal Processing**: Multi-dimensional signal analysis with Kelly Criterion position sizing
+- **Real-time Transparency**: Enhanced Telegram notifications with detailed AI reasoning and analysis
+- **Database Integration**: Complete audit trail with PostgreSQL storage for claims, consensus, and orders
 
 ## 📖 Documentation
 
@@ -22,6 +25,8 @@ This system implements a complete crypto trading pipeline with:
 - **[Aspis API Methods](docs/ASPIS_API_METHODS.md)** - Trading execution API reference
 - **[Database Schema](docs/DATABASE_SCHEMA.md)** - PostgreSQL schema and storage architecture
 - **[Decision Process](docs/DECISION_PROCESS.md)** - Complete decision-making process and Telegram integration
+- **[Enhanced Notifications](docs/ENHANCED_NOTIFICATIONS.md)** - New enhanced Telegram notification format
+- **[Enhanced Notifications Examples](docs/ENHANCED_NOTIFICATIONS_EXAMPLES.md)** - Examples of enhanced notifications with human-readable evidence
 - **[Integration Tests](src/tests/README.md)** - Comprehensive testing documentation
 - **[Troubleshooting](TROUBLESHOOTING.md)** - Common issues and solutions
 
@@ -789,6 +794,45 @@ The project uses a comprehensive type system with Zod schemas for runtime valida
 
 This is a research and educational project. **Do not use with real money without proper testing and risk management.** Cryptocurrency trading involves substantial risk of loss.
 
+## 🔧 Recent Fixes & Improvements
+
+### Enhanced Signal Processing System ✅
+- **Multi-dimensional Analysis**: Replaced simple consensus with sophisticated signal processing
+- **Kelly Criterion Position Sizing**: Mathematical optimization for position sizing
+- **Risk-Adjusted Returns**: Sharpe ratio-based portfolio optimization
+- **Market Impact Analysis**: Slippage estimation and order size constraints
+
+### Enhanced Telegram Notifications ✅
+- **Human-Readable Evidence**: Evidence names instead of IDs in notifications
+- **AI Reasoning Display**: Shows OpenAI analysis and reasoning in reports
+- **Claims Summary**: Concise summary of generated claims
+- **Enhanced Transparency**: Complete visibility into decision-making process
+
+### Database Integration ✅
+- **Complete Audit Trail**: All claims, consensus, evidence, and orders stored in PostgreSQL
+- **Round Tracking**: Full round lifecycle management (start → process → end)
+- **Performance Metrics**: Portfolio performance and trading statistics
+- **Data Persistence**: Reliable storage with proper error handling
+
+### System Stability Improvements ✅
+- **Portfolio Metrics Fix**: Corrected unrealistic financial data calculations
+- **Agent Debate Fix**: Resolved undefined/NaN values in consensus display
+- **Unique Claim IDs**: Prevented duplicate key violations in database
+- **Timestamp Validation**: Fixed invalid timestamp errors in order storage
+- **Error Handling**: Graceful degradation and fallback mechanisms
+
+### OpenAI Integration Enhancements ✅
+- **Robust JSON Parsing**: Multi-strategy parsing for malformed LLM responses
+- **Unique Request IDs**: Generated per OpenAI call to prevent conflicts
+- **Analysis Extraction**: Human-readable analysis from raw OpenAI responses
+- **Error Recovery**: Fallback mechanisms for parsing failures
+
+### Verification System Relaxation ✅
+- **MVP-Friendly**: Relaxed validation for development and testing
+- **Evidence Tolerance**: Made evidence validation optional for MVP
+- **Timestamp Tolerance**: Added 1-minute tolerance for timestamps
+- **Source Flexibility**: Relaxed source whitelist requirements
+
 ## ✅ Implementation Status
 
 ### Fully Implemented ✅
@@ -797,13 +841,16 @@ This is a research and educational project. **Do not use with real money without
 - **Collaboration Engine**: Conflict detection, round-robin debates, consensus building with risk profiles
 - **Technical Analysis**: 45+ indicators with real API integration
 - **News & Sentiment**: 170+ assets with sentiment analysis
-- **Database**: PostgreSQL with complete audit trail
-- **Telegram Integration**: Real-time transparency and monitoring
+- **Database**: PostgreSQL with complete audit trail and round tracking
+- **Enhanced Telegram Integration**: Human-readable evidence, AI reasoning, and claims summary
 - **Risk Management**: Comprehensive risk controls and kill-switch
+- **Signal Processing**: Multi-dimensional analysis with Kelly Criterion position sizing
+- **Portfolio Optimization**: Risk-adjusted returns with market impact analysis
 - **Integration Tests**: Complete test suite covering all components
 - **Type System**: Comprehensive type definitions with Zod validation
 - **CI/CD Tests**: Tests that work without API keys
 - **Architecture Refactoring**: Clean separation of concerns
+- **System Stability**: Robust error handling and fallback mechanisms
 
 ### Ready for Production 🚀
 - **Architecture**: Production-ready with proper error handling

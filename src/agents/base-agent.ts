@@ -14,6 +14,8 @@ export interface AgentContext {
 export interface AgentResponse {
   claims: Claim[];
   errors: string[];
+  openaiResponse?: string; // Raw AI reasoning
+  analysis?: string; // Human-readable analysis summary
 }
 
 export abstract class BaseAgent {
@@ -34,32 +36,42 @@ export abstract class BaseAgent {
     const errors: string[] = [];
     const claims: Claim[] = [];
     let processedData: any[] = [];
+    let openaiResponse: string = '';
+    let analysis: string = '';
 
     try {
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: Starting analysis...`);
       processedData = await this.processData(context);
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: Processed data completed, got ${processedData.length} items`);
 
       // Build prompts with processed data
       const systemPrompt = this.buildSystemPrompt(context);
       const userPrompt = this.buildUserPrompt(context, processedData);
 
-      // Call OpenAI to generate claims
-      const generatedClaims = await this.openaiService.generateClaims(
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: Calling OpenAI...`);
+      // Call OpenAI to generate claims with reasoning
+      const result = await this.openaiService.generateClaimsWithReasoning(
         systemPrompt,
         userPrompt,
-        { ...context, processedData }
+        { ...context, processedData, agentRole: this.role }
       );
 
-      claims.push(...generatedClaims);
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: OpenAI response received, claims: ${result.claims.length}`);
+      claims.push(...result.claims);
+      openaiResponse = result.openaiResponse || '';
+      analysis = result.analysis || '';
+
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: Analysis extracted: ${analysis.substring(0, 100)}...`);
 
     } catch (error) {
-      console.error(`Error in ${this.role} agent:`, error);
+      console.error(`❌ Error in ${this.role} agent:`, error);
       errors.push(`Failed to run ${this.role} agent: ${error}`);
 
       // Don't fall back to mock claims - fail gracefully
       console.error(`OpenAI failed for ${this.role} agent, no fallback to mock data`);
     }
 
-    return { claims, errors };
+    return { claims, errors, openaiResponse, analysis };
   }
 
 

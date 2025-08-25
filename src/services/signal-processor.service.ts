@@ -37,7 +37,8 @@ export class SignalProcessorService {
   processSignals(
     claims: Claim[],
     marketStats: MarketStats[],
-    riskProfile: 'averse' | 'neutral' | 'bold'
+    riskProfile: 'averse' | 'neutral' | 'bold',
+    technicalDataMap?: Map<string, any> // Add technical data map
   ): SignalAnalysis[] {
     const tickerGroups = this.groupClaimsByTicker(claims);
     const analyses: SignalAnalysis[] = [];
@@ -46,7 +47,10 @@ export class SignalProcessorService {
       const marketStat = marketStats.find(stat => stat.symbol === ticker);
       if (!marketStat) continue;
 
-      const analysis = this.analyzeTickerSignals(ticker, tickerClaims, marketStat, riskProfile);
+      // Get technical data for this ticker if available
+      const technicalData = technicalDataMap?.get(ticker);
+
+      const analysis = this.analyzeTickerSignals(ticker, tickerClaims, marketStat, riskProfile, technicalData);
       analyses.push(analysis);
     }
 
@@ -60,7 +64,8 @@ export class SignalProcessorService {
     ticker: string,
     claims: Claim[],
     marketStat: MarketStats,
-    riskProfile: 'averse' | 'neutral' | 'bold'
+    riskProfile: 'averse' | 'neutral' | 'bold',
+    technicalData?: any // Add technical data parameter
   ): SignalAnalysis {
     // 1. Extract agent-specific signals
     const fundamental = claims.find(c => c.agentRole === 'fundamental');
@@ -70,9 +75,9 @@ export class SignalProcessorService {
     // 2. Calculate multi-dimensional metrics
     const fundamentalSignal = this.calculateFundamentalSignal(fundamental, marketStat);
     const sentimentSignal = this.calculateSentimentSignal(sentiment);
-    const technicalSignal = this.calculateTechnicalSignal(technical, marketStat);
-    const momentumSignal = this.calculateMomentumSignal(marketStat);
-    const volatilitySignal = this.calculateVolatilitySignal(marketStat);
+    const technicalSignal = this.calculateTechnicalSignal(technical, marketStat, technicalData);
+    const momentumSignal = this.calculateMomentumSignal(marketStat, technicalData);
+    const volatilitySignal = this.calculateVolatilitySignal(marketStat, technicalData);
 
     // 3. Calculate risk-adjusted metrics
     const riskScore = this.calculateRiskScore(claims, marketStat);
@@ -181,7 +186,7 @@ export class SignalProcessorService {
   /**
    * Calculate technical signal with mathematical rigor
    */
-  private calculateTechnicalSignal(claim: Claim | undefined, marketStat: MarketStats): number {
+  private calculateTechnicalSignal(claim: Claim | undefined, marketStat: MarketStats, technicalData?: any): number {
     if (!claim) {
       // If no technical claim, use market momentum as technical signal
       const priceChange = (marketStat.priceChange24h || 0) / 100;
@@ -191,11 +196,22 @@ export class SignalProcessorService {
     // Base technical signal
     let signal = claim.confidence * this.directionToSignal(claim.claim);
 
-    // Extract technical indicators from signals array
-    const signals = claim.signals || [];
-    const rsi = signals.find((s: { name: string; value: number }) => s.name === 'rsi')?.value;
-    const macd = signals.find((s: { name: string; value: number }) => s.name === 'macd')?.value;
-    const volatility = signals.find((s: { name: string; value: number }) => s.name === 'volatility_30d')?.value;
+    // First try to get technical indicators from technical data
+    let rsi, macd, volatility;
+
+    if (technicalData) {
+      rsi = technicalData.RSI;
+      macd = technicalData['MACD.macd'];
+      volatility = technicalData.AO; // Use Awesome Oscillator as volatility proxy
+    }
+
+    // Fallback to signals array if technical data not available
+    if (rsi === undefined || macd === undefined) {
+      const signals = claim.signals || [];
+      rsi = rsi ?? signals.find((s: { name: string; value: number }) => s.name === 'rsi')?.value;
+      macd = macd ?? signals.find((s: { name: string; value: number }) => s.name === 'macd')?.value;
+      volatility = volatility ?? signals.find((s: { name: string; value: number }) => s.name === 'volatility_30d')?.value;
+    }
 
     // Apply technical analysis adjustments
     if (rsi !== undefined) {
@@ -219,9 +235,19 @@ export class SignalProcessorService {
   /**
    * Calculate momentum signal from price action
    */
-  private calculateMomentumSignal(marketStat: MarketStats): number {
+  private calculateMomentumSignal(marketStat: MarketStats, technicalData?: any): number {
     const priceChange = (marketStat.priceChange24h || 0) / 100;
     const volumeChange = (marketStat.volumeChange24h || 0) / 100;
+
+    // Use technical data for better momentum calculation if available
+    let momentum = 0;
+    if (technicalData) {
+      // Use MACD for momentum
+      const macd = technicalData['MACD.macd'];
+      if (macd !== undefined) {
+        momentum = Math.tanh(macd * 0.1); // Scale MACD to reasonable range
+      }
+    }
 
     // Combine price and volume momentum with data-driven weights
     const priceMomentum = Math.tanh(priceChange * this.getPriceScalingFactor());
@@ -231,14 +257,26 @@ export class SignalProcessorService {
     const priceWeight = this.calculatePriceWeight(priceChange, volumeChange);
     const volumeWeight = 1 - priceWeight;
 
-    return (priceMomentum * priceWeight + volumeMomentum * volumeWeight);
+    const marketMomentum = (priceMomentum * priceWeight + volumeMomentum * volumeWeight);
+
+    // Combine technical momentum with market momentum
+    return technicalData ? (momentum * 0.6 + marketMomentum * 0.4) : marketMomentum;
   }
 
   /**
    * Calculate volatility signal
    */
-  private calculateVolatilitySignal(marketStat: MarketStats): number {
-    // Use price change as proxy for volatility
+  private calculateVolatilitySignal(marketStat: MarketStats, technicalData?: any): number {
+    // Use technical data for better volatility calculation if available
+    if (technicalData) {
+      // Use Awesome Oscillator as volatility proxy
+      const ao = technicalData.AO;
+      if (ao !== undefined) {
+        return Math.min(Math.abs(ao) * 0.1, 1); // Scale AO to 0-1
+      }
+    }
+
+    // Fallback to price change as proxy for volatility
     const priceChange = Math.abs(marketStat.priceChange24h || 0) / 100;
     return Math.min(priceChange * 2, 1); // Scale to 0-1
   }

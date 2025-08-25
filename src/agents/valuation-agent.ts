@@ -111,7 +111,6 @@ OUTPUT FORMAT:
 {
   "claims": [
     {
-      "id": "unique_id",
       "ticker": "BTC",
       "agentRole": "valuation",
       "claim": "BUY|HOLD|SELL",
@@ -125,7 +124,6 @@ OUTPUT FORMAT:
         {"name": "signal_strength", "value": 0.68}
       ],
       "evidence": ["evidence_id_1"],
-      "timestamp": ${context.timestamp},
       "riskFlags": ["high_volatility", "weak_signals"],
       "notes": "Brief reasoning for the recommendation"
     }

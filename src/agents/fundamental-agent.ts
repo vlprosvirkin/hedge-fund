@@ -84,7 +84,6 @@ OUTPUT FORMAT:
 {
   "claims": [
     {
-      "id": "unique_id",
       "ticker": "BTC",
       "agentRole": "fundamental",
       "claim": "BUY|HOLD|SELL",
@@ -96,7 +95,6 @@ OUTPUT FORMAT:
         {"name": "trend_strength", "value": 0.68}
       ],
       "evidence": ["evidence_id_1"],
-      "timestamp": ${context.timestamp},
       "riskFlags": ["high_volatility", "low_liquidity"],
       "notes": "Brief reasoning for the recommendation"
     }

@@ -244,6 +244,314 @@ CURRENT POSITIONS:
 - Ranks top performing positions
 - Provides interactive buttons for details
 
+## 🧠 Agent Reasoning & Decision Logic
+
+### 📊 Fundamental Agent Logic
+
+The Fundamental Agent analyzes market fundamentals using quantitative metrics:
+
+#### **Data Sources & Metrics:**
+- **Price Data**: Current price, 24h change, 7d change
+- **Volume Data**: 24h volume, volume change, volume/price ratio
+- **Market Cap**: Calculated from circulating supply
+- **Liquidity Metrics**: Bid-ask spread, order book depth
+
+#### **Signal Calculation:**
+```typescript
+// Base signal from claim confidence and direction
+let signal = claim.confidence * directionToSignal(claim.claim);
+
+// Market fundamental adjustments
+const volumeScore = calculateVolumeScore(marketStat.volume24h);
+const priceChange = (marketStat.priceChange24h || 0) / 100;
+const volumeMomentum = volumeScore * Math.tanh(priceChange * priceScalingFactor);
+
+// Dynamic weight allocation
+const fundamentalWeight = calculateFundamentalWeight(claim.confidence);
+const marketWeight = 1 - fundamentalWeight;
+signal = signal * fundamentalWeight + volumeMomentum * marketWeight;
+```
+
+#### **Confidence Scoring:**
+- **High Confidence (0.8-1.0)**: Strong volume, clear price trends, low volatility
+- **Medium Confidence (0.6-0.8)**: Moderate volume, mixed signals, some volatility
+- **Low Confidence (0.4-0.6)**: Low volume, unclear trends, high volatility
+
+#### **Risk Flags:**
+- `market_volatility`: High price volatility (>30% daily)
+- `low_volume`: Insufficient trading volume
+- `price_manipulation`: Unusual price patterns
+- `liquidity_risk`: Poor bid-ask spreads
+
+### 📰 Sentiment Agent Logic
+
+The Sentiment Agent processes news and social media sentiment:
+
+#### **Data Sources:**
+- **News APIs**: 170+ crypto news sources
+- **Social Media**: Twitter, Reddit sentiment analysis
+- **Market Sentiment**: Fear & Greed Index, social volume
+
+#### **Sentiment Processing:**
+```typescript
+// Calculate average sentiment from news articles
+private calculateSentimentFromNews(news: any[]): number {
+  if (news.length === 0) return 0.5; // Neutral if no news
+  
+  const totalSentiment = news.reduce((sum, article) => {
+    return sum + (article.sentiment || 0.5);
+  }, 0);
+  
+  return totalSentiment / news.length;
+}
+```
+
+#### **Confidence Factors:**
+- **News Volume**: More articles = higher confidence
+- **Source Credibility**: Reputable sources boost confidence
+- **Sentiment Consistency**: Agreement across sources
+- **Recency**: Recent news weighted higher
+
+#### **Risk Flags:**
+- `low_coverage`: Insufficient news coverage
+- `old_news`: News older than 24 hours
+- `inconsistent_sentiment`: Mixed sentiment across sources
+- `unreliable_source`: Low-credibility sources
+
+### 📈 Valuation Agent Logic
+
+The Valuation Agent performs technical analysis using mathematical indicators:
+
+#### **Technical Indicators:**
+- **RSI (Relative Strength Index)**: Momentum oscillator (0-100)
+- **MACD (Moving Average Convergence Divergence)**: Trend following
+- **Bollinger Bands**: Volatility and price levels
+- **Volume Analysis**: Volume-price relationships
+
+#### **Signal Calculation:**
+```typescript
+// Base technical signal
+let signal = claim.confidence * directionToSignal(claim.claim);
+
+// Technical adjustments
+if (rsi !== undefined) {
+  const rsiAdjustment = calculateRSIAdjustment(rsi);
+  signal *= rsiAdjustment;
+}
+
+if (macd !== undefined) {
+  const macdAdjustment = calculateMACDAdjustment(macd);
+  signal *= macdAdjustment;
+}
+```
+
+#### **RSI Interpretation:**
+- **RSI < 20**: Extremely oversold (bullish signal)
+- **RSI < 30**: Oversold (moderate bullish)
+- **RSI 30-70**: Neutral zone
+- **RSI > 70**: Overbought (bearish)
+- **RSI > 80**: Extremely overbought (strong bearish)
+
+#### **MACD Interpretation:**
+- **Positive MACD**: Bullish momentum
+- **Negative MACD**: Bearish momentum
+- **MACD Crossover**: Signal line crosses above/below MACD line
+
+## 🎯 Signal Interpretation & Decision Making
+
+### Signal Strength Classification
+
+#### **Strong Signals (|signal| > 0.4):**
+- **BUY Signal**: Clear bullish indicators across multiple timeframes
+- **SELL Signal**: Clear bearish indicators with high confidence
+- **Action**: Immediate position sizing with full allocation
+
+#### **Moderate Signals (0.2 < |signal| < 0.4):**
+- **BUY Signal**: Mixed indicators with bullish bias
+- **SELL Signal**: Mixed indicators with bearish bias
+- **Action**: Reduced position sizing, partial allocation
+
+#### **Weak Signals (|signal| < 0.2):**
+- **HOLD Signal**: Insufficient conviction for directional trade
+- **Action**: No position, wait for stronger signals
+
+### Confidence Thresholds
+
+#### **Risk Profile: Averse**
+- **Minimum Confidence**: 70%
+- **Signal Threshold**: ±0.4
+- **Max Risk Score**: 30%
+- **Position Size**: 5% max per position
+
+#### **Risk Profile: Neutral**
+- **Minimum Confidence**: 60%
+- **Signal Threshold**: ±0.3
+- **Max Risk Score**: 50%
+- **Position Size**: 10% max per position
+
+#### **Risk Profile: Bold**
+- **Minimum Confidence**: 50%
+- **Signal Threshold**: ±0.2
+- **Max Risk Score**: 70%
+- **Position Size**: 20% max per position
+
+### Multi-Dimensional Signal Analysis
+
+The system combines signals from all agents using weighted aggregation:
+
+```typescript
+// Overall signal calculation
+const overallSignal = calculateOverallSignal(
+  fundamentalSignal,    // Market fundamentals
+  sentimentSignal,      // News sentiment
+  technicalSignal,      // Technical indicators
+  momentumSignal,       // Price momentum
+  riskProfile          // Risk tolerance
+);
+
+// Weighted combination based on confidence
+const weights = {
+  fundamental: fundamentalConfidence,
+  sentiment: sentimentConfidence,
+  technical: technicalConfidence,
+  momentum: 0.2 // Fixed weight for momentum
+};
+```
+
+### Signal Consistency Analysis
+
+#### **Agent Agreement:**
+- **High Agreement**: All agents show same direction
+- **Mixed Signals**: Agents disagree on direction
+- **Low Confidence**: Insufficient data for consensus
+
+#### **Conflict Resolution:**
+- **Majority Rule**: 2 out of 3 agents agree
+- **Confidence Weighting**: Higher confidence agents weighted more
+- **Risk Adjustment**: Conflicts increase risk score
+
+## 📊 Position Sizing Logic
+
+### Kelly Criterion Implementation
+
+The system uses Kelly Criterion for optimal position sizing:
+
+```typescript
+// Kelly Criterion: f = μ / σ²
+// where μ = expected return, σ = volatility
+const kellyFraction = expectedReturn / (volatility * volatility);
+
+// Conservative Kelly (half Kelly for safety)
+const conservativeKelly = kellyFraction * 0.5;
+```
+
+#### **Expected Return Calculation:**
+```typescript
+// Base expected return from signal strength
+const baseReturn = signal * 0.15; // 15% max expected return
+
+// Adjust for confidence
+const confidenceMultiplier = 0.5 + (confidence * 0.5);
+
+// Adjust for time horizon
+const timeHorizonMultiplier = getTimeHorizonMultiplier(timeHorizon);
+
+return baseReturn * confidenceMultiplier * timeHorizonMultiplier;
+```
+
+#### **Volatility Estimation:**
+```typescript
+// Base volatility from technical analysis
+let volatility = signal.volatility;
+
+// Adjust for market conditions
+if (signal.riskScore > 0.7) {
+  volatility *= 1.5; // Higher risk = higher volatility
+}
+
+// Adjust for time horizon
+const timeHorizonVolatility = getTimeHorizonVolatility(timeHorizon);
+volatility = Math.max(volatility, timeHorizonVolatility);
+```
+
+### Risk-Adjusted Position Sizing
+
+#### **Risk Profile Constraints:**
+- **Averse**: Max 5% per position, 15% total portfolio
+- **Neutral**: Max 10% per position, 25% total portfolio  
+- **Bold**: Max 20% per position, 40% total portfolio
+
+#### **Confidence Adjustment:**
+```typescript
+// Higher confidence = higher position size
+const confidenceAdjustment = 0.3 + (0.7 * sigmoid(confidence - 0.5));
+```
+
+#### **Risk Penalty:**
+```typescript
+// Higher risk = lower position size
+const riskPenalty = Math.exp(-2 * riskScore);
+```
+
+### Portfolio Optimization
+
+#### **Correlation Adjustment:**
+- **Crypto Assets**: 20% penalty per additional crypto position
+- **Sector Concentration**: Penalty for similar sectors
+- **Geographic Risk**: Regional concentration limits
+
+#### **Portfolio Constraints:**
+- **Maximum Positions**: 5 (averse), 8 (neutral), 12 (bold)
+- **Minimum Position**: 1% of portfolio
+- **Maximum Weight**: 15% (averse), 25% (neutral), 40% (bold)
+
+## 🔄 Consensus Building Process
+
+### Claim Aggregation
+
+#### **Weighted Consensus:**
+```typescript
+// Calculate weighted consensus score
+const consensusScore = claims.reduce((score, claim) => {
+  const weight = claim.confidence * getAgentWeight(claim.agentRole);
+  return score + (claim.signal * weight);
+}, 0) / totalWeight;
+```
+
+#### **Agent Weights:**
+- **Fundamental Agent**: 35% (market fundamentals)
+- **Sentiment Agent**: 25% (news sentiment)
+- **Valuation Agent**: 40% (technical analysis)
+
+### Conflict Detection
+
+#### **Signal Conflicts:**
+- **Directional Conflict**: Agents disagree on BUY/SELL
+- **Magnitude Conflict**: Agents agree on direction but disagree on strength
+- **Confidence Conflict**: High confidence agents disagree
+
+#### **Conflict Resolution:**
+- **Debate Rounds**: Agents provide additional reasoning
+- **Evidence Validation**: Check supporting data
+- **Confidence Adjustment**: Reduce confidence for conflicts
+
+### Final Decision Logic
+
+#### **Decision Thresholds:**
+```typescript
+const thresholds = {
+  averse: { buy: 0.4, sell: -0.4, minConfidence: 0.7, maxRisk: 0.3 },
+  neutral: { buy: 0.3, sell: -0.3, minConfidence: 0.6, maxRisk: 0.5 },
+  bold: { buy: 0.2, sell: -0.2, minConfidence: 0.5, maxRisk: 0.7 }
+};
+```
+
+#### **Decision Rules:**
+1. **Check Confidence**: Must meet minimum confidence threshold
+2. **Check Risk**: Must be below maximum risk threshold
+3. **Check Signal**: Must exceed buy/sell threshold
+4. **Generate Recommendation**: BUY, SELL, or HOLD
+
 ## 🚨 Emergency Notifications
 
 ### Kill Switch Activation
@@ -368,3 +676,315 @@ The system sends structured, informative messages that provide complete transpar
 - **Actions**: What was executed
 
 This ensures that every stakeholder can understand exactly how the system makes trading decisions and track its performance in real-time.
+
+## 🔍 Decision Quality Metrics
+
+### Signal Quality Assessment
+
+#### **Data Quality Score:**
+- **High (90-100%)**: Complete data from all sources
+- **Medium (70-90%)**: Most data available, some gaps
+- **Low (50-70%)**: Significant data missing
+- **Poor (<50%)**: Insufficient data for reliable decisions
+
+#### **Agent Reliability:**
+- **Historical Accuracy**: Track agent prediction accuracy
+- **Confidence Calibration**: Adjust confidence based on past performance
+- **Signal Consistency**: Measure signal stability over time
+
+### Performance Attribution
+
+#### **Decision Attribution:**
+- **Agent Contribution**: Which agent contributed most to decision
+- **Signal Strength**: Impact of signal strength on performance
+- **Timing Impact**: Effect of execution timing on results
+
+#### **Risk Attribution:**
+- **Volatility Impact**: How market volatility affected performance
+- **Correlation Risk**: Impact of portfolio correlation on returns
+- **Liquidity Risk**: Effect of market liquidity on execution
+
+## 📈 Continuous Improvement
+
+### Signal Optimization
+
+#### **Parameter Tuning:**
+- **Threshold Adjustment**: Optimize decision thresholds based on performance
+- **Weight Calibration**: Adjust agent weights based on accuracy
+- **Risk Parameter**: Fine-tune risk parameters for optimal risk-return
+
+#### **Model Validation:**
+- **Backtesting**: Test strategies on historical data
+- **Walk-Forward Analysis**: Validate performance over time
+- **Stress Testing**: Test under extreme market conditions
+
+### Agent Learning
+
+#### **Performance Feedback:**
+- **Accuracy Tracking**: Monitor agent prediction accuracy
+- **Confidence Calibration**: Adjust confidence based on outcomes
+- **Signal Refinement**: Improve signal calculation methods
+
+#### **Adaptive Weights:**
+- **Dynamic Weighting**: Adjust agent weights based on recent performance
+- **Market Regime Detection**: Adapt to different market conditions
+- **Risk-Adjusted Scoring**: Incorporate risk into performance metrics
+
+## 🔬 AlphaAgents Comparison & Improvement Roadmap
+
+### 📊 Current Implementation vs AlphaAgents Paper
+
+#### **✅ Strengths of Current Implementation:**
+
+1. **Multi-Agent Architecture**: Successfully implements 3 specialized agents (Fundamental, Sentiment, Valuation)
+2. **Real Data Integration**: Uses live market data, news APIs, and technical indicators
+3. **Risk Management**: Comprehensive risk controls with kill-switch functionality
+4. **Transparency**: Full Telegram integration with detailed decision logging
+5. **Position Sizing**: Kelly Criterion implementation with risk-adjusted sizing
+
+#### **🔍 Key Differences from AlphaAgents:**
+
+1. **Debate Mechanism**: AlphaAgents uses structured debate rounds with agent interaction
+2. **Reflection Process**: AlphaAgents employs SUMMARIZE → REFLECT → REVISE → AGGREGATE
+3. **Mathematical Rigor**: AlphaAgents emphasizes mathematical tools to reduce hallucinations
+4. **Tool Usage Monitoring**: AlphaAgents uses Phoenix-like monitoring of tool usage
+5. **Evidence Validation**: AlphaAgents has more sophisticated evidence validation
+
+### 🚀 Proposed Improvements
+
+#### **1. Enhanced Debate System**
+
+**Current State:**
+- Basic conflict detection
+- Simple majority voting
+- Limited agent interaction
+
+**Proposed Enhancement:**
+```typescript
+// Structured debate rounds with agent interaction
+interface DebateRound {
+  round: number;
+  agentResponses: {
+    [agentId: string]: {
+      position: 'BUY' | 'SELL' | 'HOLD';
+      confidence: number;
+      reasoning: string;
+      evidence: string[];
+      responseToOthers: string;
+    };
+  };
+  consensus: boolean;
+  finalDecision?: string;
+}
+```
+
+**Implementation:**
+- **Round 1**: Initial analysis from all agents
+- **Round 2**: Agents respond to others' arguments
+- **Round 3**: Final positions and consensus building
+- **Evidence Sharing**: Agents share supporting evidence
+- **Confidence Adjustment**: Agents can revise confidence based on debate
+
+#### **2. Reflection & Criticism Process**
+
+**Current State:**
+- Direct sentiment calculation
+- No reflection on own analysis
+
+**Proposed Enhancement:**
+```typescript
+// SUMMARIZE → REFLECT → REVISE → AGGREGATE process
+interface ReflectionProcess {
+  summarize: {
+    keyPoints: string[];
+    sentimentScore: number;
+    confidence: number;
+  };
+  reflect: {
+    potentialBiases: string[];
+    dataQuality: number;
+    alternativeViews: string[];
+  };
+  revise: {
+    adjustedSentiment: number;
+    adjustedConfidence: number;
+    reasoning: string;
+  };
+  aggregate: {
+    finalScore: number;
+    consensusLevel: number;
+  };
+}
+```
+
+**Implementation:**
+- **Summarize**: Extract key points from news analysis
+- **Reflect**: Identify potential biases and data quality issues
+- **Revise**: Adjust sentiment and confidence based on reflection
+- **Aggregate**: Combine revised scores into final sentiment
+
+#### **3. Mathematical Tool Integration**
+
+**Current State:**
+- Basic technical indicators
+- Simple signal calculations
+
+**Proposed Enhancement:**
+```typescript
+// Enhanced mathematical tools with monitoring
+interface MathematicalTools {
+  volatility: {
+    calculation: 'historical' | 'implied' | 'garch';
+    confidence: number;
+    toolUsage: boolean;
+  };
+  sharpeRatio: {
+    calculation: 'rolling' | 'exponential' | 'risk-adjusted';
+    confidence: number;
+    toolUsage: boolean;
+  };
+  correlation: {
+    calculation: 'pearson' | 'spearman' | 'dynamic';
+    confidence: number;
+    toolUsage: boolean;
+  };
+}
+```
+
+**Implementation:**
+- **GARCH Models**: Advanced volatility modeling
+- **Dynamic Correlation**: Time-varying correlation analysis
+- **Risk-Adjusted Metrics**: Sharpe ratio, Sortino ratio, Calmar ratio
+- **Tool Usage Monitoring**: Track when mathematical tools are used vs. ignored
+
+#### **4. Enhanced Evidence Validation**
+
+**Current State:**
+- Basic timestamp validation
+- Simple source whitelisting
+
+**Proposed Enhancement:**
+```typescript
+// Sophisticated evidence validation
+interface EvidenceValidation {
+  timestamp: {
+    tolerance: number;
+    timezone: string;
+    freshness: number;
+  };
+  source: {
+    credibility: number;
+    whitelist: boolean;
+    historicalAccuracy: number;
+  };
+  content: {
+    factuality: number;
+    bias: number;
+    completeness: number;
+  };
+  crossValidation: {
+    agreement: number;
+    conflicts: string[];
+    consensus: boolean;
+  };
+}
+```
+
+**Implementation:**
+- **Fact-Checking**: Validate claims against multiple sources
+- **Bias Detection**: Identify and adjust for source bias
+- **Cross-Validation**: Compare evidence across agents
+- **Historical Accuracy**: Track source reliability over time
+
+#### **5. Adaptive Learning System**
+
+**Current State:**
+- Static agent weights
+- Fixed thresholds
+
+**Proposed Enhancement:**
+```typescript
+// Adaptive learning with performance feedback
+interface AdaptiveLearning {
+  agentPerformance: {
+    [agentId: string]: {
+      accuracy: number;
+      confidence: number;
+      bias: number;
+      recentPerformance: number[];
+    };
+  };
+  weightAdjustment: {
+    fundamental: number;
+    sentiment: number;
+    technical: number;
+    adjustmentReason: string;
+  };
+  thresholdOptimization: {
+    buyThreshold: number;
+    sellThreshold: number;
+    confidenceThreshold: number;
+    optimizationMethod: string;
+  };
+}
+```
+
+**Implementation:**
+- **Performance Tracking**: Monitor agent accuracy over time
+- **Dynamic Weighting**: Adjust agent weights based on performance
+- **Threshold Optimization**: Optimize decision thresholds
+- **Bias Correction**: Identify and correct agent biases
+
+### 📋 Implementation Priority
+
+#### **Phase 1: Core Debate System (High Priority)**
+1. Implement structured debate rounds
+2. Add agent interaction and response mechanisms
+3. Enhance conflict resolution logic
+4. Add debate logging and transparency
+
+#### **Phase 2: Reflection Process (Medium Priority)**
+1. Implement SUMMARIZE → REFLECT → REVISE → AGGREGATE
+2. Add bias detection and correction
+3. Enhance sentiment analysis with reflection
+4. Add confidence adjustment mechanisms
+
+#### **Phase 3: Mathematical Tools (Medium Priority)**
+1. Integrate advanced volatility models (GARCH)
+2. Add dynamic correlation analysis
+3. Implement risk-adjusted performance metrics
+4. Add tool usage monitoring
+
+#### **Phase 4: Evidence Validation (Low Priority)**
+1. Implement sophisticated fact-checking
+2. Add cross-validation mechanisms
+3. Enhance source credibility assessment
+4. Add historical accuracy tracking
+
+#### **Phase 5: Adaptive Learning (Low Priority)**
+1. Implement performance tracking system
+2. Add dynamic weight adjustment
+3. Implement threshold optimization
+4. Add bias correction mechanisms
+
+### 🎯 Expected Benefits
+
+#### **Improved Decision Quality:**
+- **Better Consensus**: Structured debates lead to better consensus
+- **Reduced Bias**: Reflection process reduces agent biases
+- **Higher Accuracy**: Mathematical tools improve signal quality
+- **Better Validation**: Enhanced evidence validation reduces errors
+
+#### **Enhanced Transparency:**
+- **Debate Logs**: Complete record of agent interactions
+- **Reflection Trails**: Track reasoning and bias correction
+- **Tool Usage**: Monitor mathematical tool utilization
+- **Performance Attribution**: Clear attribution of decisions to agents
+
+#### **Adaptive Performance:**
+- **Learning System**: System improves over time
+- **Dynamic Weights**: Agent weights adjust to performance
+- **Optimized Thresholds**: Decision thresholds optimize automatically
+- **Bias Correction**: Automatic detection and correction of biases
+
+This roadmap will bring our implementation closer to the sophisticated multi-agent system described in the AlphaAgents paper while maintaining our focus on real-world trading applications and transparency.

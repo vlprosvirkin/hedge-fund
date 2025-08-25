@@ -49,10 +49,14 @@ export class AgentCoordinator {
     consensus: ConsensusResult[];
     debateLog: DebateRound[];
     errors: string[];
+    openaiResponse?: string;
+    analysis?: string;
   }> {
     const errors: string[] = [];
     const allClaims: Claim[] = [];
     const debateLog: DebateRound[] = [];
+    let combinedOpenAIResponse = '';
+    let combinedAnalysis = '';
 
     try {
       // Step 1: Initial analysis by all agents
@@ -74,9 +78,18 @@ export class AgentCoordinator {
         })
       );
 
-      // Collect all claims
+      // Collect all claims and reasoning
+      let combinedOpenAIResponse = '';
+      let combinedAnalysis = '';
+
       agentResponses.forEach(response => {
         allClaims.push(...response.claims);
+        if (response.openaiResponse) {
+          combinedOpenAIResponse += response.openaiResponse + '\n\n';
+        }
+        if (response.analysis) {
+          combinedAnalysis += response.analysis + '\n\n';
+        }
       });
 
       // Step 2: Organize claims by ticker and agent
@@ -110,7 +123,9 @@ export class AgentCoordinator {
         claims: allClaims,
         consensus,
         debateLog,
-        errors
+        errors,
+        openaiResponse: combinedOpenAIResponse,
+        analysis: combinedAnalysis
       };
 
     } catch (error) {
@@ -122,7 +137,9 @@ export class AgentCoordinator {
         claims: allClaims,
         consensus: [],
         debateLog,
-        errors
+        errors,
+        openaiResponse: combinedOpenAIResponse,
+        analysis: combinedAnalysis
       };
     }
   }

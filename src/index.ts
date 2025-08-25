@@ -131,6 +131,7 @@ async function startProductionSystem() {
         triggerKillSwitch: () => Promise.resolve(),
         isKillSwitchActive: () => false
       }, // TODO: implement risk service
+      technicalIndicators
     );
 
     logger.info('✅ Orchestrator created successfully');

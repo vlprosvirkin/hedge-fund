@@ -467,7 +467,7 @@ export class PostgresAdapter implements FactStore {
     }
 
     // Claims operations
-    async storeClaims(claims: Claim[]): Promise<void> {
+    async storeClaims(claims: Claim[], roundId?: string): Promise<void> {
         const client = await this.pool.connect();
 
         try {
@@ -479,7 +479,7 @@ export class PostgresAdapter implements FactStore {
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         `, [
                     claim.id,
-                    'unknown', // Default round ID
+                    roundId || 'unknown', // Use provided round ID or default
                     claim.ticker,
                     claim.agentRole,
                     claim.claim,
@@ -566,6 +566,11 @@ export class PostgresAdapter implements FactStore {
             await client.query('BEGIN');
 
             for (const order of orders) {
+                // Ensure timestamp is valid
+                const timestamp = order.timestamp && !isNaN(order.timestamp)
+                    ? new Date(order.timestamp)
+                    : new Date();
+
                 await client.query(`
           INSERT INTO orders (id, round_id, symbol, side, type, quantity, price, status, timestamp)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -578,7 +583,7 @@ export class PostgresAdapter implements FactStore {
                     order.quantity,
                     order.price,
                     order.status,
-                    new Date(order.timestamp)
+                    timestamp
                 ]);
             }
 
