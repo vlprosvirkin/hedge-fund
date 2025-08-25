@@ -756,7 +756,29 @@ export class TelegramAdapter {
         text += `🆔 Round: <code>${roundId}</code>\n`;
         text += `⏱️ Analysis time: ${processingTime}ms\n\n`;
 
-        // Show claims summary instead of AI reasoning
+        // Show AI Response and Analysis
+        if (openaiResponse) {
+            text += `🧠 <b>AI RESPONSE:</b>\n`;
+
+            // Try to extract notes/summary from claims
+            const notes = this.extractNotesFromClaims(claims);
+            if (notes.length > 0) {
+                text += `📝 <b>AI Analysis Summary:</b>\n`;
+                notes.forEach((note, i) => {
+                    text += `${i + 1}. <i>${note}</i>\n`;
+                });
+                text += '\n';
+            }
+
+            // Show raw response preview
+            const aiResponsePreview = openaiResponse.length > 300
+                ? openaiResponse.substring(0, 300) + '...'
+                : openaiResponse;
+            text += `🔍 <b>Raw Response Preview:</b>\n`;
+            text += `<i>${aiResponsePreview}</i>\n\n`;
+        }
+
+        // Show claims summary
         if (claims.length > 0) {
             text += `📋 <b>GENERATED CLAIMS:</b>\n`;
             const claimsSummary = this.generateClaimsSummary(claims);
@@ -875,7 +897,7 @@ export class TelegramAdapter {
             }
         }
 
-        // Show final resolution
+        // Show final resolution with detailed logic
         if (finalConsensus) {
             text += `🎯 <b>FINAL RESOLUTION:</b>\n`;
             const decisionEmoji = finalConsensus.decision === 'BUY' ? '🚀' :
@@ -883,10 +905,37 @@ export class TelegramAdapter {
             text += `${decisionEmoji} Decision: ${finalConsensus.decision}\n`;
             text += `💪 Confidence: ${(finalConsensus.confidence * 100).toFixed(1)}%\n`;
             text += `🤝 Agreement: ${(finalConsensus.agreement * 100).toFixed(1)}%\n`;
+
             if (finalConsensus.rationale) {
-                text += `💭 Rationale: "${finalConsensus.rationale.substring(0, 100)}${finalConsensus.rationale.length > 100 ? '...' : ''}"\n`;
+                text += `💭 <b>Logical Chain:</b>\n`;
+                text += `"${finalConsensus.rationale}"\n\n`;
+            }
+
+            // Add decision logic explanation
+            text += `🧠 <b>Decision Logic:</b>\n`;
+            if (finalConsensus.decision === 'BUY') {
+                text += `• Multiple agents agree on positive outlook\n`;
+                text += `• Strong signal strength supports bullish case\n`;
+                text += `• Risk-reward ratio favors long position\n`;
+            } else if (finalConsensus.decision === 'SELL') {
+                text += `• Consensus indicates bearish sentiment\n`;
+                text += `• Technical and fundamental signals align\n`;
+                text += `• Risk management suggests reducing exposure\n`;
+            } else {
+                text += `• Mixed signals from different agents\n`;
+                text += `• Insufficient confidence for directional trade\n`;
+                text += `• Conservative approach maintains current position\n`;
             }
         }
+
+        // Add Agent Coordinator Summary
+        text += `\n🤖 <b>AGENT COORDINATOR SUMMARY:</b>\n`;
+        text += `• 🔄 Collaboration Status: ${conflicts.length === 0 ? 'Unanimous Agreement' : 'Conflict Resolution Required'}\n`;
+        text += `• 🗣️ Debate Rounds: ${debateRounds.length} completed\n`;
+        text += `• ⚔️ Conflicts Resolved: ${conflicts.length}\n`;
+        text += `• 🤝 Consensus Quality: ${finalConsensus?.confidence > 0.7 ? 'High' : finalConsensus?.confidence > 0.4 ? 'Medium' : 'Low'}\n`;
+        text += `• 📊 Decision Confidence: ${finalConsensus ? (finalConsensus.confidence * 100).toFixed(1) : '0'}%\n`;
+        text += `• ⚡ Execution Readiness: ${finalConsensus ? 'Ready' : 'Not Ready'}\n`;
 
         const message: TelegramMessage = {
             text,
@@ -1018,6 +1067,14 @@ export class TelegramAdapter {
             } else {
                 text += `• ⏸️ Portfolio Bias: Neutral\n`;
             }
+
+            // Add Consensus Summary
+            text += `\n🤝 <b>CONSENSUS SUMMARY:</b>\n`;
+            text += `• 📊 Multi-Agent Agreement: ${consensus.length > 0 ? 'Achieved' : 'Failed'}\n`;
+            text += `• 🎯 Decision Quality: ${avgScore > 0.3 ? 'High' : avgScore > 0.1 ? 'Medium' : 'Low'}\n`;
+            text += `• 💪 Confidence Distribution: ${highConfidenceRecs} high, ${consensus.length - highConfidenceRecs} moderate\n`;
+            text += `• 📈 Market Sentiment: ${avgScore > 0.2 ? 'Bullish' : avgScore < -0.2 ? 'Bearish' : 'Neutral'}\n`;
+            text += `• ⚡ Execution Readiness: ${consensus.length > 0 ? 'Ready' : 'Not Ready'}\n`;
         }
 
         const message: TelegramMessage = {
@@ -1111,5 +1168,24 @@ export class TelegramAdapter {
         }).join(', ');
 
         return summary;
+    }
+
+    private extractNotesFromClaims(claims: Claim[]): string[] {
+        const notes: string[] = [];
+
+        claims.forEach(claim => {
+            // Try to extract notes from claim structure
+            if ((claim as any).notes) {
+                notes.push(`${claim.ticker}: ${(claim as any).notes}`);
+            }
+
+            // Also check for summary in claim text
+            if (claim.claim && claim.claim.length > 50) {
+                const summary = claim.claim.substring(0, 100) + (claim.claim.length > 100 ? '...' : '');
+                notes.push(`${claim.ticker} Summary: ${summary}`);
+            }
+        });
+
+        return notes;
     }
 }

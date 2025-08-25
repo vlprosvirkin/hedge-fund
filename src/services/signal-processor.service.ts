@@ -40,21 +40,37 @@ export class SignalProcessorService {
     riskProfile: 'averse' | 'neutral' | 'bold',
     technicalDataMap?: Map<string, any> // Add technical data map
   ): SignalAnalysis[] {
+    console.log(`🎯 SignalProcessor: Processing ${claims.length} claims for ${marketStats.length} market stats`);
+    console.log(`🎯 SignalProcessor: Risk profile: ${riskProfile}, Technical data available: ${technicalDataMap ? 'Yes' : 'No'}`);
+
     const tickerGroups = this.groupClaimsByTicker(claims);
+    console.log(`🎯 SignalProcessor: Grouped claims by ${tickerGroups.size} tickers:`, Array.from(tickerGroups.keys()));
+
     const analyses: SignalAnalysis[] = [];
 
     for (const [ticker, tickerClaims] of tickerGroups) {
       const marketStat = marketStats.find(stat => stat.symbol === ticker);
-      if (!marketStat) continue;
+      if (!marketStat) {
+        console.log(`🎯 SignalProcessor: No market stats for ${ticker}, skipping`);
+        continue;
+      }
 
       // Get technical data for this ticker if available
       const technicalData = technicalDataMap?.get(ticker);
+      console.log(`🎯 SignalProcessor: Analyzing ${ticker} with ${tickerClaims.length} claims, technical data: ${technicalData ? 'Available' : 'Not available'}`);
 
       const analysis = this.analyzeTickerSignals(ticker, tickerClaims, marketStat, riskProfile, technicalData);
+      console.log(`🎯 SignalProcessor: ${ticker} analysis - Signal: ${(analysis.overallSignal * 100).toFixed(1)}%, Recommendation: ${analysis.recommendation}, Risk: ${(analysis.riskScore * 100).toFixed(1)}%`);
       analyses.push(analysis);
     }
 
-    return analyses.sort((a, b) => b.overallSignal - a.overallSignal);
+    const sortedAnalyses = analyses.sort((a, b) => b.overallSignal - a.overallSignal);
+    console.log(`🎯 SignalProcessor: Signal processing completed for ${sortedAnalyses.length} tickers`);
+    sortedAnalyses.forEach((analysis, i) => {
+      console.log(`🎯 SignalProcessor: ${i + 1}. ${analysis.ticker} - ${analysis.recommendation} (${(analysis.overallSignal * 100).toFixed(1)}%)`);
+    });
+
+    return sortedAnalyses;
   }
 
   /**

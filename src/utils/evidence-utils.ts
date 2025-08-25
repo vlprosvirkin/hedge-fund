@@ -38,7 +38,7 @@ export function generateEvidenceNameById(evidenceId: string): string {
       const ticker = parts[1]?.toUpperCase();
       const type = parts[2];
       const timestamp = parts[3];
-      
+
       if (ticker && type) {
         const readableType = type.replace(/([A-Z])/g, ' $1').toLowerCase();
         return `${ticker} ${readableType} data`;
@@ -52,7 +52,7 @@ export function generateEvidenceNameById(evidenceId: string): string {
     const ticker = parts[0]?.toUpperCase();
     const agentRole = parts[1];
     const timestamp = parts[2];
-    
+
     if (ticker && agentRole && timestamp) {
       const readableRole = agentRole.charAt(0).toUpperCase() + agentRole.slice(1);
       const date = new Date(parseInt(timestamp)).toLocaleDateString();
@@ -84,11 +84,11 @@ export function getEvidenceDetails(evidence: Evidence, newsItem?: NewsItem): {
     relevance: `${(evidence.relevance * 100).toFixed(1)}%`,
     timestamp: new Date(evidence.timestamp).toLocaleString()
   };
-  
+
   if (evidence.quote) {
     result.quote = evidence.quote;
   }
-  
+
   return result;
 }
 
@@ -96,7 +96,7 @@ export function getEvidenceDetails(evidence: Evidence, newsItem?: NewsItem): {
  * Format evidence for display in notifications with claim context
  */
 export function formatEvidenceForDisplay(
-  evidenceIds: string[], 
+  evidenceIds: string[],
   evidenceMap?: Map<string, Evidence>,
   newsMap?: Map<string, NewsItem>,
   claimText?: string
@@ -104,23 +104,43 @@ export function formatEvidenceForDisplay(
   return evidenceIds.map((evidenceId, index) => {
     const evidence = evidenceMap?.get(evidenceId);
     const newsItem = evidence?.newsItemId ? newsMap?.get(evidence.newsItemId) : undefined;
-    
+
     let evidenceName = '';
     if (evidence) {
       evidenceName = generateEvidenceName(evidence, newsItem);
     } else {
       evidenceName = generateEvidenceNameById(evidenceId);
     }
-    
+
+    // Enhance evidence name with more context
+    let enhancedName = evidenceName;
+
+    // Add source information if available
+    if (evidence?.source) {
+      enhancedName += ` (${evidence.source})`;
+    }
+
+    // Add relevance score if available
+    if (evidence?.relevance) {
+      const relevancePercent = (evidence.relevance * 100).toFixed(0);
+      enhancedName += ` [${relevancePercent}% relevant]`;
+    }
+
+    // Add news title if available
+    if (newsItem?.title) {
+      const titlePreview = newsItem.title.substring(0, 40) + (newsItem.title.length > 40 ? '...' : '');
+      enhancedName += ` - "${titlePreview}"`;
+    }
+
     // Add claim text preview if available and this is the first evidence
     if (claimText && index === 0) {
       const claimPreview = claimText.substring(0, 50).trim();
       if (claimPreview) {
-        return `${evidenceName} | Claim: "${claimPreview}${claimText.length > 50 ? '...' : ''}"`;
+        return `${enhancedName} | Claim: "${claimPreview}${claimText.length > 50 ? '...' : ''}"`;
       }
     }
-    
-    return evidenceName;
+
+    return enhancedName;
   });
 }
 

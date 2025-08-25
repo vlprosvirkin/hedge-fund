@@ -257,6 +257,19 @@ export class HedgeFundOrchestrator {
           processingTime
         });
 
+        // Log detailed agent results
+        this.logger.info(`${role} agent detailed results`, {
+          claimsCount: result.claims.length,
+          openaiResponseLength: result.openaiResponse?.length || 0,
+          analysisLength: result.analysis?.length || 0,
+          sampleClaims: result.claims.slice(0, 2).map(c => ({
+            ticker: c.ticker,
+            confidence: c.confidence,
+            claim: c.claim.substring(0, 30) + '...',
+            evidenceCount: c.evidence?.length || 0
+          }))
+        });
+
         // 📱 Notify agent analysis completion with enhanced format
         await this.telegram.postEnhancedAgentAnalysis(
           this.roundId,

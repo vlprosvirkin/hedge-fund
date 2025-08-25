@@ -41,12 +41,19 @@ export abstract class BaseAgent {
 
     try {
       console.log(`🤖 ${this.role.toUpperCase()} Agent: Starting analysis...`);
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: Context - Universe: ${context.universe.join(', ')}, Risk Profile: ${context.riskProfile}`);
+      
       processedData = await this.processData(context);
       console.log(`🤖 ${this.role.toUpperCase()} Agent: Processed data completed, got ${processedData.length} items`);
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: Processed data preview:`, processedData.map((item, i) => `${i}: ${JSON.stringify(item).substring(0, 100)}...`));
 
       // Build prompts with processed data
       const systemPrompt = this.buildSystemPrompt(context);
       const userPrompt = this.buildUserPrompt(context, processedData);
+      
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: System prompt length: ${systemPrompt.length} chars`);
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: User prompt length: ${userPrompt.length} chars`);
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: User prompt preview: ${userPrompt.substring(0, 200)}...`);
 
       console.log(`🤖 ${this.role.toUpperCase()} Agent: Calling OpenAI...`);
       // Call OpenAI to generate claims with reasoning
@@ -57,11 +64,15 @@ export abstract class BaseAgent {
       );
 
       console.log(`🤖 ${this.role.toUpperCase()} Agent: OpenAI response received, claims: ${result.claims.length}`);
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: Raw OpenAI response length: ${result.openaiResponse?.length || 0} chars`);
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: Raw OpenAI response preview: ${result.openaiResponse?.substring(0, 300)}...`);
+      
       claims.push(...result.claims);
       openaiResponse = result.openaiResponse || '';
       analysis = result.analysis || '';
 
       console.log(`🤖 ${this.role.toUpperCase()} Agent: Analysis extracted: ${analysis.substring(0, 100)}...`);
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: Claims generated:`, claims.map(c => `${c.ticker}: ${c.claim} (${(c.confidence * 100).toFixed(1)}%)`));
 
     } catch (error) {
       console.error(`❌ Error in ${this.role} agent:`, error);

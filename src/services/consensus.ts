@@ -7,24 +7,39 @@ export class ConsensusService {
     marketStats: MarketStats[],
     maxPositions: number = 10
   ): Promise<ConsensusRec[]> {
+    console.log(`🤝 ConsensusService: Building consensus for ${claims.length} claims across ${marketStats.length} market stats`);
+    
     // Group claims by ticker
     const tickerGroups = this.groupClaimsByTicker(claims);
+    console.log(`🤝 ConsensusService: Grouped claims by ${tickerGroups.size} tickers:`, Array.from(tickerGroups.keys()));
 
     // Calculate consensus for each ticker
     const consensus: ConsensusRec[] = [];
 
     for (const [ticker, tickerClaims] of tickerGroups) {
       const marketStat = marketStats.find(stat => stat.symbol === ticker);
-      if (!marketStat) continue;
+      if (!marketStat) {
+        console.log(`🤝 ConsensusService: No market stats found for ${ticker}, skipping`);
+        continue;
+      }
 
+      console.log(`🤝 ConsensusService: Calculating consensus for ${ticker} with ${tickerClaims.length} claims`);
       const consensusRec = this.calculateTickerConsensus(ticker, tickerClaims, marketStat);
+      console.log(`🤝 ConsensusService: ${ticker} consensus - Score: ${consensusRec.finalScore.toFixed(3)}, Confidence: ${(consensusRec.avgConfidence * 100).toFixed(1)}%, Coverage: ${(consensusRec.coverage * 100).toFixed(1)}%`);
       consensus.push(consensusRec);
     }
 
     // Sort by final score and return top positions
-    return consensus
+    const sortedConsensus = consensus
       .sort((a, b) => b.finalScore - a.finalScore)
       .slice(0, maxPositions);
+    
+    console.log(`🤝 ConsensusService: Final consensus built for ${sortedConsensus.length} positions`);
+    sortedConsensus.forEach((c, i) => {
+      console.log(`🤝 ConsensusService: ${i + 1}. ${c.ticker} - Score: ${c.finalScore.toFixed(3)} (${c.finalScore > 0.1 ? 'BUY' : c.finalScore < -0.1 ? 'SELL' : 'HOLD'})`);
+    });
+    
+    return sortedConsensus;
   }
 
   private groupClaimsByTicker(claims: Claim[]): Map<string, Claim[]> {

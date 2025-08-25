@@ -82,7 +82,10 @@ export class AgentCoordinator {
       let combinedOpenAIResponse = '';
       let combinedAnalysis = '';
 
-      agentResponses.forEach(response => {
+      console.log(`🤝 AgentCoordinator: Collecting responses from ${agentResponses.length} agents...`);
+      
+      agentResponses.forEach((response, index) => {
+        console.log(`🤝 AgentCoordinator: Agent ${index + 1} - Claims: ${response.claims.length}, Analysis length: ${response.analysis?.length || 0}`);
         allClaims.push(...response.claims);
         if (response.openaiResponse) {
           combinedOpenAIResponse += response.openaiResponse + '\n\n';
@@ -92,30 +95,44 @@ export class AgentCoordinator {
         }
       });
 
+      console.log(`🤝 AgentCoordinator: Total claims collected: ${allClaims.length}`);
+      console.log(`🤝 AgentCoordinator: Combined analysis length: ${combinedAnalysis.length} chars`);
+      console.log(`🤝 AgentCoordinator: Combined OpenAI response length: ${combinedOpenAIResponse.length} chars`);
+
       // Step 2: Organize claims by ticker and agent
       const claimsByTicker = this.organizeClaimsByTicker(allClaims);
+      console.log(`🤝 AgentCoordinator: Organized claims by ticker:`, Array.from(claimsByTicker.keys()));
 
       // Step 3: Detect conflicts and run debates
       const conflicts = this.detectConflicts(claimsByTicker);
+      console.log(`🤝 AgentCoordinator: Conflict detection - Found ${conflicts.length} conflicts:`, conflicts);
 
       if (conflicts.length > 0) {
         console.log(`🔍 Detected ${conflicts.length} conflicts, starting debate rounds...`);
 
         for (let round = 1; round <= this.maxDebateRounds; round++) {
+          console.log(`🗣️ Debate Round ${round}: ${conflicts.length} conflicts to resolve`);
           const debateRound = await this.runDebateRound(round, conflicts, context);
           debateLog.push(debateRound);
 
           // Check if consensus reached
           const remainingConflicts = this.detectConflicts(claimsByTicker);
+          console.log(`🗣️ After round ${round}: ${remainingConflicts.length} conflicts remaining`);
           if (remainingConflicts.length === 0) {
             console.log(`✅ Consensus reached after ${round} debate rounds`);
             break;
           }
         }
+      } else {
+        console.log(`🤝 No conflicts detected - unanimous agreement`);
       }
 
       // Step 4: Build final consensus
       const consensus = this.buildConsensus(claimsByTicker);
+      console.log(`🤝 AgentCoordinator: Built consensus for ${consensus.length} tickers`);
+      consensus.forEach(c => {
+        console.log(`🤝 Consensus for ${c.ticker}: ${c.finalScore > 0.1 ? 'BUY' : c.finalScore < -0.1 ? 'SELL' : 'HOLD'} (score: ${c.finalScore.toFixed(3)})`);
+      });
 
       console.log(`🎯 Collaboration completed: ${allClaims.length} claims, ${consensus.length} consensus decisions`);
 
