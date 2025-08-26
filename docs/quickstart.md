@@ -1,25 +1,31 @@
+---
+hidden: true
+---
+
 # 🚀 Quick Start Guide
 
 ## Prerequisites
-- Node.js 18+
-- npm or yarn
+
+* Node.js 18+
+* npm or yarn
 
 ## Installation & Setup
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+1.  **Install dependencies:**
 
-2. **Build the project:**
-   ```bash
-   npm run build
-   ```
+    ```bash
+    npm install
+    ```
+2.  **Build the project:**
 
-3. **Run mock pipeline (safe for testing):**
-   ```bash
-   npm run mock
-   ```
+    ```bash
+    npm run build
+    ```
+3.  **Run mock pipeline (safe for testing):**
+
+    ```bash
+    npm run mock
+    ```
 
 ## What the Mock Pipeline Does
 
@@ -57,11 +63,11 @@ src/
 
 ## Key Features
 
-- **Multi-Agent Consensus**: 3 AI agents analyze data independently
-- **Risk Management**: Comprehensive risk controls and kill-switch
-- **Real-time Data**: Market data and news ingestion
-- **Portfolio Optimization**: Automated rebalancing
-- **Mock Mode**: Safe testing environment
+* **Multi-Agent Consensus**: 3 AI agents analyze data independently
+* **Risk Management**: Comprehensive risk controls and kill-switch
+* **Real-time Data**: Market data and news ingestion
+* **Portfolio Optimization**: Automated rebalancing
+* **Mock Mode**: Safe testing environment
 
 ## Next Steps
 
@@ -74,9 +80,10 @@ src/
 ## Production Setup
 
 For production use, you'll need:
-- Binance API keys
-- Aspis API key (from [https://v2.aspis.finance/create-vault](https://v2.aspis.finance/create-vault))
-- OpenAI API key
-- Database setup (PostgreSQL/Redis)
+
+* Binance API keys
+* Aspis API key (from [https://v2.aspis.finance/create-vault](https://v2.aspis.finance/create-vault))
+* OpenAI API key
+* Database setup (PostgreSQL/Redis)
 
 See `README.md` for detailed production setup instructions.
