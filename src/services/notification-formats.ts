@@ -213,7 +213,25 @@ export class NotificationFormats {
                     text += `   💭 <b>Reasoning:</b> ${claim.rationale}\n`;
                 }
 
-                // Removed Key Indicators to keep messages cleaner - focus on reasoning instead
+                // Show key signals/indicators (top 3 most important)
+                if (claim.signals && claim.signals.length > 0) {
+                    text += `   📊 <b>Key Signals:</b>\n`;
+                    // Show only top 3 most important indicators
+                    const topSignals = claim.signals.slice(0, 3);
+                    topSignals.forEach(signal => {
+                        if (signal && signal.name && signal.value !== undefined) {
+                            const value = typeof signal.value === 'number' ? signal.value.toFixed(3) : signal.value;
+                            const signalEmoji = signal.name.includes('rsi') ? '📈' :
+                                signal.name.includes('macd') ? '📊' :
+                                    signal.name.includes('sentiment') ? '📰' :
+                                        signal.name.includes('liquidity') ? '💰' : '📋';
+                            text += `      ${signalEmoji} ${signal.name}: ${value}\n`;
+                        }
+                    });
+                    if (claim.signals.length > 3) {
+                        text += `      • ... and ${claim.signals.length - 3} more\n`;
+                    }
+                }
 
                 // Show risk flags
                 if (claim.riskFlags && claim.riskFlags.length > 0) {
@@ -236,11 +254,20 @@ export class NotificationFormats {
 
         if (allEvidence.size > 0) {
             text += `🔍 <b>EVIDENCES:</b>\n`;
+            text += `📊 <b>Evidence Summary:</b> ${allEvidence.size} items used\n`;
             Array.from(allEvidence).forEach((evidence, i) => {
                 if (!evidence) {
                     text += `${i + 1}. 📄 Unknown evidence\n`;
                 } else if (typeof evidence === 'string') {
-                    text += `${i + 1}. 📄 ${evidence}\n`;
+                    // Try to parse evidence ID for better display
+                    if (evidence.includes('_')) {
+                        const parts = evidence.split('_');
+                        const type = parts[1] || 'unknown';
+                        const timestamp = parts[2] || 'unknown';
+                        text += `${i + 1}. 📄 ${type.toUpperCase()} data (${timestamp})\n`;
+                    } else {
+                        text += `${i + 1}. 📄 ${evidence}\n`;
+                    }
                 } else {
                     const source = evidence.source || 'Unknown';
                     let details = 'No details';
@@ -260,9 +287,60 @@ export class NotificationFormats {
         // 4. ANALYSIS INSIGHTS
         if (analysis && analysis.trim().length > 0) {
             text += `🧠 <b>ANALYSIS:</b>\n`;
-            // Truncate long analysis to avoid message overflow
-            const truncatedAnalysis = analysis.length > 1200 ? analysis.substring(0, 1200) + '...' : analysis;
-            text += `<i>"${truncatedAnalysis}"</i>\n\n`;
+
+            // Create compact analysis summary
+            let compactAnalysis = analysis;
+
+            // Remove common verbose patterns
+            compactAnalysis = compactAnalysis
+                .replace(/FUNDAMENTAL ANALYSIS:\s*/gi, '')
+                .replace(/TECHNICAL ANALYSIS:\s*/gi, '')
+                .replace(/SENTIMENT ANALYSIS:\s*/gi, '')
+                .replace(/Based on the above analysis, here are the claims for each ticker:/gi, '')
+                .replace(/CLAIMS:\s*/gi, '')
+                .replace(/\n\n+/g, '\n') // Remove multiple newlines
+                .trim();
+
+            // Extract key insights for each ticker
+            const tickerInsights: string[] = [];
+            claims.forEach(claim => {
+                const ticker = claim.ticker;
+                const direction = claim.direction || (claim.claim === 'BUY' ? 'bullish' : claim.claim === 'SELL' ? 'bearish' : 'neutral');
+                const confidence = (claim.confidence * 100).toFixed(0);
+
+                let insight = `${ticker}: ${direction.toUpperCase()} (${confidence}% conf)`;
+
+                if (claim.rationale) {
+                    // Extract first sentence of rationale
+                    const firstSentence = claim.rationale.split('.')[0];
+                    if (firstSentence && firstSentence.length < 80) {
+                        insight += ` - ${firstSentence}`;
+                    }
+                }
+
+                tickerInsights.push(insight);
+            });
+
+            // Show compact insights instead of full analysis
+            if (tickerInsights.length > 0) {
+                text += `📊 <b>Key Insights:</b>\n`;
+                tickerInsights.forEach(insight => {
+                    text += `• ${insight}\n`;
+                });
+
+                // Add agent-specific analysis summary
+                const agentSummary = this.getAgentAnalysisSummary(agentRole, claims);
+                if (agentSummary) {
+                    text += `\n🔬 <b>${agentRole.toUpperCase()} Analysis Summary:</b>\n`;
+                    text += `${agentSummary}\n`;
+                }
+
+                text += '\n';
+            } else {
+                // Fallback to truncated analysis if no insights extracted
+                const truncatedAnalysis = compactAnalysis.length > 400 ? compactAnalysis.substring(0, 400) + '...' : compactAnalysis;
+                text += `<i>"${truncatedAnalysis}"</i>\n\n`;
+            }
         }
 
         return text;
@@ -378,7 +456,8 @@ export class NotificationFormats {
         text += `• 📰 <b>Sentiment Agent</b> (25% weight): News sentiment, social media\n`;
         text += `• 📈 <b>Technical Agent</b> (40% weight): RSI, MACD, technical indicators\n`;
         text += `• 🎯 <b>Final Score</b> = Weighted average of agent signals\n`;
-        text += `• ⚖️ <b>Decision Thresholds</b>: BUY &gt; 0.3, SELL &lt; -0.3, HOLD otherwise\n\n`;
+        text += `• ⚖️ <b>Decision Thresholds</b>: BUY &gt; 0.3, SELL &lt; -0.3, HOLD otherwise\n`;
+        text += `• 🔄 <b>Process</b>: Individual analysis → Signal processing → Consensus building → Final decision\n\n`;
 
         // Show final consensus decision
         if (finalConsensus) {
@@ -660,5 +739,31 @@ export class NotificationFormats {
         }).join(', ');
 
         return summary;
+    }
+
+    /**
+     * Get agent-specific analysis summary
+     */
+    private static getAgentAnalysisSummary(agentRole: string, claims: Claim[]): string {
+        if (claims.length === 0) return '';
+
+        const buyCount = claims.filter(c => c.claim === 'BUY').length;
+        const sellCount = claims.filter(c => c.claim === 'SELL').length;
+        const holdCount = claims.filter(c => c.claim === 'HOLD').length;
+        const avgConfidence = claims.reduce((sum, c) => sum + c.confidence, 0) / claims.length;
+
+        switch (agentRole) {
+            case 'fundamental':
+                return `Analyzed ${claims.length} assets using market fundamentals. ${buyCount} BUY, ${sellCount} SELL, ${holdCount} HOLD recommendations with ${(avgConfidence * 100).toFixed(1)}% avg confidence. Focused on liquidity, volatility, and market cap analysis.`;
+
+            case 'sentiment':
+                return `Analyzed ${claims.length} assets using news sentiment. ${buyCount} BUY, ${sellCount} SELL, ${holdCount} HOLD recommendations with ${(avgConfidence * 100).toFixed(1)}% avg confidence. Evaluated news coverage, sentiment scores, and emotional market indicators.`;
+
+            case 'valuation':
+                return `Analyzed ${claims.length} assets using technical indicators. ${buyCount} BUY, ${sellCount} SELL, ${holdCount} HOLD recommendations with ${(avgConfidence * 100).toFixed(1)}% avg confidence. Applied RSI, MACD, volatility, and momentum analysis.`;
+
+            default:
+                return `Analyzed ${claims.length} assets. ${buyCount} BUY, ${sellCount} SELL, ${holdCount} HOLD recommendations with ${(avgConfidence * 100).toFixed(1)}% avg confidence.`;
+        }
     }
 }

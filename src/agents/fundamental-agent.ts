@@ -64,11 +64,24 @@ ANALYSIS CRITERIA:
 - TREND SUSTAINABILITY: Structural analysis of price movements
 
 CONFIDENCE SCORING:
-- 0.8-1.0: Strong signals across all metrics, clear trend, high liquidity
-- 0.6-0.7: Good signals, some uncertainty, adequate liquidity
-- 0.4-0.5: Mixed signals, moderate confidence, acceptable liquidity
-- 0.2-0.3: Weak signals, low confidence, poor liquidity
-- 0.1-0.2: Very weak signals, minimal confidence, insufficient data
+- 0.8-1.0: Strong positive signals (trend_strength > 0.5, high liquidity, low volatility)
+- 0.6-0.7: Good positive signals (trend_strength > 0.2, adequate liquidity)
+- 0.4-0.5: Mixed signals (trend_strength between -0.2 and 0.2, moderate confidence)
+- 0.2-0.3: Weak negative signals (trend_strength < -0.2, low confidence)
+- 0.1-0.2: Very weak signals (trend_strength < -0.5, minimal confidence)
+
+CALCULATE CONFIDENCE BASED ON:
+- trend_strength: Use absolute value and direction
+- liquidity_score: Higher = higher confidence
+- volatility: Lower = higher confidence (for stability)
+- volume: Higher = higher confidence
+
+TECHNICAL ANALYSIS INTEGRATION:
+- Use signal_strength from TechnicalAnalysisService for trend direction
+- RSI values: <30 (oversold) = bullish, >70 (overbought) = bearish
+- MACD values: Positive = bullish momentum, Negative = bearish momentum
+- Volatility: Higher volatility = higher potential for large moves
+- Combine fundamental data with technical signals for comprehensive analysis
 
 Risk profile: ${riskProfile} - ${this.getRiskProfileContext(riskProfile)}
 

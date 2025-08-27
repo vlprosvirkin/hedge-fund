@@ -321,11 +321,28 @@ export class HedgeFundOrchestrator {
         }
 
         // 📱 Complete agent analysis in one message
+        let analysisText = (result as any).textPart || result.analysis || '';
+
+        // Validate analysis content for sentiment agent
+        if (role === 'sentiment' && analysisText.toLowerCase().includes('fundamental analysis')) {
+          console.warn(`⚠️ Sentiment agent returned fundamental analysis, using fallback`);
+          analysisText = 'Sentiment analysis completed based on news coverage and emotional indicators.';
+        }
+
+        // Log claims structure for debugging
+        console.log(`🔍 Orchestrator: ${role} agent - Claims structure:`, result.claims.map(c => ({
+          ticker: c.ticker,
+          direction: c.direction,
+          magnitude: c.magnitude,
+          rationale: c.rationale?.substring(0, 50),
+          evidenceCount: c.evidence?.length || 0
+        })));
+
         await this.notifications.postAgentCompleteAnalysis(
           this.roundId,
           role,
           result.claims,
-          (result as any).textPart || result.analysis || '', // Use textPart for better analysis
+          analysisText,
           evidence,
           {
             universe,

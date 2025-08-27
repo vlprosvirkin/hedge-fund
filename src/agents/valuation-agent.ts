@@ -109,11 +109,26 @@ TECHNICAL ANALYSIS CRITERIA:
 - Volatility: Higher volatility = more potential for large moves
 
 CONFIDENCE SCORING:
-- 0.8-1.0: Multiple strong technical signals aligned, clear mathematical evidence
-- 0.6-0.7: Good technical signals with mathematical confirmation
-- 0.4-0.5: Mixed technical signals, moderate mathematical evidence
-- 0.2-0.3: Weak technical signals, limited mathematical evidence
-- 0.1-0.2: Very weak signals, insufficient mathematical data
+- 0.8-1.0: Strong positive signals (signal_strength > 0.5, multiple indicators aligned)
+- 0.6-0.7: Good positive signals (signal_strength > 0.2, some indicators aligned)
+- 0.4-0.5: Mixed signals (signal_strength between -0.2 and 0.2, conflicting indicators)
+- 0.2-0.3: Weak negative signals (signal_strength < -0.2, bearish indicators)
+- 0.1-0.2: Very weak signals (signal_strength < -0.5, strongly bearish)
+
+CALCULATE CONFIDENCE BASED ON:
+- signal_strength: Use absolute value and direction
+- RSI: Extreme values (>70 or <30) = higher confidence
+- MACD: Strong positive/negative values = higher confidence
+- Volatility: Higher = higher confidence (more decisive signals)
+- Multiple indicators alignment: More aligned = higher confidence
+
+TECHNICAL ANALYSIS SERVICE INTEGRATION:
+- Use calculateSignalStrength() results for comprehensive analysis
+- RSI thresholds: <30 (oversold), >70 (overbought)
+- MACD analysis: Positive/negative values and crossovers
+- Stochastic: <20 (oversold), >80 (overbought)
+- Williams %R: <-80 (oversold), >-20 (overbought)
+- Combine all indicators for weighted signal strength calculation
 
 Risk profile: ${riskProfile} - ${this.getRiskProfileContext(riskProfile)}
 

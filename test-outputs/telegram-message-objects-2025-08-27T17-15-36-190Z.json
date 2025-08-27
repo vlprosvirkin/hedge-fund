@@ -1,0 +1,78 @@
+{
+  "testDate": "8/27/2025, 9:15:36 PM",
+  "totalMessages": 8,
+  "messages": [
+    {
+      "index": 1,
+      "message": {
+        "text": "🚀 <b>TRADING ROUND STARTED</b>\n\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n🎯 Universe: 2 assets\n🤖 3 AI agents ready for analysis\n\n<i>Starting multi-agent discussion...</i>",
+        "parse_mode": "HTML",
+        "disable_web_page_preview": false
+      },
+      "text": "🚀 <b>TRADING ROUND STARTED</b>\n\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n🎯 Universe: 2 assets\n🤖 3 AI agents ready for analysis\n\n<i>Starting multi-agent discussion...</i>"
+    },
+    {
+      "index": 2,
+      "message": {
+        "text": "📊 <b>FUNDAMENTAL ANALYST</b>\n🔵 <i>Conservative analyst, relies on data and facts</i>\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n\n📊 <b>SUMMARY:</b>\n🚀 Buy: 0 | 📉 Sell: 0 | ⏸️ Hold: 2\n💪 Avg Confidence: 50.0%\n\n🎯 <b>CLAIMS:</b>\n1. ⏸️ <b>BTC</b> (50.0%)\n   ➡️ Direction: NEUTRAL\n   ⚡ Magnitude: 50.0%\n   💭 <b>Reasoning:</b> Strong fundamentals and liquidity but weak technical momentum and negative signal strength.\n   ⚠️ <b>Risk Flags:</b> low_volatility, negative_signal_strength\n\n2. ⏸️ <b>ETH</b> (50.0%)\n   ➡️ Direction: NEUTRAL\n   ⚡ Magnitude: 50.0%\n   💭 <b>Reasoning:</b> Strong fundamentals and liquidity but mixed technical momentum and negative signal strength.\n   ⚠️ <b>Risk Flags:</b> mixed_technical_signals, negative_signal_strength\n\n🔍 <b>EVIDENCES:</b>\n1. 📄 BTC_market_1756314890312\n2. 📄 ETH_market_1756314890313\n\n🧠 <b>ANALYSIS:</b>\n📊 <b>Key Insights:</b>\n• BTC: NEUTRAL (50% conf)\n• ETH: NEUTRAL (50% conf)\n\n",
+        "parse_mode": "HTML",
+        "disable_web_page_preview": true
+      },
+      "text": "📊 <b>FUNDAMENTAL ANALYST</b>\n🔵 <i>Conservative analyst, relies on data and facts</i>\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n\n📊 <b>SUMMARY:</b>\n🚀 Buy: 0 | 📉 Sell: 0 | ⏸️ Hold: 2\n💪 Avg Confidence: 50.0%\n\n🎯 <b>CLAIMS:</b>\n1. ⏸️ <b>BTC</b> (50.0%)\n   ➡️ Direction: NEUTRAL\n   ⚡ Magnitude: 50.0%\n   💭 <b>Reasoning:</b> Strong fundamentals and liquidity but weak technical momentum and negative signal strength.\n   ⚠️ <b>Risk Flags:</b> low_volatility, negative_signal_strength\n\n2. ⏸️ <b>ETH</b> (50.0%)\n   ➡️ Direction: NEUTRAL\n   ⚡ Magnitude: 50.0%\n   💭 <b>Reasoning:</b> Strong fundamentals and liquidity but mixed technical momentum and negative signal strength.\n   ⚠️ <b>Risk Flags:</b> mixed_technical_signals, negative_signal_strength\n\n🔍 <b>EVIDENCES:</b>\n1. 📄 BTC_market_1756314890312\n2. 📄 ETH_market_1756314890313\n\n🧠 <b>ANALYSIS:</b>\n📊 <b>Key Insights:</b>\n• BTC: NEUTRAL (50% conf)\n• ETH: NEUTRAL (50% conf)\n\n"
+    },
+    {
+      "index": 3,
+      "message": {
+        "text": "📰 <b>SENTIMENT ANALYST</b>\n🟡 <i>Emotional analyst, feels market sentiment</i>\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n\n📊 <b>SUMMARY:</b>\n🚀 Buy: 2 | 📉 Sell: 0 | ⏸️ Hold: 0\n💪 Avg Confidence: 67.5%\n\n🎯 <b>CLAIMS:</b>\n1. 🚀 <b>BTC</b> (71.0%)\n   📈 Direction: BULLISH\n   🔥 Magnitude: 71.0%\n   💭 <b>Reasoning:</b> The sentiment score for BTC is positive with a value of 0.71. The news coverage is high with 20 articles, and the news is fresh. However, there is some inconsistency in the sentiment of the news articles.\n   ⚠️ <b>Risk Flags:</b> inconsistent_sentiment\n\n2. 🚀 <b>ETH</b> (64.0%)\n   📈 Direction: BULLISH\n   🔥 Magnitude: 64.0%\n   💭 <b>Reasoning:</b> The sentiment score for ETH is moderately positive with a value of 0.64. The news coverage is high with 20 articles, and the news is fresh. However, there is some inconsistency in the sentiment of the news articles.\n   ⚠️ <b>Risk Flags:</b> inconsistent_sentiment\n\n🔍 <b>EVIDENCES:</b>\n1. 📄 ETH_news_1756314900425\n\n🧠 <b>ANALYSIS:</b>\n📊 <b>Key Insights:</b>\n• BTC: BULLISH (71% conf) - The sentiment score for BTC is positive with a value of 0\n• ETH: BULLISH (64% conf) - The sentiment score for ETH is moderately positive with a value of 0\n\n",
+        "parse_mode": "HTML",
+        "disable_web_page_preview": true
+      },
+      "text": "📰 <b>SENTIMENT ANALYST</b>\n🟡 <i>Emotional analyst, feels market sentiment</i>\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n\n📊 <b>SUMMARY:</b>\n🚀 Buy: 2 | 📉 Sell: 0 | ⏸️ Hold: 0\n💪 Avg Confidence: 67.5%\n\n🎯 <b>CLAIMS:</b>\n1. 🚀 <b>BTC</b> (71.0%)\n   📈 Direction: BULLISH\n   🔥 Magnitude: 71.0%\n   💭 <b>Reasoning:</b> The sentiment score for BTC is positive with a value of 0.71. The news coverage is high with 20 articles, and the news is fresh. However, there is some inconsistency in the sentiment of the news articles.\n   ⚠️ <b>Risk Flags:</b> inconsistent_sentiment\n\n2. 🚀 <b>ETH</b> (64.0%)\n   📈 Direction: BULLISH\n   🔥 Magnitude: 64.0%\n   💭 <b>Reasoning:</b> The sentiment score for ETH is moderately positive with a value of 0.64. The news coverage is high with 20 articles, and the news is fresh. However, there is some inconsistency in the sentiment of the news articles.\n   ⚠️ <b>Risk Flags:</b> inconsistent_sentiment\n\n🔍 <b>EVIDENCES:</b>\n1. 📄 ETH_news_1756314900425\n\n🧠 <b>ANALYSIS:</b>\n📊 <b>Key Insights:</b>\n• BTC: BULLISH (71% conf) - The sentiment score for BTC is positive with a value of 0\n• ETH: BULLISH (64% conf) - The sentiment score for ETH is moderately positive with a value of 0\n\n"
+    },
+    {
+      "index": 4,
+      "message": {
+        "text": "📈 <b>TECHNICAL ANALYST</b>\n🟢 <i>Pragmatic analyst, trusts technical signals</i>\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n\n📊 <b>SUMMARY:</b>\n🚀 Buy: 0 | 📉 Sell: 0 | ⏸️ Hold: 2\n💪 Avg Confidence: 50.0%\n\n🎯 <b>CLAIMS:</b>\n1. ⏸️ <b>BTC</b> (50.0%)\n   ➡️ Direction: NEUTRAL\n   ⚡ Magnitude: 50.0%\n   💭 <b>Reasoning:</b> Mixed technical signals with bearish MACD but neutral RSI and Stochastic. Moderate volatility suggests potential for significant price moves.\n   ⚠️ <b>Risk Flags:</b> high_volatility, mixed_signals\n\n2. ⏸️ <b>ETH</b> (50.0%)\n   ➡️ Direction: NEUTRAL\n   ⚡ Magnitude: 50.0%\n   💭 <b>Reasoning:</b> Mixed technical signals with bullish MACD but overbought Stochastic. Moderate volatility suggests potential for significant price moves.\n   ⚠️ <b>Risk Flags:</b> high_volatility, mixed_signals\n\n🧠 <b>ANALYSIS:</b>\n📊 <b>Key Insights:</b>\n• BTC: NEUTRAL (50% conf) - Mixed technical signals with bearish MACD but neutral RSI and Stochastic\n• ETH: NEUTRAL (50% conf) - Mixed technical signals with bullish MACD but overbought Stochastic\n\n",
+        "parse_mode": "HTML",
+        "disable_web_page_preview": true
+      },
+      "text": "📈 <b>TECHNICAL ANALYST</b>\n🟢 <i>Pragmatic analyst, trusts technical signals</i>\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n\n📊 <b>SUMMARY:</b>\n🚀 Buy: 0 | 📉 Sell: 0 | ⏸️ Hold: 2\n💪 Avg Confidence: 50.0%\n\n🎯 <b>CLAIMS:</b>\n1. ⏸️ <b>BTC</b> (50.0%)\n   ➡️ Direction: NEUTRAL\n   ⚡ Magnitude: 50.0%\n   💭 <b>Reasoning:</b> Mixed technical signals with bearish MACD but neutral RSI and Stochastic. Moderate volatility suggests potential for significant price moves.\n   ⚠️ <b>Risk Flags:</b> high_volatility, mixed_signals\n\n2. ⏸️ <b>ETH</b> (50.0%)\n   ➡️ Direction: NEUTRAL\n   ⚡ Magnitude: 50.0%\n   💭 <b>Reasoning:</b> Mixed technical signals with bullish MACD but overbought Stochastic. Moderate volatility suggests potential for significant price moves.\n   ⚠️ <b>Risk Flags:</b> high_volatility, mixed_signals\n\n🧠 <b>ANALYSIS:</b>\n📊 <b>Key Insights:</b>\n• BTC: NEUTRAL (50% conf) - Mixed technical signals with bearish MACD but neutral RSI and Stochastic\n• ETH: NEUTRAL (50% conf) - Mixed technical signals with bullish MACD but overbought Stochastic\n\n"
+    },
+    {
+      "index": 5,
+      "message": {
+        "text": "🎯 <b>SIGNAL ANALYST</b>\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n🎛️ Risk Profile: NEUTRAL\n\n📊 <b>SIGNAL ANALYSIS:</b>\n1. ⏸️ <b>ETH</b>\n   📊 Signal: 16.6%\n   💪 Confidence: 57.0%\n   ⚠️ Risk: 14.4%\n   💰 Position Size: 3.6%\n\n2. ⏸️ <b>BTC</b>\n   📊 Signal: 2.5%\n   💪 Confidence: 58.4%\n   ⚠️ Risk: 20.6%\n   💰 Position Size: 2.4%\n\n📈 <b>PORTFOLIO SUMMARY:</b>\n🚀 Buy: 0 | 📉 Sell: 0 | ⏸️ Hold: 2\n💪 Avg Confidence: 57.7%\n",
+        "parse_mode": "HTML",
+        "disable_web_page_preview": true
+      },
+      "text": "🎯 <b>SIGNAL ANALYST</b>\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n🎛️ Risk Profile: NEUTRAL\n\n📊 <b>SIGNAL ANALYSIS:</b>\n1. ⏸️ <b>ETH</b>\n   📊 Signal: 16.6%\n   💪 Confidence: 57.0%\n   ⚠️ Risk: 14.4%\n   💰 Position Size: 3.6%\n\n2. ⏸️ <b>BTC</b>\n   📊 Signal: 2.5%\n   💪 Confidence: 58.4%\n   ⚠️ Risk: 20.6%\n   💰 Position Size: 2.4%\n\n📈 <b>PORTFOLIO SUMMARY:</b>\n🚀 Buy: 0 | 📉 Sell: 0 | ⏸️ Hold: 2\n💪 Avg Confidence: 57.7%\n"
+    },
+    {
+      "index": 6,
+      "message": {
+        "text": "🎭 <b>AGENT DEBATES & CONSENSUS</b>\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n\n🤝 <b>UNANIMOUS AGREEMENT</b>\nAll agents reached consensus without conflicts.\n\n🔬 <b>CONSENSUS METHODOLOGY:</b>\n• 📊 <b>Fundamental Agent</b> (35% weight): Market data, volume, liquidity\n• 📰 <b>Sentiment Agent</b> (25% weight): News sentiment, social media\n• 📈 <b>Technical Agent</b> (40% weight): RSI, MACD, technical indicators\n• 🎯 <b>Final Score</b> = Weighted average of agent signals\n• ⚖️ <b>Decision Thresholds</b>: BUY &gt; 0.3, SELL &lt; -0.3, HOLD otherwise\n\n🎯 <b>FINAL CONSENSUS:</b>\n⏸️ Decision: HOLD\n💪 Agent Confidence: 57.0%\n🤝 Agreement: 57.0%\n\n💭 <b>FULL REASONING:</b>\n\"Consensus reached for ETH with score 0.081\"\n\n",
+        "parse_mode": "HTML",
+        "disable_web_page_preview": true
+      },
+      "text": "🎭 <b>AGENT DEBATES & CONSENSUS</b>\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n\n🤝 <b>UNANIMOUS AGREEMENT</b>\nAll agents reached consensus without conflicts.\n\n🔬 <b>CONSENSUS METHODOLOGY:</b>\n• 📊 <b>Fundamental Agent</b> (35% weight): Market data, volume, liquidity\n• 📰 <b>Sentiment Agent</b> (25% weight): News sentiment, social media\n• 📈 <b>Technical Agent</b> (40% weight): RSI, MACD, technical indicators\n• 🎯 <b>Final Score</b> = Weighted average of agent signals\n• ⚖️ <b>Decision Thresholds</b>: BUY &gt; 0.3, SELL &lt; -0.3, HOLD otherwise\n\n🎯 <b>FINAL CONSENSUS:</b>\n⏸️ Decision: HOLD\n💪 Agent Confidence: 57.0%\n🤝 Agreement: 57.0%\n\n💭 <b>FULL REASONING:</b>\n\"Consensus reached for ETH with score 0.081\"\n\n"
+    },
+    {
+      "index": 7,
+      "message": {
+        "text": "💼 <b>PORTFOLIO SUMMARY</b>\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n\n📊 <b>PORTFOLIO:</b>\n💰 Total Value: $1651.57\n📈 P&L: +0.00%\n🎯 Target Allocation: 80.0%\n\n⏸️ <b>NO ACTIVITY</b>\nNo transactions or orders in this round.\n",
+        "parse_mode": "HTML",
+        "disable_web_page_preview": true
+      },
+      "text": "💼 <b>PORTFOLIO SUMMARY</b>\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n\n📊 <b>PORTFOLIO:</b>\n💰 Total Value: $1651.57\n📈 P&L: +0.00%\n🎯 Target Allocation: 80.0%\n\n⏸️ <b>NO ACTIVITY</b>\nNo transactions or orders in this round.\n"
+    },
+    {
+      "index": 8,
+      "message": {
+        "text": "🎉 <b>ROUND COMPLETED</b>\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n⏱️ Duration: 82s\n🕐 Completed: 8/27/2025, 9:15:36 PM\n\n📊 <b>PERFORMANCE SUMMARY:</b>\n• 🤖 Agents: 3 (6 claims generated)\n• 🎯 Consensus: 2 decisions\n• ⚡ Orders: 0 executed\n• 💰 Portfolio: $1651.57 (PnL: $0.00)\n\n🎯 <b>FINAL DECISIONS:</b>\n1. ⏸️ <b>ETH</b>: 8.1% score\n   🟡 57.0% confidence\n2. ⏸️ <b>BTC</b>: 1.2% score\n   🟡 58.4% confidence\n\n<i>Multi-agent consensus system completed successfully!</i>",
+        "parse_mode": "HTML",
+        "disable_web_page_preview": true
+      },
+      "text": "🎉 <b>ROUND COMPLETED</b>\n🆔 Round: <code>016fe4e8-d2a0-401a-9b2b-5dc62d2d5a95</code>\n⏱️ Duration: 82s\n🕐 Completed: 8/27/2025, 9:15:36 PM\n\n📊 <b>PERFORMANCE SUMMARY:</b>\n• 🤖 Agents: 3 (6 claims generated)\n• 🎯 Consensus: 2 decisions\n• ⚡ Orders: 0 executed\n• 💰 Portfolio: $1651.57 (PnL: $0.00)\n\n🎯 <b>FINAL DECISIONS:</b>\n1. ⏸️ <b>ETH</b>: 8.1% score\n   🟡 57.0% confidence\n2. ⏸️ <b>BTC</b>: 1.2% score\n   🟡 58.4% confidence\n\n<i>Multi-agent consensus system completed successfully!</i>"
+    }
+  ]
+}

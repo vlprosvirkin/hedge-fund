@@ -1,0 +1,256 @@
+🧪 REAL TELEGRAM TEST RESULTS
+================================================================================
+Test Date: 8/27/2025, 9:24:44 PM
+Total Messages: 8
+Note: These messages use REAL NotificationsService formatting functions
+================================================================================
+
+📱 MESSAGE 1:
+────────────────────────────────────────────────────────────────
+🚀 <b>TRADING ROUND STARTED</b>
+
+🆔 Round: <code>dd8d9205-a6c5-4a46-a711-161c8612bfae</code>
+🎯 Universe: 2 assets
+🤖 3 AI agents ready for analysis
+
+<i>Starting multi-agent discussion...</i>
+────────────────────────────────────────────────────────────────
+
+📱 MESSAGE 2:
+────────────────────────────────────────────────────────────────
+📊 <b>FUNDAMENTAL ANALYST</b>
+🔵 <i>Conservative analyst, relies on data and facts</i>
+🆔 Round: <code>dd8d9205-a6c5-4a46-a711-161c8612bfae</code>
+
+📊 <b>SUMMARY:</b>
+🚀 Buy: 0 | 📉 Sell: 0 | ⏸️ Hold: 2
+💪 Avg Confidence: 65.0%
+
+🎯 <b>CLAIMS:</b>
+1. ⏸️ <b>BTC</b> (60.0%)
+   ➡️ Direction: NEUTRAL
+   ⚡ Magnitude: 30.0%
+   💭 <b>Reasoning:</b> Strong fundamentals and liquidity but weak technical momentum and negative trend strength
+   📊 <b>Key Signals:</b>
+      💰 liquidity_score: 1.000
+      📋 volatility: 0.002
+      📋 trend_strength: -0.300
+   ⚠️ <b>Risk Flags:</b> negative_trend_strength
+
+2. ⏸️ <b>ETH</b> (70.0%)
+   ➡️ Direction: NEUTRAL
+   💤 Magnitude: 10.0%
+   💭 <b>Reasoning:</b> Strong fundamentals and liquidity but mixed technical momentum and slightly negative trend strength
+   📊 <b>Key Signals:</b>
+      💰 liquidity_score: 1.000
+      📋 volatility: 0.005
+      📋 trend_strength: -0.100
+   ⚠️ <b>Risk Flags:</b> slightly_negative_trend_strength
+
+🔍 <b>EVIDENCES:</b>
+📊 <b>Evidence Summary:</b> 2 items used
+1. 📄 MARKET data (1756315439805)
+2. 📄 MARKET data (1756315439805)
+
+🧠 <b>ANALYSIS:</b>
+📊 <b>Key Insights:</b>
+• BTC: NEUTRAL (60% conf)
+• ETH: NEUTRAL (70% conf)
+
+🔬 <b>FUNDAMENTAL Analysis Summary:</b>
+Analyzed 2 assets using market fundamentals. 0 BUY, 0 SELL, 2 HOLD recommendations with 65.0% avg confidence. Focused on liquidity, volatility, and market cap analysis.
+
+
+────────────────────────────────────────────────────────────────
+
+📱 MESSAGE 3:
+────────────────────────────────────────────────────────────────
+📰 <b>SENTIMENT ANALYST</b>
+🟡 <i>Emotional analyst, feels market sentiment</i>
+🆔 Round: <code>dd8d9205-a6c5-4a46-a711-161c8612bfae</code>
+
+📊 <b>SUMMARY:</b>
+🚀 Buy: 2 | 📉 Sell: 0 | ⏸️ Hold: 0
+💪 Avg Confidence: 67.5%
+
+🎯 <b>CLAIMS:</b>
+1. 🚀 <b>BTC</b> (71.0%)
+   📈 Direction: BULLISH
+   🔥 Magnitude: 70.0%
+   💭 <b>Reasoning:</b> Positive sentiment from news coverage, with high coverage and freshness. Notable news includes Sequans raising funds to buy more Bitcoin and Metaplanet's acquisition of BTC.
+   📊 <b>Key Signals:</b>
+      📰 sentiment_score: 0.710
+      📋 news_coverage: 20.000
+      📋 freshness_score: 1.000
+
+2. 🚀 <b>ETH</b> (64.0%)
+   📈 Direction: BULLISH
+   🔥 Magnitude: 60.0%
+   💭 <b>Reasoning:</b> Positive sentiment from news coverage, with high coverage and freshness. Notable news includes ETHZilla's buyback and expansion of Ether holdings, and Bitmine's acquisition of Ethereum.
+   📊 <b>Key Signals:</b>
+      📰 sentiment_score: 0.640
+      📋 news_coverage: 20.000
+      📋 freshness_score: 1.000
+
+🔍 <b>EVIDENCES:</b>
+📊 <b>Evidence Summary:</b> 1 items used
+1. 📄 NEWS data (1756315450196)
+
+🧠 <b>ANALYSIS:</b>
+📊 <b>Key Insights:</b>
+• BTC: BULLISH (71% conf) - Positive sentiment from news coverage, with high coverage and freshness
+• ETH: BULLISH (64% conf) - Positive sentiment from news coverage, with high coverage and freshness
+
+🔬 <b>SENTIMENT Analysis Summary:</b>
+Analyzed 2 assets using news sentiment. 2 BUY, 0 SELL, 0 HOLD recommendations with 67.5% avg confidence. Evaluated news coverage, sentiment scores, and emotional market indicators.
+
+
+────────────────────────────────────────────────────────────────
+
+📱 MESSAGE 4:
+────────────────────────────────────────────────────────────────
+📈 <b>TECHNICAL ANALYST</b>
+🟢 <i>Pragmatic analyst, trusts technical signals</i>
+🆔 Round: <code>dd8d9205-a6c5-4a46-a711-161c8612bfae</code>
+
+📊 <b>SUMMARY:</b>
+🚀 Buy: 0 | 📉 Sell: 1 | ⏸️ Hold: 1
+💪 Avg Confidence: 30.0%
+
+🎯 <b>CLAIMS:</b>
+1. 📉 <b>BTC</b> (20.0%)
+   📉 Direction: BEARISH
+   🔥 Magnitude: 70.0%
+   💭 <b>Reasoning:</b> The MACD is bearish and the signal strength is negative, suggesting a downward trend.
+   📊 <b>Key Signals:</b>
+      📈 rsi: 50.230
+      📊 macd: -608.890
+      📋 volatility_30d: 0.300
+      • ... and 2 more
+   ⚠️ <b>Risk Flags:</b> high_volatility, weak_signals
+
+2. ⏸️ <b>ETH</b> (40.0%)
+   ➡️ Direction: NEUTRAL
+   ⚡ Magnitude: 50.0%
+   💭 <b>Reasoning:</b> The MACD is bullish but the signal strength is slightly negative, suggesting mixed signals.
+   📊 <b>Key Signals:</b>
+      📈 rsi: 54.540
+      📊 macd: 12.330
+      📋 volatility_30d: 0.300
+      • ... and 2 more
+   ⚠️ <b>Risk Flags:</b> high_volatility, weak_signals
+
+🧠 <b>ANALYSIS:</b>
+📊 <b>Key Insights:</b>
+• BTC: BEARISH (20% conf)
+• ETH: NEUTRAL (40% conf)
+
+🔬 <b>VALUATION Analysis Summary:</b>
+Analyzed 2 assets using technical indicators. 0 BUY, 1 SELL, 1 HOLD recommendations with 30.0% avg confidence. Applied RSI, MACD, volatility, and momentum analysis.
+
+
+────────────────────────────────────────────────────────────────
+
+📱 MESSAGE 5:
+────────────────────────────────────────────────────────────────
+🎯 <b>SIGNAL ANALYST</b>
+🆔 Round: <code>dd8d9205-a6c5-4a46-a711-161c8612bfae</code>
+🎛️ Risk Profile: NEUTRAL
+
+📊 <b>SIGNAL ANALYSIS:</b>
+1. ⏸️ <b>ETH</b>
+   📊 Signal: 24.3%
+   💪 Confidence: 59.7%
+   ⚠️ Risk: 9.9%
+   💰 Position Size: 6.6%
+
+2. ⏸️ <b>BTC</b>
+   📊 Signal: 11.5%
+   💪 Confidence: 44.7%
+   ⚠️ Risk: 15.0%
+   💰 Position Size: 3.9%
+
+📈 <b>PORTFOLIO SUMMARY:</b>
+🚀 Buy: 0 | 📉 Sell: 0 | ⏸️ Hold: 2
+💪 Avg Confidence: 52.2%
+
+────────────────────────────────────────────────────────────────
+
+📱 MESSAGE 6:
+────────────────────────────────────────────────────────────────
+🎭 <b>AGENT DEBATES & CONSENSUS</b>
+🆔 Round: <code>dd8d9205-a6c5-4a46-a711-161c8612bfae</code>
+
+⚔️ <b>CONFLICT RESOLUTION: 1 conflicts</b>
+
+🔴 <b>BTC Conflict:</b>
+   📊 Fundamental: undefined
+   📈 Technical: undefined
+   ⚡ Severity: low
+
+🔬 <b>CONSENSUS METHODOLOGY:</b>
+• 📊 <b>Fundamental Agent</b> (35% weight): Market data, volume, liquidity
+• 📰 <b>Sentiment Agent</b> (25% weight): News sentiment, social media
+• 📈 <b>Technical Agent</b> (40% weight): RSI, MACD, technical indicators
+• 🎯 <b>Final Score</b> = Weighted average of agent signals
+• ⚖️ <b>Decision Thresholds</b>: BUY &gt; 0.3, SELL &lt; -0.3, HOLD otherwise
+• 🔄 <b>Process</b>: Individual analysis → Signal processing → Consensus building → Final decision
+
+🎯 <b>FINAL CONSENSUS:</b>
+🚀 Decision: BUY
+💪 Agent Confidence: 59.7%
+🤝 Agreement: 59.7%
+
+💭 <b>FULL REASONING:</b>
+"Consensus reached for ETH with score 0.131"
+
+
+────────────────────────────────────────────────────────────────
+
+📱 MESSAGE 7:
+────────────────────────────────────────────────────────────────
+💼 <b>PORTFOLIO SUMMARY</b>
+🆔 Round: <code>dd8d9205-a6c5-4a46-a711-161c8612bfae</code>
+
+📊 <b>PORTFOLIO:</b>
+💰 Total Value: $1651.65
+📈 P&L: +0.00%
+🎯 Target Allocation: 80.0%
+
+⏸️ <b>NO ACTIVITY</b>
+No transactions or orders in this round.
+
+────────────────────────────────────────────────────────────────
+
+📱 MESSAGE 8:
+────────────────────────────────────────────────────────────────
+🎉 <b>ROUND COMPLETED</b>
+🆔 Round: <code>dd8d9205-a6c5-4a46-a711-161c8612bfae</code>
+⏱️ Duration: 74s
+🕐 Completed: 8/27/2025, 9:24:44 PM
+
+📊 <b>PERFORMANCE SUMMARY:</b>
+• 🤖 Agents: 3 (6 claims generated)
+• 🎯 Consensus: 2 decisions
+• ⚡ Orders: 0 executed
+• 💰 Portfolio: $1651.65 (PnL: $0.00)
+
+🎯 <b>FINAL DECISIONS:</b>
+1. ⏸️ <b>ETH</b>: 13.1% score
+   🟡 59.7% confidence
+2. ⏸️ <b>BTC</b>: 4.4% score
+   🟡 44.7% confidence
+
+<i>Multi-agent consensus system completed successfully!</i>
+────────────────────────────────────────────────────────────────
+
+📊 MESSAGE SUMMARY:
+================================================================================
+1. 🚀 <b>TRADING ROUND STARTED</b>...
+2. 📊 <b>FUNDAMENTAL ANALYST</b>...
+3. 📰 <b>SENTIMENT ANALYST</b>...
+4. 📈 <b>TECHNICAL ANALYST</b>...
+5. 🎯 <b>SIGNAL ANALYST</b>...
+6. 🎭 <b>AGENT DEBATES & CONSENSUS</b>...
+7. 💼 <b>PORTFOLIO SUMMARY</b>...
+8. 🎉 <b>ROUND COMPLETED</b>...

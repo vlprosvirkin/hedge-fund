@@ -200,6 +200,17 @@ export function extractClaimsFromJSON(jsonPart: any, context: any): any[] {
     const validClaims = [];
     const errors = [];
 
+    // Debug logging
+    console.log(`🔍 extractClaimsFromJSON: Processing ${claimsArray.length} claims`);
+    console.log(`🔍 extractClaimsFromJSON: Context facts count: ${context.facts?.length || 0}`);
+    if (context.facts && context.facts.length > 0) {
+        console.log(`🔍 extractClaimsFromJSON: Sample facts:`, context.facts.slice(0, 2).map((f: any) => ({
+            ticker: f.ticker,
+            kind: f.kind,
+            id: f.id
+        })));
+    }
+
     for (let i = 0; i < claimsArray.length; i++) {
         const claimData = claimsArray[i];
 
@@ -220,21 +231,24 @@ export function extractClaimsFromJSON(jsonPart: any, context: any): any[] {
             if (claimData.agentRole === 'sentiment') {
                 // Sentiment agent uses news evidence
                 const tickerEvidence = context.facts?.filter((e: any) =>
-                    e.ticker === claimData.ticker && e.type === 'news'
+                    e.ticker === claimData.ticker && e.kind === 'news'
                 ) || [];
-                evidenceIds = tickerEvidence.map((e: any) => e.id).slice(0, 3);
+                evidenceIds = tickerEvidence.map((e: any) => e.id || `${e.ticker}_${e.kind}_${Date.now()}`).slice(0, 3);
+                console.log(`🔍 extractClaimsFromJSON: ${claimData.ticker} sentiment - Found ${tickerEvidence.length} news evidence, using ${evidenceIds.length} IDs:`, evidenceIds);
             } else if (claimData.agentRole === 'fundamental') {
                 // Fundamental agent uses market data evidence
                 const tickerEvidence = context.facts?.filter((e: any) =>
-                    e.ticker === claimData.ticker && e.type === 'market'
+                    e.ticker === claimData.ticker && e.kind === 'market'
                 ) || [];
-                evidenceIds = tickerEvidence.map((e: any) => e.id).slice(0, 3);
+                evidenceIds = tickerEvidence.map((e: any) => e.id || `${e.ticker}_${e.kind}_${Date.now()}`).slice(0, 3);
+                console.log(`🔍 extractClaimsFromJSON: ${claimData.ticker} fundamental - Found ${tickerEvidence.length} market evidence, using ${evidenceIds.length} IDs:`, evidenceIds);
             } else if (claimData.agentRole === 'valuation') {
                 // Technical agent uses technical indicators evidence
                 const tickerEvidence = context.facts?.filter((e: any) =>
-                    e.ticker === claimData.ticker && e.type === 'technical'
+                    e.ticker === claimData.ticker && e.kind === 'technical'
                 ) || [];
-                evidenceIds = tickerEvidence.map((e: any) => e.id).slice(0, 3);
+                evidenceIds = tickerEvidence.map((e: any) => e.id || `${e.ticker}_${e.kind}_${Date.now()}`).slice(0, 3);
+                console.log(`🔍 extractClaimsFromJSON: ${claimData.ticker} valuation - Found ${tickerEvidence.length} technical evidence, using ${evidenceIds.length} IDs:`, evidenceIds);
             }
 
             const validClaim = {
