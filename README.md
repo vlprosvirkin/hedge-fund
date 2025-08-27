@@ -25,6 +25,7 @@ This system implements a complete crypto trading pipeline with:
 - **[Aspis API Methods](docs/ASPIS_API_METHODS.md)** - Trading execution API reference
 - **[Database Schema](docs/DATABASE_SCHEMA.md)** - PostgreSQL schema and storage architecture
 - **[Decision Process](docs/DECISION_PROCESS.md)** - Complete decision-making process and Telegram integration
+- **[Methodology](docs/METHODOLOGY.md)** - Mathematical models and decision-making framework
 - **[Enhanced Notifications](docs/ENHANCED_NOTIFICATIONS.md)** - New enhanced Telegram notification format
 - **[Enhanced Notifications Examples](docs/ENHANCED_NOTIFICATIONS_EXAMPLES.md)** - Examples of enhanced notifications with human-readable evidence
 - **[Integration Tests](src/tests/README.md)** - Comprehensive testing documentation

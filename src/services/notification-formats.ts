@@ -213,16 +213,7 @@ export class NotificationFormats {
                     text += `   💭 <b>Reasoning:</b> ${claim.rationale}\n`;
                 }
 
-                // Show key signals/indicators
-                if (claim.signals && claim.signals.length > 0) {
-                    text += `   📈 <b>Key Indicators:</b>\n`;
-                    claim.signals.forEach(signal => {
-                        if (signal && signal.name && signal.value !== undefined) {
-                            const value = typeof signal.value === 'number' ? signal.value.toFixed(2) : signal.value;
-                            text += `      • ${signal.name}: ${value}\n`;
-                        }
-                    });
-                }
+                // Removed Key Indicators to keep messages cleaner - focus on reasoning instead
 
                 // Show risk flags
                 if (claim.riskFlags && claim.riskFlags.length > 0) {
@@ -270,7 +261,7 @@ export class NotificationFormats {
         if (analysis && analysis.trim().length > 0) {
             text += `🧠 <b>ANALYSIS:</b>\n`;
             // Truncate long analysis to avoid message overflow
-            const truncatedAnalysis = analysis.length > 800 ? analysis.substring(0, 800) + '...' : analysis;
+            const truncatedAnalysis = analysis.length > 1200 ? analysis.substring(0, 1200) + '...' : analysis;
             text += `<i>"${truncatedAnalysis}"</i>\n\n`;
         }
 
@@ -381,13 +372,21 @@ export class NotificationFormats {
             }
         }
 
+        // Add consensus methodology explanation
+        text += `🔬 <b>CONSENSUS METHODOLOGY:</b>\n`;
+        text += `• 📊 <b>Fundamental Agent</b> (35% weight): Market data, volume, liquidity\n`;
+        text += `• 📰 <b>Sentiment Agent</b> (25% weight): News sentiment, social media\n`;
+        text += `• 📈 <b>Technical Agent</b> (40% weight): RSI, MACD, technical indicators\n`;
+        text += `• 🎯 <b>Final Score</b> = Weighted average of agent signals\n`;
+        text += `• ⚖️ <b>Decision Thresholds</b>: BUY > 0.3, SELL < -0.3, HOLD otherwise\n\n`;
+
         // Show final consensus decision
         if (finalConsensus) {
             text += `🎯 <b>FINAL CONSENSUS:</b>\n`;
             const decisionEmoji = finalConsensus.decision === 'BUY' ? '🚀' :
                 finalConsensus.decision === 'SELL' ? '📉' : '⏸️';
             text += `${decisionEmoji} Decision: ${finalConsensus.decision}\n`;
-            text += `💪 Confidence: ${(finalConsensus.confidence * 100).toFixed(1)}%\n`;
+            text += `💪 Agent Confidence: ${(finalConsensus.confidence * 100).toFixed(1)}%\n`;
             text += `🤝 Agreement: ${(finalConsensus.agreement * 100).toFixed(1)}%\n\n`;
 
             if (finalConsensus.rationale) {

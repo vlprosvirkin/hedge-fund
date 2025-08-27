@@ -321,7 +321,7 @@ export class HedgeFundOrchestrator {
           this.roundId,
           role,
           result.claims,
-          result.analysis || '',
+          (result as any).textPart || result.analysis || '', // Use textPart for better analysis
           evidence,
           {
             universe,
@@ -457,7 +457,7 @@ export class HedgeFundOrchestrator {
 
         const consensusSummary = {
           decision: firstConsensus.finalScore > 0.1 ? 'BUY' : firstConsensus.finalScore < -0.1 ? 'SELL' : 'HOLD',
-          confidence: Math.abs(firstConsensus.finalScore || 0.5),
+          confidence: firstConsensus.avgConfidence || 0.5, // Use actual agent confidence, not finalScore
           agreement: firstConsensus.avgConfidence || 0.5,
           rationale: `Consensus reached for ${firstConsensus.ticker} with score ${(firstConsensus.finalScore || 0).toFixed(3)}`
         };
