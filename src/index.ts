@@ -93,6 +93,7 @@ async function startProductionSystem() {
     const { NewsAPIAdapter } = await import('./adapters/news-adapter.js');
     const { PostgresAdapter } = await import('./adapters/postgres-adapter.js');
     const { AgentsService } = await import('./services/agents.js');
+    const { OpenAIService } = await import('./services/openai.service.js');
 
     // Create adapters
     const marketData = new BinanceAdapter();
@@ -106,6 +107,9 @@ async function startProductionSystem() {
 
     // Create agents service with shared technical services
     const agents = new AgentsService(technicalIndicators, technicalAnalysis);
+
+    // Create OpenAI service
+    const openaiService = new OpenAIService();
 
     // Create orchestrator
     const orchestrator = new HedgeFundOrchestrator(
@@ -131,7 +135,8 @@ async function startProductionSystem() {
         triggerKillSwitch: () => Promise.resolve(),
         isKillSwitchActive: () => false
       }, // TODO: implement risk service
-      technicalIndicators
+      technicalIndicators,
+      openaiService
     );
 
     logger.info('✅ Orchestrator created successfully');

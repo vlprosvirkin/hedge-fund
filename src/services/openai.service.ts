@@ -95,4 +95,34 @@ export class OpenAIService {
         const result = await this.generateClaimsWithReasoning(systemPrompt, userPrompt, context);
         return result.claims;
     }
+
+    // Simple response generation for summaries
+    async generateResponse(
+        prompt: string,
+        options: { maxTokens?: number; temperature?: number } = {}
+    ): Promise<string> {
+        try {
+            const response = await this.client.chat.completions.create({
+                model: this.model,
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                temperature: options.temperature || 0.3,
+                max_tokens: options.maxTokens || 500
+            });
+
+            const content = response.choices[0]?.message?.content;
+            if (!content) {
+                throw new Error('No content received from OpenAI');
+            }
+
+            return content;
+        } catch (error) {
+            console.error('OpenAI API error:', error);
+            throw new Error(`Failed to generate response: ${error}`);
+        }
+    }
 }

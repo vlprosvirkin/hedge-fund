@@ -28,6 +28,7 @@ import { TelegramAdapter } from './adapters/telegram-adapter.js';
 import { NotificationsService } from './services/notifications.service.js';
 import { TechnicalIndicatorsAdapter } from './adapters/technical-indicators-adapter.js';
 import { VaultController } from './controllers/vault.controller.js';
+import { OpenAIService } from './services/openai.service.js';
 import { v4 as uuidv4 } from 'uuid';
 import pino from 'pino';
 
@@ -50,6 +51,7 @@ export class HedgeFundOrchestrator {
     private agents: LLMService,
     private risk: RiskService,
     private technicalIndicators: TechnicalIndicatorsAdapter,
+    private openaiService: OpenAIService,
     telegram?: TelegramAdapter
   ) {
     this.logger = pino({
@@ -476,11 +478,14 @@ export class HedgeFundOrchestrator {
         const firstConsensus = consensus[0];
         this.logger.info('First consensus data:', firstConsensus);
 
+        // Build detailed consensus rationale
+        const detailedRationale = await this.buildConsensusRationale(firstConsensus, conflicts.conflicts, allClaims);
+
         const consensusSummary = {
-          decision: firstConsensus.finalScore > 0.1 ? 'BUY' : firstConsensus.finalScore < -0.1 ? 'SELL' : 'HOLD',
+          decision: firstConsensus.finalScore > 0.15 ? 'BUY' : firstConsensus.finalScore < -0.15 ? 'SELL' : 'HOLD',
           confidence: firstConsensus.avgConfidence || 0.5, // Use actual agent confidence, not finalScore
           agreement: firstConsensus.avgConfidence || 0.5,
-          rationale: `Consensus reached for ${firstConsensus.ticker} with score ${(firstConsensus.finalScore || 0).toFixed(3)}`
+          rationale: detailedRationale
         };
 
         this.logger.info('Consensus summary:', consensusSummary);
@@ -656,7 +661,7 @@ export class HedgeFundOrchestrator {
 
     // Use signal analyses for more sophisticated weight calculation
     const qualifiedSignals = signalAnalyses
-      .filter(signal => signal.recommendation !== 'HOLD' && signal.confidence >= 0.5)
+      .filter(signal => signal.recommendation !== 'HOLD' && signal.confidence >= 0.3)
       .slice(0, maxPositions);
 
     this.logger.info('🎯 Building target weights from signal analyses', {
@@ -664,7 +669,7 @@ export class HedgeFundOrchestrator {
       maxPositions,
       totalSignals: signalAnalyses.length,
       qualifiedSignals: qualifiedSignals.length,
-      minConfidence: 0.5,
+      minConfidence: 0.3,
       topSignals: qualifiedSignals.map(s => ({
         ticker: s.ticker,
         signal: s.overallSignal.toFixed(3),
@@ -675,7 +680,7 @@ export class HedgeFundOrchestrator {
     });
 
     if (qualifiedSignals.length === 0) {
-      this.logger.warn('⚠️ No qualified signals found (min confidence: 50%)');
+      this.logger.warn('⚠️ No qualified signals found (min confidence: 30%)');
       return [];
     }
 
@@ -893,6 +898,124 @@ export class HedgeFundOrchestrator {
 
     console.log(`🤝 buildConsensusFromSignals: Created ${consensus.length} consensus records from ${signalAnalyses.length} signal analyses`);
     return consensus.sort((a, b) => b.finalScore - a.finalScore);
+  }
+
+  private async buildConsensusRationale(consensus: ConsensusRec, conflicts: any[], allClaims: Claim[]): Promise<string> {
+    const ticker = consensus.ticker;
+    const score = consensus.finalScore;
+    const confidence = consensus.avgConfidence;
+    const decision = score > 0.1 ? 'BUY' : score < -0.1 ? 'SELL' : 'HOLD';
+
+    // Get claims for this ticker
+    const tickerClaims = allClaims.filter(c => c.ticker === ticker);
+    const fundamentalClaim = tickerClaims.find(c => c.agentRole === 'fundamental');
+    const sentimentClaim = tickerClaims.find(c => c.agentRole === 'sentiment');
+    const technicalClaim = tickerClaims.find(c => c.agentRole === 'valuation');
+
+    // Build context for GPT analysis
+    const analysisContext = {
+      ticker,
+      decision,
+      score: score.toFixed(3),
+      confidence: (confidence * 100).toFixed(1),
+      agentAnalysis: {
+        fundamental: fundamentalClaim ? {
+          recommendation: fundamentalClaim.claim,
+          confidence: (fundamentalClaim.confidence * 100).toFixed(1),
+          reasoning: fundamentalClaim.rationale,
+          signals: fundamentalClaim.signals?.slice(0, 3) || []
+        } : null,
+        sentiment: sentimentClaim ? {
+          recommendation: sentimentClaim.claim,
+          confidence: (sentimentClaim.confidence * 100).toFixed(1),
+          reasoning: sentimentClaim.rationale,
+          signals: sentimentClaim.signals?.slice(0, 3) || []
+        } : null,
+        technical: technicalClaim ? {
+          recommendation: technicalClaim.claim,
+          confidence: (technicalClaim.confidence * 100).toFixed(1),
+          reasoning: technicalClaim.rationale,
+          signals: technicalClaim.signals?.slice(0, 3) || []
+        } : null
+      },
+      conflicts: conflicts.filter(c => c.ticker === ticker).length
+    };
+
+    // Generate GPT-powered summary
+    const gptSummary = await this.generateGPTSummary(analysisContext);
+
+    return gptSummary;
+  }
+
+  private async generateGPTSummary(context: any): Promise<string> {
+    try {
+      const prompt = `You are a senior investment analyst. Analyze the multi-agent consensus decision and provide a concise, professional summary.
+
+TICKER: ${context.ticker}
+DECISION: ${context.decision}
+CONSENSUS SCORE: ${context.score}
+CONFIDENCE: ${context.confidence}%
+
+AGENT ANALYSIS:
+${context.agentAnalysis.fundamental ? `📊 Fundamental: ${context.agentAnalysis.fundamental.recommendation} (${context.agentAnalysis.fundamental.confidence}%) - ${context.agentAnalysis.fundamental.reasoning}` : '📊 Fundamental: No data'}
+${context.agentAnalysis.sentiment ? `📰 Sentiment: ${context.agentAnalysis.sentiment.recommendation} (${context.agentAnalysis.sentiment.confidence}%) - ${context.agentAnalysis.sentiment.reasoning}` : '📰 Sentiment: No data'}
+${context.agentAnalysis.technical ? `📈 Technical: ${context.agentAnalysis.technical.recommendation} (${context.agentAnalysis.technical.confidence}%) - ${context.agentAnalysis.technical.reasoning}` : '📈 Technical: No data'}
+
+CONFLICTS: ${context.conflicts} agent conflicts resolved
+
+Generate a concise summary (max 200 words) that explains:
+1. The consensus decision and its strength
+2. Key factors driving the decision
+3. Agent agreement/disagreement
+4. Risk considerations
+5. Market context
+
+Format as a professional investment analysis.`;
+
+      const response = await this.openaiService.generateResponse(prompt, {
+        maxTokens: 300,
+        temperature: 0.3
+      });
+
+      return response.trim();
+    } catch (error) {
+      console.error('GPT summary generation failed:', error);
+
+      // Fallback to basic rationale
+      return this.generateFallbackRationale(context);
+    }
+  }
+
+  private generateFallbackRationale(context: any): string {
+    const { ticker, decision, score, confidence } = context;
+
+    let rationale = `📊 **Multi-Agent Consensus Analysis for ${ticker}**\n\n`;
+
+    // Decision explanation
+    if (decision === 'BUY') {
+      rationale += `📈 **BUY Decision**: Consensus score of ${score} indicates positive market sentiment. `;
+    } else if (decision === 'SELL') {
+      rationale += `📉 **SELL Decision**: Consensus score of ${score} indicates negative market sentiment. `;
+    } else {
+      rationale += `⏸️ **HOLD Decision**: Consensus score of ${score} indicates mixed market sentiment. `;
+    }
+
+    rationale += `Agent confidence: ${confidence}%.\n\n`;
+
+    // Signal strength
+    if (Math.abs(parseFloat(score)) > 0.3) {
+      rationale += `🎯 **Strong Signal**: Clear directional conviction.`;
+    } else if (Math.abs(parseFloat(score)) > 0.1) {
+      rationale += `📊 **Moderate Signal**: Some directional bias.`;
+    } else {
+      rationale += `⚖️ **Neutral Signal**: Balanced conditions.`;
+    }
+
+    if (context.conflicts > 0) {
+      rationale += `\n\n⚔️ **Conflict Resolution**: ${context.conflicts} agent conflicts resolved.`;
+    }
+
+    return rationale;
   }
 
   private createEvidenceFromNews(news: NewsItem[], universe: string[], timestamp: number): any[] {

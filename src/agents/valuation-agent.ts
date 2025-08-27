@@ -115,6 +115,8 @@ CONFIDENCE SCORING:
 - 0.2-0.3: Weak negative signals (signal_strength < -0.2, bearish indicators)
 - 0.1-0.2: Very weak signals (signal_strength < -0.5, strongly bearish)
 
+IMPORTANT: Be more confident in your analysis. If you have clear technical data, use higher confidence scores (0.6-0.8). Only use low confidence (0.2-0.4) when indicators are truly conflicting or data is insufficient.
+
 CALCULATE CONFIDENCE BASED ON:
 - signal_strength: Use absolute value and direction
 - RSI: Extreme values (>70 or <30) = higher confidence

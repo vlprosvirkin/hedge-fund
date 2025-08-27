@@ -70,6 +70,8 @@ CONFIDENCE SCORING:
 - 0.2-0.3: Weak negative signals (trend_strength < -0.2, low confidence)
 - 0.1-0.2: Very weak signals (trend_strength < -0.5, minimal confidence)
 
+IMPORTANT: Be more confident in your analysis. If you have clear data, use higher confidence scores (0.6-0.8). Only use low confidence (0.2-0.4) when data is truly insufficient or contradictory.
+
 CALCULATE CONFIDENCE BASED ON:
 - trend_strength: Use absolute value and direction
 - liquidity_score: Higher = higher confidence

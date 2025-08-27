@@ -33,6 +33,7 @@ import { SignalProcessorService } from '../services/signal-processor.service.js'
 import { ConsensusService } from '../services/consensus.js';
 import type { RiskService } from '../interfaces/adapters.js';
 import { VaultController } from '../controllers/vault.controller.js';
+import { OpenAIService } from '../services/openai.service.js';
 import { DEFAULT_CONFIG } from '../config.js';
 import fs from 'fs';
 import path from 'path';
@@ -166,6 +167,9 @@ async function runRealTelegramTest() {
         };
 
         // Create orchestrator with real Telegram adapter (but mocked sendMessage)
+        // Create OpenAI service
+        const openaiService = new OpenAIService();
+
         const orchestrator = new HedgeFundOrchestrator(
             config,
             marketData,
@@ -176,6 +180,7 @@ async function runRealTelegramTest() {
             llmService,
             risk,
             technicalIndicators,
+            openaiService,
             telegram
         );
 

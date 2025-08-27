@@ -5,6 +5,7 @@ import { NewsAPIAdapter } from '../adapters/news-adapter.js';
 import { AgentsService } from '../services/agents.js';
 import { ConsensusService } from '../services/consensus.js';
 import { VerifierService } from '../services/verifier.js';
+import { OpenAIService } from '../services/openai.service.js';
 import type {
     SystemConfig,
     PipelineArtifact,
@@ -108,6 +109,9 @@ async function decisionExecutionIntegrationTest() {
         // 3. Создание оркестратора
         console.log('\n🎼 Step 3: Creating orchestrator...');
 
+        // Create OpenAI service
+        const openaiService = new OpenAIService();
+
         const orchestrator = new HedgeFundOrchestrator(
             config,
             mockMarketData as any,
@@ -117,7 +121,8 @@ async function decisionExecutionIntegrationTest() {
             mockUniverse as any,
             agentsService,
             mockRiskService as any,
-            technicalIndicators
+            technicalIndicators,
+            openaiService
         );
 
         console.log('✅ Orchestrator created');
