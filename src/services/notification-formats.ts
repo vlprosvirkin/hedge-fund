@@ -378,7 +378,7 @@ export class NotificationFormats {
         text += `• 📰 <b>Sentiment Agent</b> (25% weight): News sentiment, social media\n`;
         text += `• 📈 <b>Technical Agent</b> (40% weight): RSI, MACD, technical indicators\n`;
         text += `• 🎯 <b>Final Score</b> = Weighted average of agent signals\n`;
-        text += `• ⚖️ <b>Decision Thresholds</b>: BUY > 0.3, SELL < -0.3, HOLD otherwise\n\n`;
+        text += `• ⚖️ <b>Decision Thresholds</b>: BUY &gt; 0.3, SELL &lt; -0.3, HOLD otherwise\n\n`;
 
         // Show final consensus decision
         if (finalConsensus) {

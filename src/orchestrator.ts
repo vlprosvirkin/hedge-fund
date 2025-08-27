@@ -163,7 +163,9 @@ export class HedgeFundOrchestrator {
         });
 
         // Wait for next round
+        this.logger.info(`⏸️ Waiting ${this.config.debateInterval} seconds before next round...`);
         await this.sleep(this.config.debateInterval * 1000);
+        this.logger.info(`✅ Wait completed, starting next round...`);
 
       } catch (error) {
         this.logger.error('Error in trading loop:', {
@@ -173,7 +175,9 @@ export class HedgeFundOrchestrator {
         });
 
         // Wait longer on errors to avoid spam
+        this.logger.info(`❌ Error occurred, waiting 30 seconds before retry...`);
         await this.sleep(30000); // Wait 30 seconds before retrying
+        this.logger.info(`🔄 Retrying after error...`);
       }
     }
   }
