@@ -245,7 +245,12 @@ export function extractClaimsFromJSON(jsonPart: any, context: any): any[] {
                 confidence: Math.max(0, Math.min(1, claimData.confidence || 0.5)),
                 evidence: evidenceIds, // Always use real evidence IDs
                 timestamp: context.timestamp,
-                riskFlags: claimData.riskFlags || []
+                riskFlags: claimData.riskFlags || [],
+                // Include additional fields from the original claim data
+                direction: claimData.direction,
+                magnitude: claimData.magnitude,
+                rationale: claimData.rationale,
+                signals: claimData.signals
             };
 
             validClaims.push(validClaim);
