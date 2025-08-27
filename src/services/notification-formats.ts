@@ -189,7 +189,7 @@ export class NotificationFormats {
         text += `🚀 Buy: ${buyCount} | 📉 Sell: ${sellCount} | ⏸️ Hold: ${holdCount}\n`;
         text += `💪 Avg Confidence: ${(avgConfidence * 100).toFixed(1)}%\n\n`;
 
-        // 2. DETAILED CLAIMS
+        // 2. CLAIMS
         if (claims.length > 0) {
             text += `🎯 <b>CLAIMS:</b>\n`;
             claims.forEach((claim, i) => {
@@ -197,57 +197,23 @@ export class NotificationFormats {
                 const ticker = claim.ticker === 'UNKNOWN' ? 'PARSE_ERROR' : claim.ticker;
                 text += `${i + 1}. ${action} <b>${ticker}</b> (${(claim.confidence * 100).toFixed(1)}%)\n`;
 
-                // Show direction and magnitude
-                if (claim.direction) {
-                    const directionEmoji = claim.direction === 'bullish' ? '📈' : claim.direction === 'bearish' ? '📉' : '➡️';
-                    text += `   ${directionEmoji} Direction: ${claim.direction.toUpperCase()}\n`;
-                }
-
-                if (claim.magnitude !== undefined) {
-                    const magnitudeEmoji = Math.abs(claim.magnitude) > 0.5 ? '🔥' : Math.abs(claim.magnitude) > 0.2 ? '⚡' : '💤';
-                    text += `   ${magnitudeEmoji} Magnitude: ${(claim.magnitude * 100).toFixed(1)}%\n`;
-                }
-
-                // Show rationale
-                if (claim.rationale) {
-                    text += `   💭 <b>Reasoning:</b> ${claim.rationale}\n`;
-                }
-
-                // Show key signals/indicators
                 if (claim.signals && claim.signals.length > 0) {
-                    text += `   📈 <b>Key Indicators:</b>\n`;
-                    claim.signals.forEach(signal => {
-                        const value = typeof signal.value === 'number' ? signal.value.toFixed(2) : signal.value;
-                        text += `      • ${signal.name}: ${value}\n`;
-                    });
+                    const signals = claim.signals.map(s => `${s.name}: ${typeof s.value === 'number' ? s.value.toFixed(2) : s.value}`).join(', ');
+                    text += `   📈 ${signals}\n`;
                 }
-
-                // Show risk flags
                 if (claim.riskFlags && claim.riskFlags.length > 0) {
-                    text += `   ⚠️ <b>Risk Flags:</b> ${claim.riskFlags.join(', ')}\n`;
+                    text += `   ⚠️ ${claim.riskFlags.join(', ')}\n`;
                 }
-
-                text += '\n';
             });
+            text += '\n';
         }
 
         // 3. EVIDENCES
         const allEvidence = new Set<any>();
         claims.forEach(claim => {
             if (claim.evidence) {
-                claim.evidence.forEach(evidenceId => {
-                    // Try to get evidence object from evidenceMap
-                    if (evidenceMap && typeof evidenceId === 'string') {
-                        const evidenceObj = evidenceMap.get(evidenceId);
-                        if (evidenceObj) {
-                            allEvidence.add(evidenceObj);
-                        } else {
-                            // If not found in map, add the ID as string
-                            allEvidence.add(evidenceId);
-                        }
-                    } else {
-                        allEvidence.add(evidenceId);
-                    }
+                claim.evidence.forEach(evidence => {
+                    allEvidence.add(evidence);
                 });
             }
         });
@@ -255,27 +221,19 @@ export class NotificationFormats {
         if (allEvidence.size > 0) {
             text += `🔍 <b>EVIDENCES:</b>\n`;
             Array.from(allEvidence).forEach((evidence, i) => {
-                if (!evidence) {
-                    text += `${i + 1}. 📄 Unknown evidence\n`;
-                } else if (typeof evidence === 'string') {
-                    text += `${i + 1}. 📄 Evidence ID: ${evidence}\n`;
+                if (typeof evidence === 'string') {
+                    text += `${i + 1}. 📄 ${evidence}\n`;
                 } else {
                     const source = evidence.source || 'Unknown';
-                    const ticker = evidence.ticker || 'Unknown';
                     let details = 'No details';
 
                     if (evidence.kind === 'news') {
                         details = evidence.snippet || evidence.url || 'No details';
-                        text += `${i + 1}. 📰 [${ticker}] ${source}: ${details}\n`;
-                    } else if (evidence.kind === 'market') {
-                        details = `${evidence.metric}: ${evidence.value}`;
-                        text += `${i + 1}. 📊 [${ticker}] ${source}: ${details}\n`;
-                    } else if (evidence.kind === 'tech') {
-                        details = `${evidence.metric}: ${evidence.value}`;
-                        text += `${i + 1}. 📈 [${ticker}] ${source}: ${details}\n`;
-                    } else {
-                        text += `${i + 1}. 📄 [${ticker}] ${source}: ${details}\n`;
+                    } else if (evidence.kind === 'market' || evidence.kind === 'tech') {
+                        details = evidence.metric || 'No details';
                     }
+
+                    text += `${i + 1}. 📄 ${source}: ${details}\n`;
                 }
             });
             text += '\n';
@@ -284,9 +242,7 @@ export class NotificationFormats {
         // 4. ANALYSIS INSIGHTS
         if (analysis && analysis.trim().length > 0) {
             text += `🧠 <b>ANALYSIS:</b>\n`;
-            // Truncate long analysis to avoid message overflow
-            const truncatedAnalysis = analysis.length > 500 ? analysis.substring(0, 500) + '...' : analysis;
-            text += `<i>"${truncatedAnalysis}"</i>\n\n`;
+            text += `<i>"${analysis}"</i>\n`;
         }
 
         return text;
