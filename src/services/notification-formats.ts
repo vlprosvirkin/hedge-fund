@@ -218,12 +218,7 @@ export class NotificationFormats {
                     text += `   📈 <b>Key Indicators:</b>\n`;
                     claim.signals.forEach(signal => {
                         const value = typeof signal.value === 'number' ? signal.value.toFixed(2) : signal.value;
-                        const signalEmoji = signal.name.toLowerCase().includes('rsi') ? '📊' :
-                            signal.name.toLowerCase().includes('macd') ? '📈' :
-                                signal.name.toLowerCase().includes('sentiment') ? '💭' :
-                                    signal.name.toLowerCase().includes('volatility') ? '📉' :
-                                        signal.name.toLowerCase().includes('liquidity') ? '💧' : '📊';
-                        text += `      ${signalEmoji} ${signal.name}: ${value}\n`;
+                        text += `      • ${signal.name}: ${value}\n`;
                     });
                 }
 
@@ -239,7 +234,7 @@ export class NotificationFormats {
         // 3. EVIDENCES
         const allEvidence = new Set<any>();
         claims.forEach(claim => {
-            if (claim.evidence && Array.isArray(claim.evidence)) {
+            if (claim.evidence) {
                 claim.evidence.forEach(evidenceId => {
                     // Try to get evidence object from evidenceMap
                     if (evidenceMap && typeof evidenceId === 'string') {
@@ -272,25 +267,12 @@ export class NotificationFormats {
                     if (evidence.kind === 'news') {
                         details = evidence.snippet || evidence.url || 'No details';
                         text += `${i + 1}. 📰 [${ticker}] ${source}: ${details}\n`;
-                        if (evidence.relevance !== undefined) {
-                            text += `   📊 Relevance: ${(evidence.relevance * 100).toFixed(1)}%\n`;
-                        }
-                        if (evidence.impact !== undefined) {
-                            const impactEmoji = evidence.impact > 0 ? '📈' : evidence.impact < 0 ? '📉' : '➡️';
-                            text += `   ${impactEmoji} Impact: ${(evidence.impact * 100).toFixed(1)}%\n`;
-                        }
                     } else if (evidence.kind === 'market') {
                         details = `${evidence.metric}: ${evidence.value}`;
                         text += `${i + 1}. 📊 [${ticker}] ${source}: ${details}\n`;
-                        if (evidence.relevance !== undefined) {
-                            text += `   📊 Relevance: ${(evidence.relevance * 100).toFixed(1)}%\n`;
-                        }
                     } else if (evidence.kind === 'tech') {
                         details = `${evidence.metric}: ${evidence.value}`;
                         text += `${i + 1}. 📈 [${ticker}] ${source}: ${details}\n`;
-                        if (evidence.relevance !== undefined) {
-                            text += `   📊 Relevance: ${(evidence.relevance * 100).toFixed(1)}%\n`;
-                        }
                     } else {
                         text += `${i + 1}. 📄 [${ticker}] ${source}: ${details}\n`;
                     }

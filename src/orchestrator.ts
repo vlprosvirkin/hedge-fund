@@ -317,13 +317,11 @@ export class HedgeFundOrchestrator {
         }
 
         // 📱 Complete agent analysis in one message
-        // Use jsonPart.claims for detailed claims with direction, magnitude, rationale, signals
-        const detailedClaims = (result as any).jsonPart?.claims || result.claims;
         await this.notifications.postAgentCompleteAnalysis(
           this.roundId,
           role,
-          detailedClaims,
-          (result as any).textPart || result.analysis || '',
+          result.claims,
+          result.analysis || '',
           evidence,
           {
             universe,

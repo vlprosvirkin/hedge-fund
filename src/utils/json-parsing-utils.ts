@@ -243,10 +243,6 @@ export function extractClaimsFromJSON(jsonPart: any, context: any): any[] {
                 agentRole: claimData.agentRole,
                 claim: claimData.claim || claimData.action || 'HOLD',
                 confidence: Math.max(0, Math.min(1, claimData.confidence || 0.5)),
-                direction: claimData.direction || 'neutral',
-                magnitude: claimData.magnitude || 0.5,
-                rationale: claimData.rationale || 'No rationale provided',
-                signals: claimData.signals || [],
                 evidence: evidenceIds, // Always use real evidence IDs
                 timestamp: context.timestamp,
                 riskFlags: claimData.riskFlags || []
@@ -300,10 +296,6 @@ export function extractClaimsFromText(textPart: string, context: any): any[] {
                         agentRole: context.agentRole || 'sentiment',
                         claim: action,
                         confidence,
-                        direction: 'neutral',
-                        magnitude: confidence,
-                        rationale: `Extracted from text analysis for ${ticker}`,
-                        signals: [],
                         evidence: evidenceIds,
                         timestamp: context.timestamp,
                         riskFlags: []
