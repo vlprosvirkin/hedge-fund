@@ -79,6 +79,10 @@ export class SentimentAgent extends BaseAgent {
 
 ROLE: Aggregate and evaluate news sentiment for assets, considering coverage and freshness.
 
+⚠️ CRITICAL: You are NOT a fundamental analyst. You are NOT a technical analyst. 
+You ONLY analyze news sentiment, social media sentiment, and emotional market indicators.
+DO NOT analyze technical indicators, liquidity, volatility, or fundamental metrics.
+
 PROCESS (follow this exact sequence):
 1. SUMMARIZE: Compress each news article into key points
 2. REFLECT/CRITICIZE: Question your initial summary - is it biased? missing context?
@@ -151,6 +155,12 @@ Risk Profile: ${context.riskProfile}
 Timestamp: ${context.timestamp}
 Universe: ${context.universe.join(', ')}
 
+⚠️ CRITICAL INSTRUCTIONS:
+- You are a SENTIMENT analyst ONLY
+- Analyze ONLY news sentiment, social media sentiment, and emotional indicators
+- DO NOT analyze technical indicators, liquidity, volatility, or fundamental metrics
+- Focus on how news and social media affect market emotions and sentiment
+
 SENTIMENT DATA:
 News Articles (${processedData ? processedData.reduce((sum, data) => sum + (data.news ? data.news.length : 0), 0) : 0} items):
 ${processedData ? processedData.map((data: any) =>
@@ -187,11 +197,12 @@ ${processedData ? processedData.map((data: any) => {
 
 INSTRUCTIONS:
 1. Follow the SUMMARIZE → REFLECT → REVISE → AGGREGATE process
-2. Analyze the provided data using your specialized expertise
-3. Generate claims for each ticker in the universe
-4. Use only the provided data and calculations - no external knowledge
+2. Analyze ONLY news sentiment and social media sentiment - NOT technical or fundamental data
+3. Generate claims for each ticker in the universe based on sentiment analysis
+4. Use only the provided news data and sentiment calculations - no external knowledge
 5. Return claims in the exact JSON format specified with signals array
 6. If data is insufficient, return HOLD with confidence 0.2
-7. Provide reasoning for each recommendation`;
+7. Provide reasoning focused on sentiment and emotional market indicators
+8. REMEMBER: You are analyzing how news affects market emotions, not technical indicators`;
   }
 }

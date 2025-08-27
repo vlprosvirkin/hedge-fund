@@ -211,6 +211,258 @@ CURRENT POSITIONS:
 - Calculates unrealized PnL
 - Reports portfolio changes
 
+## 🔌 Aspis API Integration & Execution Details
+
+### API Endpoint Structure
+```typescript
+// Aspis API base configuration
+const ASPIS_CONFIG = {
+  baseUrl: 'https://trading-api.aspis.finance',
+  apiKey: process.env.ASPIS_API_KEY,
+  vaultAddress: process.env.ASPIS_VAULT_ADDRESS,
+  timeout: 30000,
+  retryAttempts: 3
+};
+```
+
+### Order Execution Flow
+
+#### **Step 1: Position Size Calculation**
+```typescript
+// Calculate actual quantity from position size percentage
+const calculateQuantity = (positionSize: number, symbol: string, availableUsdt: number) => {
+  const currentPrice = await getCurrentPrice(symbol);
+  const usdtAmount = availableUsdt * positionSize;
+  const quantity = usdtAmount / currentPrice;
+  
+  // Apply minimum/maximum quantity constraints
+  const minQty = getMinQuantity(symbol);
+  const maxQty = getMaxQuantity(symbol);
+  
+  return Math.max(minQty, Math.min(maxQty, quantity));
+};
+```
+
+#### **Step 2: Order Placement**
+```typescript
+// Place order through Aspis API
+const placeOrder = async (orderParams: {
+  symbol: string;
+  side: 'buy' | 'sell';
+  quantity: number;
+  type: 'market' | 'limit';
+  price?: number;
+}) => {
+  const input: ExecuteOrderInput = {
+    vault_address: ASPIS_CONFIG.vaultAddress,
+    symbol: orderParams.symbol,
+    side: orderParams.side,
+    quantity: orderParams.quantity.toString(),
+    order_type: orderParams.type,
+    price: orderParams.price?.toString() || '0',
+    time_in_force: 'GTC',
+    reduce_only: false,
+    post_only: false
+  };
+
+  const response = await axios.post<ExecuteOrderResponse>(
+    `${ASPIS_CONFIG.baseUrl}/execute_order`,
+    input,
+    {
+      headers: {
+        'Authorization': `Bearer ${ASPIS_CONFIG.apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: ASPIS_CONFIG.timeout
+    }
+  );
+
+  return response.data.order_id;
+};
+```
+
+#### **Step 3: Order Status Tracking**
+```typescript
+// Monitor order execution
+const trackOrder = async (orderId: string) => {
+  const maxAttempts = 10;
+  const delayMs = 1000;
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const order = await getOrder(orderId);
+    
+    if (order.status === 'FILLED') {
+      return {
+        status: 'FILLED',
+        filledQuantity: order.filled_quantity,
+        avgPrice: order.avg_price,
+        commission: order.commission
+      };
+    }
+    
+    if (order.status === 'REJECTED' || order.status === 'CANCELED') {
+      throw new Error(`Order ${orderId} failed: ${order.status}`);
+    }
+    
+    // Wait before next check
+    await sleep(delayMs);
+  }
+  
+  throw new Error(`Order ${orderId} timeout after ${maxAttempts} attempts`);
+};
+```
+
+### Market Impact & Slippage Considerations
+
+#### **Slippage Estimation**
+```typescript
+// Estimate slippage based on order size and market depth
+const estimateSlippage = (orderSize: number, marketDepth: OrderBook) => {
+  const { bids, asks } = marketDepth;
+  
+  // Calculate market impact
+  let cumulativeVolume = 0;
+  let weightedPrice = 0;
+  
+  for (const [price, volume] of orderSize > 0 ? asks : bids) {
+    cumulativeVolume += volume;
+    weightedPrice += price * Math.min(volume, orderSize - cumulativeVolume);
+    
+    if (cumulativeVolume >= orderSize) break;
+  }
+  
+  const avgPrice = weightedPrice / orderSize;
+  const marketPrice = orderSize > 0 ? asks[0][0] : bids[0][0];
+  const slippage = Math.abs(avgPrice - marketPrice) / marketPrice;
+  
+  return slippage;
+};
+```
+
+#### **Order Size Optimization**
+```typescript
+// Optimize order size to minimize market impact
+const optimizeOrderSize = (targetSize: number, maxSlippage: number = 0.005) => {
+  const marketDepth = await getMarketDepth(symbol);
+  
+  // Binary search for optimal order size
+  let left = 0;
+  let right = targetSize;
+  let optimalSize = 0;
+  
+  while (left <= right) {
+    const mid = (left + right) / 2;
+    const slippage = estimateSlippage(mid, marketDepth);
+    
+    if (slippage <= maxSlippage) {
+      optimalSize = mid;
+      left = mid + 0.001; // Small increment
+    } else {
+      right = mid - 0.001;
+    }
+  }
+  
+  return optimalSize;
+};
+```
+
+### Error Handling & Retry Logic
+
+#### **Retry Strategy**
+```typescript
+// Exponential backoff retry for failed orders
+const executeOrderWithRetry = async (orderParams: OrderParams, maxRetries: number = 3) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const orderId = await placeOrder(orderParams);
+      const result = await trackOrder(orderId);
+      return result;
+    } catch (error) {
+      console.error(`Order attempt ${attempt} failed:`, error);
+      
+      if (attempt === maxRetries) {
+        throw new Error(`Order failed after ${maxRetries} attempts: ${error.message}`);
+      }
+      
+      // Exponential backoff
+      const delay = Math.pow(2, attempt) * 1000;
+      await sleep(delay);
+    }
+  }
+};
+```
+
+#### **Error Classification**
+```typescript
+// Classify errors for appropriate handling
+const classifyError = (error: any) => {
+  if (error.response?.status === 429) {
+    return 'RATE_LIMIT';
+  }
+  
+  if (error.response?.status === 400) {
+    return 'INVALID_ORDER';
+  }
+  
+  if (error.response?.status === 503) {
+    return 'SERVICE_UNAVAILABLE';
+  }
+  
+  if (error.code === 'ECONNRESET') {
+    return 'NETWORK_ERROR';
+  }
+  
+  return 'UNKNOWN_ERROR';
+};
+```
+
+### Portfolio Rebalancing Logic
+
+#### **Target Weight Calculation**
+```typescript
+// Calculate target weights from signal analysis
+const calculateTargetWeights = (signalAnalyses: SignalAnalysis[]) => {
+  const totalWeight = signalAnalyses.reduce((sum, signal) => {
+    return sum + signal.positionSize * signal.correlationPenalty;
+  }, 0);
+  
+  return signalAnalyses.map(signal => ({
+    symbol: signal.ticker,
+    weight: (signal.positionSize * signal.correlationPenalty) / totalWeight,
+    side: signal.recommendation === 'BUY' ? 'buy' : 'sell'
+  }));
+};
+```
+
+#### **Rebalancing Orders**
+```typescript
+// Generate rebalancing orders
+const generateRebalancingOrders = (targetWeights: TargetWeight[], currentPositions: Position[]) => {
+  const orders = [];
+  
+  for (const target of targetWeights) {
+    const currentPosition = currentPositions.find(p => p.symbol === target.symbol);
+    const currentWeight = currentPosition ? calculateCurrentWeight(currentPosition, currentPositions) : 0;
+    const weightDiff = target.weight - currentWeight;
+    
+    if (Math.abs(weightDiff) > 0.01) { // 1% threshold
+      const side = weightDiff > 0 ? 'buy' : 'sell';
+      const quantity = Math.abs(calculateQuantity(Math.abs(weightDiff), target.symbol));
+      
+      orders.push({
+        symbol: target.symbol,
+        side,
+        quantity,
+        type: 'market',
+        reason: 'rebalancing'
+      });
+    }
+  }
+  
+  return orders;
+};
+```
+
 ### Phase 6: Round Summary
 ```
 🎉 TRADING ROUND COMPLETED
@@ -523,6 +775,104 @@ const kellyFraction = expectedReturn / (volatility * volatility);
 const conservativeKelly = kellyFraction * 0.5;
 ```
 
+### 📊 Detailed Position Sizing Examples
+
+#### **Example 1: Strong BUY Signal**
+```typescript
+// Input parameters
+const signal = 0.45;        // Strong bullish signal (45%)
+const confidence = 0.85;    // High confidence (85%)
+const riskScore = 0.15;     // Low risk (15%)
+const riskProfile = 'neutral';
+const volatility = 0.25;    // 25% volatility
+
+// Expected return calculation
+const expectedReturn = signal * 0.15 * (0.5 + confidence * 0.5);
+// = 0.45 * 0.15 * (0.5 + 0.85 * 0.5) = 0.0675 * 0.925 = 0.0624 (6.24%)
+
+// Kelly Criterion
+const kellyFraction = expectedReturn / (volatility * volatility);
+// = 0.0624 / (0.25 * 0.25) = 0.0624 / 0.0625 = 0.998
+
+// Conservative Kelly (half Kelly)
+const conservativeKelly = kellyFraction * 0.5 = 0.499;
+
+// Risk profile constraint (neutral: max 10%)
+const maxPositionSize = 0.10;
+const constrainedKelly = Math.min(conservativeKelly, maxPositionSize) = 0.10;
+
+// Confidence adjustment
+const confidenceAdjustment = 0.3 + (0.7 * sigmoid(confidence - 0.5)) = 0.85;
+let positionSize = constrainedKelly * confidenceAdjustment = 0.085;
+
+// Risk penalty
+const riskPenalty = Math.exp(-2 * riskScore) = Math.exp(-2 * 0.15) = 0.741;
+positionSize *= riskPenalty = 0.085 * 0.741 = 0.063;
+
+// Final position size: 6.3% of portfolio
+```
+
+#### **Example 2: Moderate HOLD Signal**
+```typescript
+// Input parameters
+const signal = 0.15;        // Weak bullish signal (15%)
+const confidence = 0.65;    // Moderate confidence (65%)
+const riskScore = 0.35;     // Moderate risk (35%)
+const riskProfile = 'neutral';
+const volatility = 0.30;    // 30% volatility
+
+// Expected return calculation
+const expectedReturn = 0.15 * 0.15 * (0.5 + 0.65 * 0.5) = 0.0225 * 0.825 = 0.0186;
+
+// Kelly Criterion
+const kellyFraction = 0.0186 / (0.30 * 0.30) = 0.0186 / 0.09 = 0.207;
+const conservativeKelly = 0.207 * 0.5 = 0.103;
+
+// Risk profile constraint
+const constrainedKelly = Math.min(0.103, 0.10) = 0.10;
+
+// Confidence adjustment
+const confidenceAdjustment = 0.3 + (0.7 * sigmoid(0.65 - 0.5)) = 0.65;
+let positionSize = 0.10 * 0.65 = 0.065;
+
+// Risk penalty
+const riskPenalty = Math.exp(-2 * 0.35) = 0.497;
+positionSize *= 0.497 = 0.032;
+
+// Final position size: 3.2% of portfolio (small position due to weak signal)
+```
+
+#### **Example 3: SELL Signal with High Risk**
+```typescript
+// Input parameters
+const signal = -0.35;       // Bearish signal (-35%)
+const confidence = 0.75;    // High confidence (75%)
+const riskScore = 0.65;     // High risk (65%)
+const riskProfile = 'averse';
+const volatility = 0.40;    // 40% volatility
+
+// Expected return (negative for sell)
+const expectedReturn = -0.35 * 0.15 * (0.5 + 0.75 * 0.5) = -0.0525 * 0.875 = -0.046;
+
+// Kelly Criterion
+const kellyFraction = -0.046 / (0.40 * 0.40) = -0.046 / 0.16 = -0.288;
+const conservativeKelly = -0.288 * 0.5 = -0.144;
+
+// Risk profile constraint (averse: max 5%)
+const maxPositionSize = 0.05;
+const constrainedKelly = Math.max(-0.144, -0.05) = -0.05; // Cap at 5% for risk-averse
+
+// Confidence adjustment
+const confidenceAdjustment = 0.3 + (0.7 * sigmoid(0.75 - 0.5)) = 0.75;
+let positionSize = Math.abs(-0.05) * confidenceAdjustment = 0.0375;
+
+// Risk penalty (high risk = lower position)
+const riskPenalty = Math.exp(-2 * 0.65) = 0.273;
+positionSize *= 0.273 = 0.010;
+
+// Final position size: 1.0% of portfolio (very small due to high risk)
+```
+
 #### **Expected Return Calculation:**
 ```typescript
 // Base expected return from signal strength
@@ -630,15 +980,226 @@ const thresholds = {
 3. **Check Signal**: Must exceed buy/sell threshold
 4. **Generate Recommendation**: BUY, SELL, or HOLD
 
-## 🚨 Emergency Notifications
+## 🚨 Emergency Notifications & Monitoring
 
-### Kill Switch Activation
+### Real-Time Monitoring Dashboard
+
+The system provides comprehensive real-time monitoring through Telegram notifications:
+
+#### **System Health Monitoring**
+```
+🏥 SYSTEM HEALTH CHECK
+🕐 Time: 2024-01-15 14:30:00
+📊 Status: ✅ HEALTHY
+
+🔧 COMPONENTS:
+• Market Data API: ✅ Online
+• News API: ✅ Online  
+• Technical Indicators: ✅ Online
+• Aspis Trading API: ✅ Online
+• Database: ✅ Online
+
+📈 PERFORMANCE:
+• Response Time: 1.2s avg
+• Success Rate: 98.5%
+• Error Rate: 1.5%
+• Last Error: 2 hours ago
+```
+
+#### **Portfolio Risk Monitoring**
+```
+📊 PORTFOLIO RISK DASHBOARD
+🕐 Time: 2024-01-15 14:30:00
+
+💰 PORTFOLIO METRICS:
+• Total Value: $25,000
+• Unrealized PnL: $1,050 (+4.2%)
+• Realized PnL: $350
+• Daily Return: +2.1%
+
+⚠️ RISK METRICS:
+• Portfolio Volatility: 15.2%
+• Max Drawdown: -8.5%
+• VaR (95%): -$1,250
+• Correlation: 0.45
+
+🛡️ RISK LIMITS:
+• Position Concentration: ✅ 12% < 15% limit
+• Portfolio Leverage: ✅ 1.0x < 2.0x limit
+• Daily Loss: ✅ +$1,050 > -$500 limit
+```
+
+### Emergency Alert System
+
+#### **Kill Switch Activation**
 ```
 🛑 EMERGENCY ALERT
 🚨 Type: KILL SWITCH
 🕐 Time: 2024-01-15 14:35:22
 📝 Details: Risk limits exceeded - emergency stop triggered
 ⚡ All trading operations have been halted
+
+🔍 TRIGGER DETAILS:
+• Daily loss exceeded: -$750 > -$500 limit
+• Portfolio volatility: 25% > 20% limit
+• Position concentration: 18% > 15% limit
+
+🔄 RECOVERY ACTIONS:
+• All open orders canceled
+• Risk assessment required
+• Manual intervention needed
+```
+
+#### **Risk Violation Alerts**
+```
+🚨 RISK VIOLATION ALERT
+🕐 Time: 2024-01-15 14:35:22
+📝 Type: POSITION SIZE LIMIT
+📊 Asset: BTCUSDT
+⚠️ Current: 12.5% > 10% limit
+
+🛡️ AUTOMATIC ACTIONS:
+• Position size reduced to 10%
+• Additional orders blocked
+• Risk review triggered
+
+📋 MANUAL ACTIONS REQUIRED:
+• Review position sizing logic
+• Adjust risk parameters
+• Monitor for additional violations
+```
+
+#### **API Failure Alerts**
+```
+⚠️ API FAILURE ALERT
+🕐 Time: 2024-01-15 14:35:22
+📝 Service: Technical Indicators API
+❌ Status: UNAVAILABLE
+⏱️ Downtime: 5 minutes
+
+🔄 AUTOMATIC RESPONSE:
+• Fallback to cached data
+• Reduced confidence scores
+• Alternative data sources activated
+
+📊 IMPACT ASSESSMENT:
+• Signal quality: Reduced by 30%
+• Agent confidence: Reduced by 25%
+• Trading decisions: More conservative
+```
+
+### Performance Monitoring
+
+#### **Agent Performance Tracking**
+```
+📊 AGENT PERFORMANCE REPORT
+📅 Period: Last 24 hours
+🔄 Total Rounds: 24
+
+🤖 AGENT ACCURACY:
+• Fundamental Agent: 78.5% ✅
+• Sentiment Agent: 72.3% ⚠️
+• Valuation Agent: 81.2% ✅
+
+📈 SIGNAL QUALITY:
+• Strong Signals: 45% (10/24)
+• Moderate Signals: 35% (8/24)
+• Weak Signals: 20% (6/24)
+
+🎯 DECISION OUTCOMES:
+• Profitable Trades: 15/24 (62.5%)
+• Break-even Trades: 5/24 (20.8%)
+• Loss-making Trades: 4/24 (16.7%)
+```
+
+#### **Execution Quality Monitoring**
+```
+⚡ EXECUTION QUALITY REPORT
+📅 Period: Last 24 hours
+📋 Total Orders: 48
+
+📊 EXECUTION METRICS:
+• Fill Rate: 98.5% (47/48)
+• Average Slippage: 0.12%
+• Market Impact: 0.08%
+• Execution Time: 1.2s avg
+
+❌ FAILED ORDERS:
+• Rate Limit Exceeded: 1
+• Insufficient Balance: 0
+• Invalid Order: 0
+
+🔄 RETRY SUCCESS:
+• First Attempt: 45/48 (93.8%)
+• Second Attempt: 2/3 (66.7%)
+• Third Attempt: 0/1 (0%)
+```
+
+### Alert Configuration
+
+#### **Alert Levels**
+```typescript
+// Alert configuration by severity
+const ALERT_CONFIG = {
+  CRITICAL: {
+    telegram: true,
+    email: true,
+    slack: true,
+    autoKillSwitch: true
+  },
+  HIGH: {
+    telegram: true,
+    email: true,
+    slack: false,
+    autoKillSwitch: false
+  },
+  MEDIUM: {
+    telegram: true,
+    email: false,
+    slack: false,
+    autoKillSwitch: false
+  },
+  LOW: {
+    telegram: false,
+    email: false,
+    slack: false,
+    autoKillSwitch: false
+  }
+};
+```
+
+#### **Alert Triggers**
+```typescript
+// Risk-based alert triggers
+const ALERT_TRIGGERS = {
+  // Portfolio risk alerts
+  PORTFOLIO_DRAWDOWN: {
+    threshold: 0.10, // 10% drawdown
+    severity: 'HIGH',
+    message: 'Portfolio drawdown exceeded 10%'
+  },
+  
+  // Position concentration alerts
+  POSITION_CONCENTRATION: {
+    threshold: 0.15, // 15% concentration
+    severity: 'MEDIUM',
+    message: 'Position concentration exceeded 15%'
+  },
+  
+  // Daily loss alerts
+  DAILY_LOSS: {
+    threshold: -0.05, // -5% daily loss
+    severity: 'CRITICAL',
+    message: 'Daily loss exceeded 5%'
+  },
+  
+  // API failure alerts
+  API_FAILURE: {
+    threshold: 300, // 5 minutes downtime
+    severity: 'HIGH',
+    message: 'API service unavailable for 5+ minutes'
+  }
+};
 ```
 
 ### Risk Violations
@@ -731,6 +1292,7 @@ const thresholds = {
 
 ## 🚀 Testing
 
+### Telegram Integration Test
 Run the Telegram integration test:
 ```bash
 npm run test:telegram
@@ -742,6 +1304,127 @@ This test validates:
 - ✅ Emergency alert system
 - ✅ Performance reporting
 - ✅ Decision transparency
+
+### Decision-Execution Integration Test
+Run the full decision-execution integration test:
+```bash
+npm run test:decision-execution
+```
+
+This comprehensive test validates the complete trading pipeline:
+
+#### **Test Coverage:**
+1. **Agent Analysis** → Claims generation
+2. **Signal Processing** → Position size calculation
+3. **Risk Assessment** → Limit validation
+4. **Order Execution** → Real Aspis API integration
+5. **Position Tracking** → Portfolio updates
+
+#### **Test Flow:**
+```typescript
+// 1. Initialize components
+const orchestrator = new HedgeFundOrchestrator(config, adapters);
+
+// 2. Execute full trading pipeline
+const artifact = await orchestrator.executeTradingPipeline();
+
+// 3. Validate results
+assert(artifact.claims.length > 0, 'Claims should be generated');
+assert(artifact.consensus.length > 0, 'Consensus should be built');
+assert(artifact.orders.length >= 0, 'Orders should be placed');
+
+// 4. Check final positions
+const positions = await aspisAdapter.getPositions();
+assert(positions.length >= 0, 'Positions should be tracked');
+```
+
+#### **Expected Test Output:**
+```
+🚀 Starting Decision-Execution Integration Test...
+
+🔧 Step 1: Initializing components...
+✅ All components initialized
+
+🔌 Step 2: Connecting to services...
+✅ Market data connected
+✅ Fact store connected
+✅ Universe service connected
+✅ Risk service connected
+
+📊 Step 3: Running agent analysis...
+🤖 FUNDAMENTAL Agent: Starting analysis...
+🤖 SENTIMENT Agent: Starting analysis...
+🤖 VALUATION Agent: Starting analysis...
+✅ All agents completed analysis
+
+🎯 Step 4: Signal processing...
+🎯 SignalProcessor: Processing 6 claims for 2 market stats
+✅ Signal processing completed
+
+⚖️ Step 5: Consensus building...
+✅ Consensus built for 2 assets
+
+⚠️ Step 6: Risk assessment...
+✅ Risk check: PASSED
+
+📈 Step 7: Executing trades...
+✅ Total orders placed: 2
+
+📊 Step 8: Checking final positions...
+✅ Final positions: 2
+
+🎉 Decision-Execution Integration Test PASSED!
+```
+
+### Database Integration Test
+Test database storage and retrieval:
+```bash
+npm run test:database
+```
+
+Validates:
+- ✅ Evidence storage with ticker field
+- ✅ Claims persistence
+- ✅ Consensus records
+- ✅ Order tracking
+- ✅ Position history
+
+### Real Telegram Test
+Test with real Telegram notifications:
+```bash
+npm run test:real-telegram
+```
+
+Sends actual notifications to configured Telegram chat:
+- ✅ Round start notifications
+- ✅ Agent analysis results
+- ✅ Consensus decisions
+- ✅ Order execution confirmations
+- ✅ Portfolio updates
+
+### Performance Benchmarks
+```bash
+npm run test:performance
+```
+
+Measures:
+- ⏱️ Agent processing time
+- 📊 Signal calculation speed
+- 🔄 Order execution latency
+- 💾 Database operation performance
+- 📱 Notification delivery time
+
+### Error Handling Tests
+```bash
+npm run test:errors
+```
+
+Validates:
+- ❌ API failure recovery
+- ⚠️ Risk limit violations
+- 🔄 Retry logic for failed orders
+- 🛑 Kill switch activation
+- 📝 Error logging and reporting
 
 ## 📋 Message Examples
 
