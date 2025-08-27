@@ -89,12 +89,15 @@ This system implements a complete crypto trading pipeline with:
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                           HedgeFundOrchestrator                                 │
+│                                                                                 │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
-│  │ VaultController │  │ AgentsService │  │ ConsensusService │  │ VerifierService    │ │
-│  │                 │  │               │  │                 │  │                     │ │
-│  │ • Portfolio     │  │ • Multi-Agent │  │ • Consensus     │  │ • Claim Validation  │ │
-│  │ • Order Conv.   │  │ • Coordination│  │ • Conflict Res. │  │ • Evidence Check    │ │
-│  │ • Risk Mgmt     │  │ • Debate Engine│  │ • Risk Profiles │  │ • Source Validation │ │
+│  │VaultController│  │AgentsService│  │ConsensusService│  │  VerifierService   │ │
+│  │             │  │             │  │             │  │                         │ │
+│  │• Portfolio  │  │• Multi-Agent│  │• Consensus  │  │• Claim Validation       │ │
+│  │• Order Conv.│  │• Coordination│  │• Conflict  │  │• Evidence Check         │ │
+│  │• Risk Mgmt  │  │• Debate     │  │  Res.       │  │• Source Validation      │ │
+│  │             │  │  Engine     │  │• Risk       │  │                         │ │
+│  │             │  │             │  │  Profiles   │  │                         │ │
 │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────────┘
          │                       │                       │                       │
@@ -116,29 +119,15 @@ This system implements a complete crypto trading pipeline with:
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                           AgentCoordinator                                      │
+│                                                                                 │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
 │  │Fundamental  │  │ Sentiment   │  │ Valuation   │  │    Debate Engine        │ │
-│  │   Agent     │  │   Agent     │  │   Agent     │  │  • Conflict Detection   │ │
-│  │             │  │             │  │             │  │  • Round-Robin Debates  │ │
-│  │• Liquidity  │  │• News       │  │• Technical  │  │  • Consensus Building   │ │
-│  │• Volatility │  │• Sentiment  │  │• Indicators │  │  • Risk Profile Weight  │ │
-│  │• Market Cap │  │• Reflection │  │• Momentum   │  │                         │ │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Multi-Agent System Architecture (AlphaAgents Style)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                           AgentCoordinator                                      │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
-│  │Fundamental  │  │ Sentiment   │  │ Valuation   │  │    Debate Engine        │ │
-│  │   Agent     │  │   Agent     │  │   Agent     │  │  • Conflict Detection   │ │
-│  │             │  │             │  │             │  │  • Round-Robin Debates  │ │
-│  │• Liquidity  │  │• News       │  │• Technical  │  │  • Consensus Building   │ │
-│  │• Volatility │  │• Sentiment  │  │• Indicators │  │  • Risk Profile Weight  │ │
-│  │• Market Cap │  │• Reflection │  │• Momentum   │  │                         │ │
+│  │   Agent     │  │   Agent     │  │   Agent     │  │                         │ │
+│  │             │  │             │  │             │  │• Conflict Detection     │ │
+│  │• Liquidity  │  │• News       │  │• Technical  │  │• Round-Robin Debates    │ │
+│  │• Volatility │  │• Sentiment  │  │• Indicators │  │• Consensus Building     │ │
+│  │• Market Cap │  │• Reflection │  │• Momentum   │  │• Risk Profile Weight    │ │
+│  │             │  │             │  │             │  │                         │ │
 │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -275,7 +264,8 @@ This system implements a complete crypto trading pipeline with:
 
 #### 11. **Data Storage & Analytics** ([PostgresAdapter](docs/DATABASE_SCHEMA.md))
 - **ACID Transactions**: PostgreSQL with complete audit trail
-- **Decision Storage**: News, evidence, claims, and consensus storage
+- **Decision Storage**: News, evidence (with ticker field), claims, and consensus storage
+- **Evidence Structure**: Discriminated union with ticker-specific and GLOBAL evidence support
 - **Performance Analytics**: Round tracking and performance metrics
 - **Compliance Logging**: Risk violations and compliance tracking
 - **Data Management**: Automatic cleanup and retention policies
@@ -373,7 +363,7 @@ npm run dev
 - **Real-time Data**: Fetches market data from Binance via BinanceAdapter
 - **News Ingestion**: Collects news from multiple sources via NewsAPIAdapter
 - **Technical Data**: Retrieves technical indicators via TechnicalIndicatorsAdapter
-- **Evidence Storage**: Stores all data with timestamps and relevance scores
+- **Evidence Storage**: Stores all data with timestamps, relevance scores, and ticker field (including GLOBAL evidence)
 
 ### 3. Multi-Agent Analysis (AlphaAgents Style)
 Each agent specializes in different aspects with shared service integration:
@@ -395,6 +385,7 @@ Each agent specializes in different aspects with shared service integration:
 - **Liquidity Analysis**: Market depth and volume concentration assessment
 - **Volatility Assessment**: Price volatility and structural risk evaluation
 - **Market Cap Dynamics**: Market cap analysis and trend sustainability
+- **Evidence Integration**: Processes market evidence with ticker-specific data
 - **Service Integration**: Uses shared TechnicalIndicatorsAdapter and TechnicalAnalysisService
 - **Status**: ✅ **Fully implemented** with real market data integration
 
@@ -402,14 +393,38 @@ Each agent specializes in different aspects with shared service integration:
 - **News Processing**: Summarization → reflection/criticism → revised sentiment
 - **Scoring Algorithm**: Coverage × freshness × consistency scoring
 - **Source Validation**: Credibility assessment and time-lock validation
+- **Evidence Integration**: Processes news evidence with ticker-specific and GLOBAL evidence
+- **GLOBAL Impact**: Integrates market-wide news affecting all assets
 - **Status**: ✅ **Fully implemented** with News API integration
 
 **Valuation Agent**:
 - **Technical Analysis**: RSI, MACD, Bollinger Bands, Stochastic indicators
 - **Volatility Calculations**: σ and Sharpe-proxy on 30-90 day windows
 - **Signal Processing**: Momentum/mean-reversion analysis with signal strength
+- **Evidence Integration**: Processes technical evidence with ticker-specific data
 - **Service Integration**: Uses shared TechnicalIndicatorsAdapter and TechnicalAnalysisService
 - **Status**: ✅ **Fully implemented** with Technical Indicators API integration
+
+### 🌍 GLOBAL Evidence Integration
+
+The system integrates market-wide news and events using the special `GLOBAL` ticker in evidence:
+
+#### **GLOBAL Evidence Processing:**
+- **Regulatory News**: Federal Reserve policy changes, SEC decisions
+- **Macroeconomic Events**: Inflation data, employment reports  
+- **Market Sentiment**: Fear & Greed Index changes, institutional flows
+- **Geopolitical Events**: Global economic uncertainty, trade wars
+
+#### **Integration in Agent Analysis:**
+- **Fundamental Agent**: Considers global economic factors affecting crypto
+- **Sentiment Agent**: Processes market-wide news sentiment with 30% weight
+- **Valuation Agent**: Adjusts technical analysis for market-wide volatility
+
+#### **Evidence Structure:**
+- **Ticker-Specific Evidence**: Asset-specific news, market data, technical indicators
+- **GLOBAL Evidence**: Market-wide events affecting all assets
+- **Discriminated Union**: Single evidence table with ticker field for efficient storage
+- **Weighted Integration**: GLOBAL evidence weighted less than ticker-specific evidence
 
 ### 4. Multi-Agent Collaboration & Verification
 - **Shared Data Access**: All agents access the same connected service instances
@@ -418,6 +433,7 @@ Each agent specializes in different aspects with shared service integration:
 - **Consensus Building**: Weighted voting with risk profile consideration
 - **Claim Verification**: Validates format, evidence, and timestamp locks
 - **Source Validation**: Enforces whitelist and detects suspicious patterns
+- **Evidence Integration**: Processes ticker-specific and GLOBAL evidence for comprehensive analysis
 
 ### 5. Consensus Building (`src/services/consensus.ts`)
 - **Multi-Agent Aggregation**: Combines claims from all three agents
@@ -726,9 +742,9 @@ The project implements a sophisticated multi-agent system inspired by AlphaAgent
 - **Error Isolation**: Agent errors isolated from shared service failures
 
 #### Agent Roles & Expertise
-- **Fundamental Agent**: Market fundamentals, liquidity, volatility, trend sustainability
-- **Sentiment Agent**: News analysis with reflection/criticism, coverage × freshness scoring
-- **Valuation Agent**: Technical indicators, volatility (σ), Sharpe-proxy calculations
+- **Fundamental Agent**: Market fundamentals, liquidity, volatility, trend sustainability, market evidence processing
+- **Sentiment Agent**: News analysis with reflection/criticism, coverage × freshness scoring, GLOBAL evidence integration
+- **Valuation Agent**: Technical indicators, volatility (σ), Sharpe-proxy calculations, technical evidence processing
 
 #### Collaboration Process
 1. **Service Initialization**: Shared services connected and injected into agents
@@ -807,9 +823,11 @@ This is a research and educational project. **Do not use with real money without
 - **AI Reasoning Display**: Shows OpenAI analysis and reasoning in reports
 - **Claims Summary**: Concise summary of generated claims
 - **Enhanced Transparency**: Complete visibility into decision-making process
+- **GLOBAL Evidence Integration**: Market-wide news and events affecting all assets
 
 ### Database Integration ✅
 - **Complete Audit Trail**: All claims, consensus, evidence, and orders stored in PostgreSQL
+- **Evidence Structure**: Discriminated union with ticker field for ticker-specific and GLOBAL evidence
 - **Round Tracking**: Full round lifecycle management (start → process → end)
 - **Performance Metrics**: Portfolio performance and trading statistics
 - **Data Persistence**: Reliable storage with proper error handling
@@ -819,6 +837,7 @@ This is a research and educational project. **Do not use with real money without
 - **Agent Debate Fix**: Resolved undefined/NaN values in consensus display
 - **Unique Claim IDs**: Prevented duplicate key violations in database
 - **Timestamp Validation**: Fixed invalid timestamp errors in order storage
+- **Evidence Structure**: Updated evidence schema with ticker field and GLOBAL support
 - **Error Handling**: Graceful degradation and fallback mechanisms
 
 ### OpenAI Integration Enhancements ✅
@@ -840,8 +859,8 @@ This is a research and educational project. **Do not use with real money without
 - **Agent Specialization**: Fundamental (liquidity/volatility), Sentiment (news/reflection), Valuation (technical indicators)
 - **Collaboration Engine**: Conflict detection, round-robin debates, consensus building with risk profiles
 - **Technical Analysis**: 45+ indicators with real API integration
-- **News & Sentiment**: 170+ assets with sentiment analysis
-- **Database**: PostgreSQL with complete audit trail and round tracking
+- **News & Sentiment**: 170+ assets with sentiment analysis and GLOBAL evidence integration
+- **Database**: PostgreSQL with complete audit trail, round tracking, and discriminated union evidence structure
 - **Enhanced Telegram Integration**: Human-readable evidence, AI reasoning, and claims summary
 - **Risk Management**: Comprehensive risk controls and kill-switch
 - **Signal Processing**: Multi-dimensional analysis with Kelly Criterion position sizing
@@ -851,6 +870,7 @@ This is a research and educational project. **Do not use with real money without
 - **CI/CD Tests**: Tests that work without API keys
 - **Architecture Refactoring**: Clean separation of concerns
 - **System Stability**: Robust error handling and fallback mechanisms
+- **Evidence Structure**: Ticker-specific and GLOBAL evidence with discriminated union support
 
 ### Ready for Production 🚀
 - **Architecture**: Production-ready with proper error handling
@@ -919,17 +939,17 @@ The Signal Processing System replaces the simplistic consensus mechanism with a 
 ## Individual Signal Analysis
 
 ### Fundamental Signal Analysis
-- **Data Sources**: Financial ratios, earnings data, market fundamentals
+- **Data Sources**: Financial ratios, earnings data, market fundamentals, market evidence with ticker field
 - **Processing**: Weighted analysis of P/E ratios, growth metrics, sector performance
 - **Output**: -1 to 1 signal (sell to buy) with confidence scoring
 
 ### Sentiment Signal Analysis  
-- **Data Sources**: News sentiment, social media analysis, market sentiment indicators
-- **Processing**: NLP-based sentiment scoring with credibility weighting
+- **Data Sources**: News sentiment, social media analysis, market sentiment indicators, news evidence with ticker-specific and GLOBAL evidence
+- **Processing**: NLP-based sentiment scoring with credibility weighting, GLOBAL evidence integration
 - **Output**: -1 to 1 signal with coverage and freshness metrics
 
 ### Technical Signal Analysis
-- **Data Sources**: Price data, volume, technical indicators (RSI, MACD, Bollinger Bands)
+- **Data Sources**: Price data, volume, technical indicators (RSI, MACD, Bollinger Bands), technical evidence with ticker field
 - **Processing**: Multi-indicator analysis with momentum and volatility calculations
 - **Output**: -1 to 1 signal with technical strength scoring
 

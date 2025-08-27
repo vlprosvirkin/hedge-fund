@@ -78,27 +78,30 @@ export const DEFAULT_CONFIG: SystemConfig = {
 export const RISK_LIMITS: Record<string, RiskLimits> = {
   averse: {
     maxPositionPercent: 0.15,
-    maxLeverage: 1.0,
+    maxLeverage: 1.0, // No leverage
     maxTurnover: 0.5,
     maxDailyLoss: 0.02,
     maxDrawdown: 0.05,
-    maxConcentration: 0.20
+    maxConcentration: 0.20,
+    minCashBuffer: 0.05 // Keep 5% cash buffer
   },
   neutral: {
     maxPositionPercent: 0.20,
-    maxLeverage: 1.5,
+    maxLeverage: 1.0, // No leverage
     maxTurnover: 1.0,
     maxDailyLoss: 0.05,
     maxDrawdown: 0.10,
-    maxConcentration: 0.25
+    maxConcentration: 0.25,
+    minCashBuffer: 0.02 // Keep 2% cash buffer
   },
   bold: {
     maxPositionPercent: 0.25,
-    maxLeverage: 2.0,
+    maxLeverage: 1.0, // No leverage
     maxTurnover: 2.0,
     maxDailyLoss: 0.10,
     maxDrawdown: 0.15,
-    maxConcentration: 0.30
+    maxConcentration: 0.30,
+    minCashBuffer: 0.00 // No cash buffer requirement
   }
 };
 

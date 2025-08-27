@@ -64,10 +64,10 @@ ANALYSIS CRITERIA:
 - TREND SUSTAINABILITY: Structural analysis of price movements
 
 CONFIDENCE SCORING:
-- 0.9-1.0: Strong signals across all metrics, clear trend, high liquidity
-- 0.7-0.8: Good signals, some uncertainty, adequate liquidity
-- 0.5-0.6: Mixed signals, moderate confidence, acceptable liquidity
-- 0.3-0.4: Weak signals, low confidence, poor liquidity
+- 0.8-1.0: Strong signals across all metrics, clear trend, high liquidity
+- 0.6-0.7: Good signals, some uncertainty, adequate liquidity
+- 0.4-0.5: Mixed signals, moderate confidence, acceptable liquidity
+- 0.2-0.3: Weak signals, low confidence, poor liquidity
 - 0.1-0.2: Very weak signals, minimal confidence, insufficient data
 
 Risk profile: ${riskProfile} - ${this.getRiskProfileContext(riskProfile)}
@@ -76,11 +76,34 @@ STRICT RULES:
 1. Use ONLY provided data and tools - no external knowledge
 2. Claims must be timestamp-locked to provided data
 3. Confidence must be between 0.1 and 1.0 based on signal strength
-4. Return ONLY valid JSON array of claims
-5. If insufficient data, return HOLD with confidence 0.2
-6. Provide specific reasoning for each recommendation
+4. If insufficient data, return HOLD with confidence 0.2
+5. Provide specific reasoning for each recommendation
+6. REQUIRED: Each claim MUST include at least 1 market evidence (vol24h, spread_bps, vwap) from Binance data
+7. OPTIONAL: Include technical evidence (RSI, MACD) for additional support
+
+CRITICAL: You MUST provide a detailed text analysis BEFORE the JSON claims.
+CRITICAL: For evidence field, use ONLY real evidence IDs from the provided context, NOT placeholder IDs like "evidence_id_1".
+CRITICAL: Each claim MUST reference specific market metrics (volume, spread, price) from the provided data.
 
 OUTPUT FORMAT:
+You MUST follow this exact format:
+
+FUNDAMENTAL ANALYSIS:
+Provide a comprehensive analysis of each asset's fundamentals including:
+- Liquidity assessment and volume analysis
+- Volatility patterns and risk assessment
+- Market cap implications and institutional interest
+- Trend sustainability and signal strength evaluation
+- Overall fundamental health and investment thesis
+
+For example:
+"FUNDAMENTAL ANALYSIS:
+BTC shows excellent liquidity with high volume and low volatility, indicating stable pricing and institutional interest. The market cap suggests strong fundamentals, but the negative trend strength indicates potential headwinds. Overall, the asset shows mixed signals with strong fundamentals but weak technical momentum.
+
+ETH demonstrates good liquidity with moderate volatility, suggesting healthy market activity. The market cap indicates solid institutional backing, but the negative trend strength raises concerns about short-term direction. The fundamentals are sound but technical momentum is weak."
+
+Then provide the claims in JSON format:
+
 {
   "claims": [
     {
@@ -88,15 +111,16 @@ OUTPUT FORMAT:
       "agentRole": "fundamental",
       "claim": "BUY|HOLD|SELL",
       "confidence": 0.85,
-      "horizon": "days|weeks",
+      "direction": "bullish|bearish|neutral",
+      "magnitude": 0.7,
+      "rationale": "Brief reasoning for the recommendation",
       "signals": [
         {"name": "liquidity_score", "value": 0.72},
         {"name": "volatility", "value": 0.55},
         {"name": "trend_strength", "value": 0.68}
       ],
-      "evidence": ["evidence_id_1"],
-      "riskFlags": ["high_volatility", "low_liquidity"],
-      "notes": "Brief reasoning for the recommendation"
+      "evidence": ["REAL_EVIDENCE_ID_1", "REAL_EVIDENCE_ID_2"],
+      "riskFlags": ["high_volatility", "low_liquidity"]
     }
   ]
 }`;
@@ -145,8 +169,10 @@ INSTRUCTIONS:
 1. Analyze the provided data using your specialized expertise
 2. Generate claims for each ticker in the universe
 3. Use only the provided data and calculations - no external knowledge
-4. Return claims in the exact JSON format specified with signals array
-5. If data is insufficient, return HOLD with confidence 0.2
-6. Provide reasoning for each recommendation`;
+4. If data is insufficient, return HOLD with confidence 0.2
+5. Provide reasoning for each recommendation
+
+CRITICAL: You MUST provide a detailed fundamental analysis in plain text BEFORE the JSON claims.
+CRITICAL: Follow the exact format shown in the system prompt.`;
   }
 }

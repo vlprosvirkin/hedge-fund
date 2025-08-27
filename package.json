@@ -7,9 +7,11 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.js",
+    "start": "tsx src/index.ts",
     "test": "tsx src/tests/ci-integration.ts",
     "test:watch": "tsx watch src/tests/ci-integration.ts",
+    "test:telegram": "tsx src/tests/telegram-formatting-test.ts",
+    "test:real-telegram": "tsx src/tests/real-telegram-test.ts",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"
   },

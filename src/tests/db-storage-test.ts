@@ -37,12 +37,18 @@ async function testDatabaseStorage() {
     const mockEvidence: Evidence[] = [
       {
         id: uuidv4(),
-        ticker: 'BTC',
-        newsItemId: mockNews[0]!.id,
-        relevance: 0.9,
-        quote: 'Bitcoin shows strong momentum',
+        kind: 'news',
+        source: 'CoinDesk',
+        url: 'https://coindesk.com/bitcoin-news',
+        snippet: 'Bitcoin reaches new all-time high',
+        publishedAt: new Date().toISOString(),
+        relevance: 0.85,
+        impact: 0.8,
+        confidence: 0.85,
+        quote: 'Bitcoin reaches new all-time high',
         timestamp: Date.now(),
-        source: 'CoinDesk'
+        newsItemId: 'news-1',
+        ticker: 'BTC'
       }
     ];
     await postgresAdapter.putEvidence(mockEvidence);
@@ -62,7 +68,7 @@ async function testDatabaseStorage() {
         agentRole: 'fundamental',
         claim: 'BUY - Strong fundamentals',
         confidence: 0.8,
-        evidence: [mockEvidence[0]!.id],
+        evidence: [mockEvidence[0]!],
         timestamp: Date.now(),
         riskFlags: []
       }

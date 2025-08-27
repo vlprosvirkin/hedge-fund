@@ -15,7 +15,8 @@ export interface AgentResponse {
   claims: Claim[];
   errors: string[];
   openaiResponse?: string; // Raw AI reasoning
-  analysis?: string; // Human-readable analysis summary
+  textPart?: string; // Human-readable text analysis
+  jsonPart?: any; // Parsed JSON data
 }
 
 export abstract class BaseAgent {
@@ -37,12 +38,13 @@ export abstract class BaseAgent {
     const claims: Claim[] = [];
     let processedData: any[] = [];
     let openaiResponse: string = '';
-    let analysis: string = '';
+    let textPart: string = '';
+    let jsonPart: any = null;
 
     try {
       console.log(`🤖 ${this.role.toUpperCase()} Agent: Starting analysis...`);
       console.log(`🤖 ${this.role.toUpperCase()} Agent: Context - Universe: ${context.universe.join(', ')}, Risk Profile: ${context.riskProfile}`);
-      
+
       processedData = await this.processData(context);
       console.log(`🤖 ${this.role.toUpperCase()} Agent: Processed data completed, got ${processedData.length} items`);
       console.log(`🤖 ${this.role.toUpperCase()} Agent: Processed data preview:`, processedData.map((item, i) => `${i}: ${JSON.stringify(item).substring(0, 100)}...`));
@@ -50,7 +52,7 @@ export abstract class BaseAgent {
       // Build prompts with processed data
       const systemPrompt = this.buildSystemPrompt(context);
       const userPrompt = this.buildUserPrompt(context, processedData);
-      
+
       console.log(`🤖 ${this.role.toUpperCase()} Agent: System prompt length: ${systemPrompt.length} chars`);
       console.log(`🤖 ${this.role.toUpperCase()} Agent: User prompt length: ${userPrompt.length} chars`);
       console.log(`🤖 ${this.role.toUpperCase()} Agent: User prompt preview: ${userPrompt.substring(0, 200)}...`);
@@ -66,12 +68,15 @@ export abstract class BaseAgent {
       console.log(`🤖 ${this.role.toUpperCase()} Agent: OpenAI response received, claims: ${result.claims.length}`);
       console.log(`🤖 ${this.role.toUpperCase()} Agent: Raw OpenAI response length: ${result.openaiResponse?.length || 0} chars`);
       console.log(`🤖 ${this.role.toUpperCase()} Agent: Raw OpenAI response preview: ${result.openaiResponse?.substring(0, 300)}...`);
-      
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: Full OpenAI response for user display:`);
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: ${result.openaiResponse}`);
+
       claims.push(...result.claims);
       openaiResponse = result.openaiResponse || '';
-      analysis = result.analysis || '';
+      textPart = result.textPart || '';
+      jsonPart = result.jsonPart || null;
 
-      console.log(`🤖 ${this.role.toUpperCase()} Agent: Analysis extracted: ${analysis.substring(0, 100)}...`);
+      console.log(`🤖 ${this.role.toUpperCase()} Agent: Text part extracted: ${textPart.substring(0, 100)}...`);
       console.log(`🤖 ${this.role.toUpperCase()} Agent: Claims generated:`, claims.map(c => `${c.ticker}: ${c.claim} (${(c.confidence * 100).toFixed(1)}%)`));
 
     } catch (error) {
@@ -82,7 +87,7 @@ export abstract class BaseAgent {
       console.error(`OpenAI failed for ${this.role} agent, no fallback to mock data`);
     }
 
-    return { claims, errors, openaiResponse, analysis };
+    return { claims, errors, openaiResponse, textPart, jsonPart };
   }
 
 

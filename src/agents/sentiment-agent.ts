@@ -94,10 +94,10 @@ ANALYSIS CRITERIA:
 - TIME-LOCK: Anti-leak protection - ignore old news
 
 CONFIDENCE SCORING:
-- 0.9-1.0: High coverage, fresh news, consistent sentiment, credible sources
-- 0.7-0.8: Good coverage, recent news, mostly consistent
-- 0.5-0.6: Moderate coverage, mixed sentiment, some uncertainty
-- 0.3-0.4: Low coverage, old news, inconsistent sentiment
+- 0.8-1.0: High coverage, fresh news, consistent sentiment, credible sources
+- 0.6-0.7: Good coverage, recent news, mostly consistent
+- 0.4-0.5: Moderate coverage, mixed sentiment, some uncertainty
+- 0.2-0.3: Low coverage, old news, inconsistent sentiment
 - 0.1-0.2: Very low coverage, very old news, insufficient data
 
 Risk profile: ${riskProfile} - ${this.getRiskProfileContext(riskProfile)}
@@ -120,15 +120,16 @@ Return ONLY a valid JSON object with this exact structure:
       "agentRole": "sentiment",
       "claim": "BUY|HOLD|SELL",
       "confidence": 0.85,
-      "horizon": "days|weeks",
+      "direction": "bullish|bearish|neutral",
+      "magnitude": 0.7,
+      "rationale": "Brief reasoning for the recommendation",
       "signals": [
         {"name": "sentiment_score", "value": 0.72},
         {"name": "news_coverage", "value": 15},
         {"name": "freshness_score", "value": 0.85}
       ],
-      "evidence": ["evidence_id_1"],
-      "riskFlags": ["low_coverage", "old_news"],
-      "notes": "Brief reasoning for the recommendation"
+      "evidence": [],
+      "riskFlags": ["low_coverage", "old_news"]
     }
   ]
 }

@@ -8,7 +8,7 @@ export class ConsensusService {
     maxPositions: number = 10
   ): Promise<ConsensusRec[]> {
     console.log(`🤝 ConsensusService: Building consensus for ${claims.length} claims across ${marketStats.length} market stats`);
-    
+
     // Group claims by ticker
     const tickerGroups = this.groupClaimsByTicker(claims);
     console.log(`🤝 ConsensusService: Grouped claims by ${tickerGroups.size} tickers:`, Array.from(tickerGroups.keys()));
@@ -33,12 +33,12 @@ export class ConsensusService {
     const sortedConsensus = consensus
       .sort((a, b) => b.finalScore - a.finalScore)
       .slice(0, maxPositions);
-    
+
     console.log(`🤝 ConsensusService: Final consensus built for ${sortedConsensus.length} positions`);
     sortedConsensus.forEach((c, i) => {
       console.log(`🤝 ConsensusService: ${i + 1}. ${c.ticker} - Score: ${c.finalScore.toFixed(3)} (${c.finalScore > 0.1 ? 'BUY' : c.finalScore < -0.1 ? 'SELL' : 'HOLD'})`);
     });
-    
+
     return sortedConsensus;
   }
 
@@ -60,18 +60,18 @@ export class ConsensusService {
     claims: Claim[],
     marketStat: MarketStats
   ): ConsensusRec {
-    // Calculate average confidence
+    // Calculate average confidence from verified claims
     const avgConfidence = claims.reduce((sum, claim) => sum + claim.confidence, 0) / claims.length;
 
     // Calculate coverage (how many different agent roles covered this ticker)
     const roles = new Set(claims.map(claim => claim.agentRole));
     const coverage = roles.size / 3; // 3 possible roles: fundamental, sentiment, valuation
 
-    // Calculate liquidity score (normalized volume)
-    const liquidity = Math.min(marketStat.volume24h / 1000000, 1); // Normalize to 0-1
+    // Calculate liquidity score (normalized volume/spread)
+    const liquidity = this.calculateLiquidityScore(marketStat);
 
-    // Calculate final score
-    const finalScore = this.calculateFinalScore(avgConfidence, coverage, liquidity, claims);
+    // Calculate final score: avgConfidence * coverage * liquidity
+    const finalScore = avgConfidence * coverage * liquidity;
 
     return {
       ticker,
@@ -83,39 +83,25 @@ export class ConsensusService {
     };
   }
 
+  private calculateLiquidityScore(marketStat: MarketStats): number {
+    // Normalize liquidity based on volume and spread
+    // Higher volume = better liquidity, lower spread = better liquidity
+
+    const volumeScore = Math.min(marketStat.volume24h / 1000000, 1); // Normalize to 0-1
+    const spreadScore = Math.max(0, 1 - (marketStat.spread || 0) / 100); // Lower spread = higher score
+
+    // Combine volume and spread scores
+    return (volumeScore * 0.7 + spreadScore * 0.3);
+  }
+
   private calculateFinalScore(
     avgConfidence: number,
     coverage: number,
     liquidity: number,
     claims: Claim[]
   ): number {
-    // Data-driven scoring based on AlphaAgents methodology
-
-    // 1. Base confidence score (weighted by coverage)
-    const confidenceScore = avgConfidence * Math.min(coverage * 1.5, 1.0);
-
-    // 2. Liquidity adjustment (higher liquidity = more confidence)
-    const liquidityScore = Math.min(liquidity * 1.2, 1.0);
-
-    // 3. Risk penalty (penalize high-risk positions)
-    const riskFlags = claims.flatMap(claim => claim.riskFlags || []);
-    const riskPenalty = Math.min(riskFlags.length * 0.15, 0.4);
-
-    // 4. Consensus strength (agreement between agents)
-    const roleConsensus = this.calculateRoleConsensus(claims);
-
-    // 5. Signal strength (how strong are the individual signals)
-    const signalStrength = this.calculateSignalStrength(claims);
-
-    // Combine all factors with weights
-    const finalScore = (
-      confidenceScore * 0.35 +
-      liquidityScore * 0.20 +
-      roleConsensus * 0.25 +
-      signalStrength * 0.20
-    ) * (1 - riskPenalty);
-
-    return Math.max(0, Math.min(1, finalScore));
+    // Simple formula: finalScore = avgConfidence * coverage * liquidity
+    return avgConfidence * coverage * liquidity;
   }
 
   private calculateRoleConsensus(claims: Claim[]): number {

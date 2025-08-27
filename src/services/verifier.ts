@@ -1,6 +1,6 @@
 import type { FactStore } from '../interfaces/adapters.js';
-import type { Claim, Evidence, RiskViolation } from '../types/index.js';
-
+import type { Claim, RiskViolation } from '../types/index.js';
+import { EvidenceSchema } from '../types/index.js';
 
 export class VerifierService {
   constructor(private factStore: FactStore) { }
@@ -50,11 +50,10 @@ export class VerifierService {
       });
     }
 
-    // 2. Validate evidence exists and is time-locked (relaxed for MVP)
+    // 2. Validate evidence exists and is time-locked
     if (claim.evidence && claim.evidence.length > 0) {
       const evidenceValidation = await this.validateEvidence(claim.evidence, cutoff);
       if (!evidenceValidation.valid) {
-        // Only add violations as warnings for MVP
         violations.push(...evidenceValidation.violations.map(v => ({ ...v, severity: 'warning' as const })));
       }
     }
@@ -83,7 +82,7 @@ export class VerifierService {
   }
 
   private async validateEvidence(
-    evidenceIds: string[],
+    evidence: any[], // Use structured evidence array
     cutoff: number
   ): Promise<{
     valid: boolean;
@@ -92,50 +91,90 @@ export class VerifierService {
     const violations: RiskViolation[] = [];
 
     try {
-      // Get evidence from fact store
-      const evidence = await this.factStore.getNewsByIds(evidenceIds);
-
       for (const ev of evidence) {
-        // Check if evidence is time-locked
-        if (ev.publishedAt > cutoff) {
+        // Validate evidence schema
+        try {
+          EvidenceSchema.parse(ev);
+        } catch (error) {
           violations.push({
             type: 'position',
-            current: ev.publishedAt,
+            current: 0,
+            limit: 0,
+            severity: 'critical'
+          });
+          continue;
+        }
+
+        // Check timestamp based on evidence type
+        let timestamp: number;
+        if (ev.kind === 'news') {
+          timestamp = new Date(ev.publishedAt).getTime();
+        } else {
+          timestamp = new Date(ev.observedAt).getTime();
+        }
+
+        if (timestamp > cutoff) {
+          violations.push({
+            type: 'position',
+            current: timestamp,
             limit: cutoff,
             severity: 'critical'
           });
         }
 
-        // Check source whitelist (relaxed for MVP)
-        if (!this.isWhitelistedSource(ev.source)) {
+        // Check source whitelist based on evidence type
+        if (!this.isValidSource(ev.source, ev.kind)) {
           violations.push({
             type: 'position',
             current: 0,
             limit: 0,
-            severity: 'warning' // Keep as warning for type compatibility
+            severity: 'warning'
           });
         }
       }
-
-      // Check if all evidence IDs were found (relaxed for MVP)
-      if (evidence.length !== evidenceIds.length) {
-        violations.push({
-          type: 'position',
-          current: evidence.length,
-          limit: evidenceIds.length,
-          severity: 'warning' // Changed from critical to warning
-        });
-      }
     } catch (error) {
-      // For MVP: Don't fail verification if fact store is unavailable
-      console.warn('Fact store unavailable, skipping evidence validation:', error);
-      // Don't add violations for fact store errors in MVP
+      // For MVP: Don't fail verification if validation fails
+      console.warn('Evidence validation error:', error);
     }
 
     return {
       valid: violations.length === 0,
       violations
     };
+  }
+
+  private isValidSource(source: string, kind: string): boolean {
+    const newsWhitelist = [
+      'coindesk.com',
+      'cointelegraph.com',
+      'bitcoin.com',
+      'decrypt.co',
+      'theblock.co',
+      'reuters.com',
+      'bloomberg.com',
+      'cnbc.com',
+      'wsj.com'
+    ];
+
+    const marketWhitelist = ['binance'];
+    const techWhitelist = ['indicators', 'technical-analysis'];
+
+    switch (kind) {
+      case 'news':
+        return newsWhitelist.some(whitelisted =>
+          source.toLowerCase().includes(whitelisted)
+        );
+      case 'market':
+        return marketWhitelist.some(whitelisted =>
+          source.toLowerCase().includes(whitelisted)
+        );
+      case 'tech':
+        return techWhitelist.some(whitelisted =>
+          source.toLowerCase().includes(whitelisted)
+        );
+      default:
+        return false;
+    }
   }
 
   private checkSuspiciousPatterns(claim: Claim): RiskViolation[] {
@@ -174,42 +213,32 @@ export class VerifierService {
     return violations;
   }
 
-  private isWhitelistedSource(source: string): boolean {
-    const whitelist = [
-      'coindesk.com',
-      'cointelegraph.com',
-      'bitcoin.com',
-      'decrypt.co',
-      'theblock.co',
-      'reuters.com',
-      'bloomberg.com',
-      'cnbc.com',
-      'wsj.com'
-    ];
-
-    return whitelist.some(whitelisted =>
-      source.toLowerCase().includes(whitelisted)
-    );
-  }
-
   // Additional validation methods
   async validateEvidenceRelevance(
-    evidence: Evidence[],
+    evidence: any[], // Use any for now since we have mixed types
     ticker: string
   ): Promise<boolean> {
     const relevantEvidence = evidence.filter(e => e.ticker === ticker);
-    const avgRelevance = relevantEvidence.reduce((sum, e) => sum + e.relevance, 0) / relevantEvidence.length;
+    const avgRelevance = relevantEvidence.reduce((sum, e) => sum + (e.relevance || 0), 0) / relevantEvidence.length;
 
     return avgRelevance > 0.5; // Minimum relevance threshold
   }
 
   async checkEvidenceFreshness(
-    evidence: Evidence[],
+    evidence: any[], // Use any for now since we have mixed types
     maxAgeHours: number = 24
   ): Promise<boolean> {
     const now = Date.now();
     const maxAge = maxAgeHours * 60 * 60 * 1000;
 
-    return evidence.every(e => (now - e.timestamp) <= maxAge);
+    return evidence.every(e => {
+      let timestamp: number;
+      if (e.kind === 'news') {
+        timestamp = new Date(e.publishedAt).getTime();
+      } else {
+        timestamp = new Date(e.observedAt).getTime();
+      }
+      return timestamp && (now - timestamp) <= maxAge;
+    });
   }
 }

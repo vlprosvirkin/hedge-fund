@@ -31,45 +31,69 @@ CREATE TABLE news (
 - **Indexing**: `published_at`, `source` for fast queries
 - **Sentiment**: Pre-calculated sentiment scores (0.0-1.0)
 
-#### 2. `evidence` - Trading Evidence
+#### 2. `evidence` - Trading Evidence (Discriminated Union)
 ```sql
 CREATE TABLE evidence (
-  id VARCHAR(255) PRIMARY KEY,
-  ticker VARCHAR(20) NOT NULL,
-  news_item_id VARCHAR(255) NOT NULL,
-  relevance DECIMAL(3,2) NOT NULL,
-  quote TEXT NOT NULL,
-  timestamp TIMESTAMP NOT NULL,
+  id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  ticker VARCHAR(20) NOT NULL, -- BTC, ETH, SOL, GLOBAL (for market-wide news)
+  kind VARCHAR(20) NOT NULL, -- 'news', 'market', 'tech'
   source VARCHAR(255) NOT NULL,
+  relevance DECIMAL(3,2) NOT NULL DEFAULT 0.5,
+  impact DECIMAL(3,2), -- -1.0 to 1.0
+  confidence DECIMAL(3,2), -- 0.0 to 1.0
+  
+  -- News-specific fields
+  url TEXT,
+  snippet TEXT,
+  published_at TIMESTAMP,
+  
+  -- Market/Tech-specific fields  
+  metric VARCHAR(100),
+  value DECIMAL(20,8),
+  observed_at TIMESTAMP,
+  
+  -- Metadata
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (news_item_id) REFERENCES news(id)
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-**Purpose**: Links news articles to specific trading assets
-- **Relevance**: How relevant the news is to the ticker (0.0-1.0)
-- **Quotes**: Key quotes from news articles
-- **Indexing**: `ticker`, `timestamp` for fast lookups
+**Purpose**: Stores structured evidence for trading decisions using discriminated union pattern
+- **Ticker**: Asset symbol (BTC, ETH, SOL) or **GLOBAL** for market-wide news
+- **Kind**: Evidence type discriminator ('news', 'market', 'tech')
+- **News Evidence**: URL, snippet, published_at for news articles
+- **Market Evidence**: Metric, value, observed_at for market data (source: 'binance')
+- **Tech Evidence**: Metric, value, observed_at for technical indicators (source: 'indicators')
+- **GLOBAL Ticker**: Special value for news affecting entire crypto market
+- **Indexing**: `ticker`, `kind`, `source`, `relevance` for fast queries
 
-#### 3. `claims` - Agent Claims
+#### 3. `claims` - Agent Claims (Enhanced Structure)
 ```sql
 CREATE TABLE claims (
   id VARCHAR(255) PRIMARY KEY,
   round_id VARCHAR(255) NOT NULL,
   ticker VARCHAR(20) NOT NULL,
-  agent_role VARCHAR(50) NOT NULL,
+  agent_role VARCHAR(50) NOT NULL, -- 'fundamental', 'sentiment', 'valuation'
   claim_text TEXT NOT NULL,
   confidence DECIMAL(3,2) NOT NULL,
-  evidence_ids TEXT[] NOT NULL,
+  evidence_ids TEXT[] NOT NULL, -- Array of evidence IDs
   risk_flags TEXT[] NOT NULL,
+  direction VARCHAR(20), -- 'bullish', 'bearish', 'neutral'
+  magnitude DECIMAL(3,2), -- -1.0 to 1.0 (signal strength)
+  rationale TEXT, -- Detailed reasoning
+  thesis TEXT, -- Short thesis statement
   timestamp TIMESTAMP NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-**Purpose**: Stores AI agent analysis results
+**Purpose**: Stores AI agent analysis results with enhanced structure
 - **Agent Roles**: `fundamental`, `sentiment`, `valuation`
 - **Confidence**: Agent confidence score (0.0-1.0)
+- **Direction**: Explicit signal direction ('bullish', 'bearish', 'neutral')
+- **Magnitude**: Signal strength (-1.0 to 1.0)
+- **Thesis**: Short, clear thesis statement
+- **Rationale**: Detailed reasoning for the claim
 - **Evidence**: Array of evidence IDs supporting the claim
 - **Risk Flags**: Array of risk warnings
 
@@ -181,7 +205,12 @@ CREATE INDEX idx_news_source ON news(source);
 
 -- Evidence indexes
 CREATE INDEX idx_evidence_ticker ON evidence(ticker);
-CREATE INDEX idx_evidence_timestamp ON evidence(timestamp);
+CREATE INDEX idx_evidence_kind ON evidence(kind);
+CREATE INDEX idx_evidence_source ON evidence(source);
+CREATE INDEX idx_evidence_published_at ON evidence(published_at);
+CREATE INDEX idx_evidence_observed_at ON evidence(observed_at);
+CREATE INDEX idx_evidence_metric ON evidence(metric);
+CREATE INDEX idx_evidence_relevance ON evidence(relevance);
 
 -- Claims indexes
 CREATE INDEX idx_claims_round_id ON claims(round_id);
@@ -218,14 +247,129 @@ CREATE INDEX idx_rounds_start_time ON rounds(start_time);
 3. **Session Data**: Not applicable for our use case
 4. **Complexity**: Additional dependency without clear benefit
 
+## 🏗️ Evidence & Claims Structure
+
+### 📋 Evidence Types (Discriminated Union)
+
+The system uses a discriminated union pattern for evidence, allowing different types of evidence to be stored in a single table while maintaining type safety.
+
+#### 1. **News Evidence** (`kind: 'news'`)
+```typescript
+{
+  id: string,
+  ticker: string, // BTC, ETH, SOL, or GLOBAL
+  kind: 'news',
+  source: string, // coindesk.com, reuters.com, etc.
+  url: string,
+  snippet: string,
+  publishedAt: string, // ISO datetime
+  relevance: number, // 0.0-1.0
+  impact?: number, // -1.0 to 1.0
+  confidence?: number // 0.0-1.0
+}
+```
+
+#### 2. **Market Evidence** (`kind: 'market'`)
+```typescript
+{
+  id: string,
+  ticker: string, // BTC, ETH, SOL
+  kind: 'market',
+  source: 'binance', // Fixed source
+  metric: 'vol24h' | 'spread_bps' | 'ohlcv_close' | 'vwap' | 'liquidity_score',
+  value: number,
+  observedAt: string, // ISO datetime
+  relevance: number, // 0.0-1.0
+  impact?: number, // -1.0 to 1.0
+  confidence?: number // 0.0-1.0
+}
+```
+
+#### 3. **Technical Evidence** (`kind: 'tech'`)
+```typescript
+{
+  id: string,
+  ticker: string, // BTC, ETH, SOL
+  kind: 'tech',
+  source: 'indicators', // Fixed source
+  metric: string, // RSI(14,1h), MACD(12,26,9,1h), etc.
+  value: number,
+  observedAt: string, // ISO datetime
+  relevance: number, // 0.0-1.0
+  impact?: number, // -1.0 to 1.0
+  confidence?: number // 0.0-1.0
+}
+```
+
+### 🎯 Claims Structure
+
+Claims represent AI agent analysis results with enhanced structure for better decision-making.
+
+```typescript
+{
+  id: string,
+  ticker: string, // BTC, ETH, SOL
+  agentRole: 'fundamental' | 'sentiment' | 'valuation',
+  claim: string, // BUY, SELL, HOLD
+  thesis: string, // Short thesis statement
+  confidence: number, // 0.0-1.0
+  evidence: Evidence[], // Array of evidence objects
+  timestamp: number,
+  direction: 'bullish' | 'bearish' | 'neutral',
+  magnitude: number, // -1.0 to 1.0 (signal strength)
+  riskFlags: string[] // Array of risk warnings
+}
+```
+
+### 🌍 GLOBAL Ticker for Market-Wide News
+
+For news that affects the entire crypto market (e.g., regulatory changes, macroeconomic events), use the special ticker `GLOBAL`:
+
+```typescript
+// Example: Federal Reserve policy change affecting all crypto
+{
+  id: "global-fed-policy-2024",
+  ticker: "GLOBAL", // Special ticker for market-wide impact
+  kind: "news",
+  source: "reuters.com",
+  url: "https://reuters.com/fed-policy-crypto",
+  snippet: "Federal Reserve signals potential rate cuts, boosting crypto markets",
+  publishedAt: "2024-01-15T10:00:00Z",
+  relevance: 0.95,
+  impact: 0.8,
+  confidence: 0.9
+}
+```
+
+**Usage in Claims:**
+- GLOBAL evidence can be referenced by claims for any ticker
+- Agents can consider market-wide factors when making individual asset recommendations
+- Consensus building includes market-wide sentiment in scoring
+
+### 🔍 Evidence Validation Rules
+
+```sql
+-- News evidence validation
+ALTER TABLE evidence ADD CONSTRAINT chk_news_evidence 
+  CHECK (kind != 'news' OR (url IS NOT NULL AND snippet IS NOT NULL AND published_at IS NOT NULL));
+
+-- Market evidence validation  
+ALTER TABLE evidence ADD CONSTRAINT chk_market_evidence 
+  CHECK (kind != 'market' OR (metric IS NOT NULL AND value IS NOT NULL AND observed_at IS NOT NULL));
+
+-- Tech evidence validation
+ALTER TABLE evidence ADD CONSTRAINT chk_tech_evidence 
+  CHECK (kind != 'tech' OR (metric IS NOT NULL AND value IS NOT NULL AND observed_at IS NOT NULL));
+```
+
 ## 📈 Data Flow
 
 ```
 📰 News API → news table
     ↓
-🔍 Evidence Extraction → evidence table
+🔍 Evidence Extraction → evidence table (with ticker/GLOBAL)
     ↓
-🤖 Agent Analysis → claims table
+🤖 Agent Analysis → claims table (enhanced structure)
     ↓
 🎯 Consensus Building → consensus table
     ↓

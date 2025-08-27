@@ -125,7 +125,7 @@ export class BinanceAdapter implements MarketDataAdapter {
 
       // Calculate price change percentage
       const priceChange24h = parseFloat(ticker.priceChangePercent || '0');
-      
+
       // Calculate volume change (estimate based on current vs average volume)
       const volume24h = parseFloat(ticker.volume);
       const avgVolume = parseFloat(ticker.quoteVolume || ticker.volume);
@@ -133,6 +133,8 @@ export class BinanceAdapter implements MarketDataAdapter {
 
       return {
         symbol: symbol.toUpperCase(), // Return clean ticker
+        timestamp: Date.now(), // Add missing timestamp
+        price: parseFloat(ticker.lastPrice || ticker.closePrice || '0'), // Current price
         volume24h: volume24h,
         volumeChange24h: volumeChange24h,
         priceChange24h: priceChange24h,

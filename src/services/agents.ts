@@ -54,7 +54,7 @@ export class AgentsService implements LLMService {
       riskProfile: string;
       timestamp: number;
     }
-  ): Promise<{ claims: Claim[]; errors: string[]; openaiResponse?: string; analysis?: string }> {
+  ): Promise<{ claims: Claim[]; errors: string[]; openaiResponse?: string; analysis?: string; textPart?: string; jsonPart?: any }> {
     // Convert context to AgentContext format
     const agentContext: AgentContext = {
       universe: context.universe,
@@ -74,15 +74,24 @@ export class AgentsService implements LLMService {
       claims: roleClaims,
       errors: result.errors
     };
-    
+
     if (result.openaiResponse) {
       response.openaiResponse = result.openaiResponse;
     }
-    
+
     if (result.analysis) {
       response.analysis = result.analysis;
     }
-    
+
+    // Add textPart and jsonPart from the agent response
+    if (result.textPart) {
+      response.textPart = result.textPart;
+    }
+
+    if (result.jsonPart) {
+      response.jsonPart = result.jsonPart;
+    }
+
     return response;
   }
 

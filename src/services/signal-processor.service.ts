@@ -89,11 +89,15 @@ export class SignalProcessorService {
     const technical = claims.find(c => c.agentRole === 'valuation');
 
     // 2. Calculate multi-dimensional metrics
+    console.log(`🔍 analyzeTickerSignals: ${ticker} - fundamental=${!!fundamental}, sentiment=${!!sentiment}, technical=${!!technical}, technicalData=${!!technicalData}`);
+
     const fundamentalSignal = this.calculateFundamentalSignal(fundamental, marketStat);
     const sentimentSignal = this.calculateSentimentSignal(sentiment);
     const technicalSignal = this.calculateTechnicalSignal(technical, marketStat, technicalData);
     const momentumSignal = this.calculateMomentumSignal(marketStat, technicalData);
     const volatilitySignal = this.calculateVolatilitySignal(marketStat, technicalData);
+
+    console.log(`🔍 analyzeTickerSignals: ${ticker} signals - fundamental=${fundamentalSignal.toFixed(3)}, sentiment=${sentimentSignal.toFixed(3)}, technical=${technicalSignal.toFixed(3)}, momentum=${momentumSignal.toFixed(3)}, volatility=${volatilitySignal.toFixed(3)}`);
 
     // 3. Calculate risk-adjusted metrics
     const riskScore = this.calculateRiskScore(claims, marketStat);
@@ -203,14 +207,22 @@ export class SignalProcessorService {
    * Calculate technical signal with mathematical rigor
    */
   private calculateTechnicalSignal(claim: Claim | undefined, marketStat: MarketStats, technicalData?: any): number {
+    console.log(`🔍 calculateTechnicalSignal: claim=${claim?.ticker}, technicalData=${!!technicalData}`);
+
     if (!claim) {
       // If no technical claim, use market momentum as technical signal
       const priceChange = (marketStat.priceChange24h || 0) / 100;
-      return Math.max(-1, Math.min(1, priceChange * 2)); // Scale price change to signal
-    }
+      const volumeChange = (marketStat.volumeChange24h || 0) / 100;
 
-    // Base technical signal
-    let signal = claim.confidence * this.directionToSignal(claim.claim);
+      // Calculate technical signal from market data
+      const priceSignal = Math.tanh(priceChange * 2);
+      const volumeSignal = Math.tanh(volumeChange * 0.5);
+
+      // Combine price and volume signals
+      const result = Math.max(-1, Math.min(1, (priceSignal * 0.7 + volumeSignal * 0.3)));
+      console.log(`🔍 calculateTechnicalSignal: No claim, using market data - result=${result.toFixed(3)}`);
+      return result;
+    }
 
     // First try to get technical indicators from technical data
     let rsi, macd, volatility;
@@ -219,6 +231,7 @@ export class SignalProcessorService {
       rsi = technicalData.RSI;
       macd = technicalData['MACD.macd'];
       volatility = technicalData.AO; // Use Awesome Oscillator as volatility proxy
+      console.log(`🔍 calculateTechnicalSignal: From technicalData - RSI=${rsi}, MACD=${macd}, AO=${volatility}`);
     }
 
     // Fallback to signals array if technical data not available
@@ -227,25 +240,47 @@ export class SignalProcessorService {
       rsi = rsi ?? signals.find((s: { name: string; value: number }) => s.name === 'rsi')?.value;
       macd = macd ?? signals.find((s: { name: string; value: number }) => s.name === 'macd')?.value;
       volatility = volatility ?? signals.find((s: { name: string; value: number }) => s.name === 'volatility_30d')?.value;
+      console.log(`🔍 calculateTechnicalSignal: From signals - RSI=${rsi}, MACD=${macd}, volatility=${volatility}`);
     }
 
-    // Apply technical analysis adjustments
-    if (rsi !== undefined) {
-      const rsiAdjustment = this.calculateRSIAdjustment(rsi);
-      signal *= rsiAdjustment;
+    // Calculate technical signal based on indicators
+    let signal = 0;
+
+    // If we have technical indicators, use them to calculate signal
+    if (rsi !== undefined || macd !== undefined || volatility !== undefined) {
+      let rsiSignal = 0, macdSignal = 0, volatilitySignal = 0;
+
+      if (rsi !== undefined) {
+        // RSI signal: 0-30 = bullish, 70-100 = bearish, 30-70 = neutral
+        if (rsi < 30) rsiSignal = (30 - rsi) / 30; // Bullish signal
+        else if (rsi > 70) rsiSignal = -(rsi - 70) / 30; // Bearish signal
+        else rsiSignal = 0; // Neutral
+      }
+
+      if (macd !== undefined) {
+        // MACD signal: positive = bullish, negative = bearish
+        macdSignal = Math.tanh(macd * 0.001); // Scale MACD to reasonable range
+      }
+
+      if (volatility !== undefined) {
+        // Volatility signal: high volatility = more uncertainty
+        volatilitySignal = Math.min(Math.abs(volatility) * 0.01, 0.5); // Scale volatility
+      }
+
+      // Combine signals with weights
+      const weights = { rsi: 0.4, macd: 0.4, volatility: 0.2 };
+      signal = (rsiSignal * weights.rsi + macdSignal * weights.macd + volatilitySignal * weights.volatility);
+
+      console.log(`🔍 calculateTechnicalSignal: Technical indicators - RSI=${rsiSignal.toFixed(3)}, MACD=${macdSignal.toFixed(3)}, Vol=${volatilitySignal.toFixed(3)}, Combined=${signal.toFixed(3)}`);
+    } else {
+      // Fallback to claim-based signal
+      signal = claim.confidence * this.directionToSignal(claim.claim);
+      console.log(`🔍 calculateTechnicalSignal: Using claim-based signal=${signal.toFixed(3)} (confidence=${claim.confidence}, direction=${this.directionToSignal(claim.claim)})`);
     }
 
-    if (macd !== undefined) {
-      const macdAdjustment = this.calculateMACDAdjustment(macd);
-      signal *= macdAdjustment;
-    }
-
-    if (volatility !== undefined) {
-      const volatilityAdjustment = this.calculateVolatilityAdjustment(volatility);
-      signal *= volatilityAdjustment;
-    }
-
-    return Math.max(-1, Math.min(1, signal));
+    const finalSignal = Math.max(-1, Math.min(1, signal));
+    console.log(`🔍 calculateTechnicalSignal: Final signal=${finalSignal.toFixed(3)}`);
+    return finalSignal;
   }
 
   /**

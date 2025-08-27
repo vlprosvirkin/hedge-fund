@@ -255,6 +255,8 @@ The Fundamental Agent analyzes market fundamentals using quantitative metrics:
 - **Volume Data**: 24h volume, volume change, volume/price ratio
 - **Market Cap**: Calculated from circulating supply
 - **Liquidity Metrics**: Bid-ask spread, order book depth
+- **Evidence Structure**: Market evidence with ticker field (BTC, ETH, SOL)
+- **Market Data**: Real-time data from Binance API with structured evidence
 
 #### **Signal Calculation:**
 ```typescript
@@ -288,21 +290,42 @@ signal = signal * fundamentalWeight + volumeMomentum * marketWeight;
 The Sentiment Agent processes news and social media sentiment:
 
 #### **Data Sources:**
-- **News APIs**: 170+ crypto news sources
+- **News APIs**: 170+ crypto news sources with ticker-specific and GLOBAL news
+- **Evidence Structure**: Discriminated union with ticker field (BTC, ETH, SOL, GLOBAL)
 - **Social Media**: Twitter, Reddit sentiment analysis
 - **Market Sentiment**: Fear & Greed Index, social volume
 
 #### **Sentiment Processing:**
 ```typescript
-// Calculate average sentiment from news articles
-private calculateSentimentFromNews(news: any[]): number {
-  if (news.length === 0) return 0.5; // Neutral if no news
+// Calculate average sentiment from news articles with ticker-specific and GLOBAL evidence
+private calculateSentimentFromNews(evidence: Evidence[]): number {
+  if (evidence.length === 0) return 0.5; // Neutral if no news
   
-  const totalSentiment = news.reduce((sum, article) => {
-    return sum + (article.sentiment || 0.5);
+  // Filter evidence by kind and ticker
+  const newsEvidence = evidence.filter(e => e.kind === 'news');
+  const tickerEvidence = newsEvidence.filter(e => e.ticker === this.targetTicker);
+  const globalEvidence = newsEvidence.filter(e => e.ticker === 'GLOBAL');
+  
+  // Calculate sentiment from ticker-specific news
+  const tickerSentiment = this.calculateSentimentFromEvidence(tickerEvidence);
+  
+  // Calculate sentiment from GLOBAL news (affects all assets)
+  const globalSentiment = this.calculateSentimentFromEvidence(globalEvidence);
+  
+  // Combine ticker-specific and global sentiment
+  const combinedSentiment = (tickerSentiment * 0.7) + (globalSentiment * 0.3);
+  
+  return combinedSentiment;
+}
+
+private calculateSentimentFromEvidence(evidence: Evidence[]): number {
+  if (evidence.length === 0) return 0.5;
+  
+  const totalSentiment = evidence.reduce((sum, e) => {
+    return sum + (e.confidence || 0.5);
   }, 0);
   
-  return totalSentiment / news.length;
+  return totalSentiment / evidence.length;
 }
 ```
 
@@ -327,6 +350,8 @@ The Valuation Agent performs technical analysis using mathematical indicators:
 - **MACD (Moving Average Convergence Divergence)**: Trend following
 - **Bollinger Bands**: Volatility and price levels
 - **Volume Analysis**: Volume-price relationships
+- **Evidence Structure**: Technical evidence with ticker field (BTC, ETH, SOL)
+- **Technical Data**: Real-time indicators from Technical Indicators API with structured evidence
 
 #### **Signal Calculation:**
 ```typescript
@@ -429,6 +454,59 @@ const weights = {
 - **Majority Rule**: 2 out of 3 agents agree
 - **Confidence Weighting**: Higher confidence agents weighted more
 - **Risk Adjustment**: Conflicts increase risk score
+
+### 🌍 GLOBAL Evidence Integration
+
+The system integrates market-wide news and events using the special `GLOBAL` ticker in evidence:
+
+#### **GLOBAL Evidence Processing:**
+```typescript
+// Process GLOBAL evidence for all assets
+const processGlobalEvidence = (evidence: Evidence[], targetTicker: string) => {
+  const globalEvidence = evidence.filter(e => e.ticker === 'GLOBAL');
+  const tickerEvidence = evidence.filter(e => e.ticker === targetTicker);
+  
+  // Combine ticker-specific and global evidence
+  const combinedEvidence = [...tickerEvidence, ...globalEvidence];
+  
+  // Weight global evidence less than ticker-specific evidence
+  const weightedEvidence = combinedEvidence.map(e => ({
+    ...e,
+    relevance: e.ticker === 'GLOBAL' ? e.relevance * 0.3 : e.relevance
+  }));
+  
+  return weightedEvidence;
+};
+```
+
+#### **GLOBAL Evidence Impact:**
+- **Regulatory News**: Federal Reserve policy changes, SEC decisions
+- **Macroeconomic Events**: Inflation data, employment reports
+- **Market Sentiment**: Fear & Greed Index changes, institutional flows
+- **Geopolitical Events**: Global economic uncertainty, trade wars
+
+#### **Integration in Agent Analysis:**
+- **Fundamental Agent**: Considers global economic factors affecting crypto
+- **Sentiment Agent**: Processes market-wide news sentiment
+- **Valuation Agent**: Adjusts technical analysis for market-wide volatility
+
+#### **Consensus Building with GLOBAL Evidence:**
+```typescript
+// Enhanced consensus calculation including GLOBAL evidence
+const buildConsensusWithGlobal = (claims: Claim[], globalEvidence: Evidence[]) => {
+  // Standard consensus calculation
+  const baseConsensus = buildConsensus(claims);
+  
+  // Adjust consensus based on global evidence
+  const globalSentiment = calculateGlobalSentiment(globalEvidence);
+  const globalAdjustment = (globalSentiment - 0.5) * 0.2; // ±10% adjustment
+  
+  return baseConsensus.map(consensus => ({
+    ...consensus,
+    finalScore: consensus.finalScore + globalAdjustment
+  }));
+};
+```
 
 ## 📊 Position Sizing Logic
 
@@ -862,10 +940,11 @@ interface MathematicalTools {
 **Current State:**
 - Basic timestamp validation
 - Simple source whitelisting
+- Discriminated union evidence structure with ticker field
 
 **Proposed Enhancement:**
 ```typescript
-// Sophisticated evidence validation
+// Sophisticated evidence validation with ticker support
 interface EvidenceValidation {
   timestamp: {
     tolerance: number;
@@ -882,6 +961,11 @@ interface EvidenceValidation {
     bias: number;
     completeness: number;
   };
+  ticker: {
+    validation: boolean;
+    isGlobal: boolean;
+    marketImpact: number;
+  };
   crossValidation: {
     agreement: number;
     conflicts: string[];
@@ -895,6 +979,8 @@ interface EvidenceValidation {
 - **Bias Detection**: Identify and adjust for source bias
 - **Cross-Validation**: Compare evidence across agents
 - **Historical Accuracy**: Track source reliability over time
+- **Ticker Validation**: Validate ticker-specific vs GLOBAL evidence
+- **Market Impact Assessment**: Evaluate impact of GLOBAL evidence on individual assets
 
 #### **5. Adaptive Learning System**
 
@@ -960,6 +1046,8 @@ interface AdaptiveLearning {
 2. Add cross-validation mechanisms
 3. Enhance source credibility assessment
 4. Add historical accuracy tracking
+5. Implement ticker validation for GLOBAL vs specific evidence
+6. Add market impact assessment for GLOBAL evidence
 
 #### **Phase 5: Adaptive Learning (Low Priority)**
 1. Implement performance tracking system
@@ -974,12 +1062,15 @@ interface AdaptiveLearning {
 - **Reduced Bias**: Reflection process reduces agent biases
 - **Higher Accuracy**: Mathematical tools improve signal quality
 - **Better Validation**: Enhanced evidence validation reduces errors
+- **GLOBAL Integration**: Proper handling of market-wide vs asset-specific evidence
 
 #### **Enhanced Transparency:**
 - **Debate Logs**: Complete record of agent interactions
 - **Reflection Trails**: Track reasoning and bias correction
 - **Tool Usage**: Monitor mathematical tool utilization
 - **Performance Attribution**: Clear attribution of decisions to agents
+- **Evidence Tracking**: Track ticker-specific vs GLOBAL evidence usage
+- **Market Impact Analysis**: Show how GLOBAL events affect individual assets
 
 #### **Adaptive Performance:**
 - **Learning System**: System improves over time

@@ -35,6 +35,8 @@ export const OrderBookSchema = z.object({
 
 export const MarketStatsSchema = z.object({
   symbol: z.string(),
+  timestamp: z.number(), // Add missing timestamp
+  price: z.number().optional(), // Current price
   volume24h: z.number(),
   volumeChange24h: z.number().optional(),
   priceChange24h: z.number().optional(),
@@ -61,33 +63,86 @@ export const NewsItemSchema = z.object({
   assets: z.array(z.string()).optional(),
 });
 
-export const EvidenceSchema = z.object({
-  id: z.string(),
-  ticker: z.string(),
-  newsItemId: z.string(),
-  relevance: z.number(), // 0 to 1
-  timestamp: z.number(),
+// ===== Evidence Types (Discriminated Union) =====
+export const NewsEvidenceSchema = z.object({
+  id: z.string(), // Add missing id
+  ticker: z.string(), // BTC, ETH, etc.
+  kind: z.literal('news'),
   source: z.string(),
+  url: z.string().url(),
+  snippet: z.string(),
+  publishedAt: z.string().datetime(),
+  relevance: z.number(), // 0 to 1
+  impact: z.number().optional(), // -1 to 1
+  confidence: z.number().optional(), // 0 to 1
+  // Legacy properties for backward compatibility
   quote: z.string().optional(),
+  timestamp: z.number().optional(),
+  newsItemId: z.string().optional(),
 });
 
-export type NewsItem = z.infer<typeof NewsItemSchema>;
-export type Evidence = z.infer<typeof EvidenceSchema>;
+export const MarketEvidenceSchema = z.object({
+  id: z.string(), // Add missing id
+  ticker: z.string(), // BTC, ETH, etc.
+  kind: z.literal('market'),
+  source: z.literal('binance'),
+  metric: z.enum(['vol24h', 'spread_bps', 'ohlcv_close', 'vwap', 'liquidity_score']),
+  value: z.number().finite(),
+  observedAt: z.string().datetime(),
+  relevance: z.number(), // 0 to 1
+  impact: z.number().optional(), // -1 to 1
+  confidence: z.number().optional(), // 0 to 1
+  // Legacy properties for backward compatibility
+  quote: z.string().optional(),
+  timestamp: z.number().optional(),
+  newsItemId: z.string().optional(),
+});
 
-// ===== Agent Types =====
+export const TechEvidenceSchema = z.object({
+  id: z.string(), // Add missing id
+  ticker: z.string(), // BTC, ETH, etc.
+  kind: z.literal('tech'),
+  source: z.literal('indicators'),
+  metric: z.string().min(2), // RSI(14,1h), MACD(12,26,9,1h), etc.
+  value: z.number().finite(),
+  observedAt: z.string().datetime(),
+  relevance: z.number(), // 0 to 1
+  impact: z.number().optional(), // -1 to 1
+  confidence: z.number().optional(), // 0 to 1
+  // Legacy properties for backward compatibility
+  quote: z.string().optional(),
+  timestamp: z.number().optional(),
+  newsItemId: z.string().optional(),
+});
+
+export const EvidenceSchema = z.discriminatedUnion('kind', [
+  NewsEvidenceSchema,
+  MarketEvidenceSchema,
+  TechEvidenceSchema
+]);
+
+// ===== Claim Types (Updated) =====
 export const ClaimSchema = z.object({
   id: z.string(),
   ticker: z.string(),
   agentRole: z.enum(['fundamental', 'sentiment', 'valuation']),
   claim: z.string(),
   confidence: z.number(), // 0 to 1
-  evidence: z.array(z.string()), // Evidence IDs
+  evidence: z.array(EvidenceSchema), // Use structured evidence directly
   timestamp: z.number(),
   riskFlags: z.array(z.string()).optional(),
   signals: z.array(z.object({
     name: z.string(),
     value: z.number()
   })).optional(),
+
+  // Только действительно полезные поля
+  direction: z.enum(['bullish', 'bearish', 'neutral']).optional(), // Явное направление
+  magnitude: z.number().optional(), // -1 to 1 (сила сигнала)
+  rationale: z.string().optional(), // Подробное обоснование
+
+  // New fields for better structure
+  thesis: z.string().optional(), // Short thesis statement
 });
 
 export const ConsensusRecSchema = z.object({
@@ -157,6 +212,7 @@ export const RiskLimitsSchema = z.object({
   maxDailyLoss: z.number(),
   maxDrawdown: z.number(),
   maxConcentration: z.number(),
+  minCashBuffer: z.number().optional(), // Minimum cash buffer to maintain
 });
 
 export const RiskViolationSchema = z.object({
@@ -244,3 +300,9 @@ export type SignalMetrics = z.infer<typeof SignalMetricsSchema>;
 
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
 export type PipelineArtifact = z.infer<typeof PipelineArtifactSchema>;
+
+export type NewsItem = z.infer<typeof NewsItemSchema>;
+export type Evidence = z.infer<typeof EvidenceSchema>;
+export type NewsEvidence = z.infer<typeof NewsEvidenceSchema>;
+export type MarketEvidence = z.infer<typeof MarketEvidenceSchema>;
+export type TechEvidence = z.infer<typeof TechEvidenceSchema>;

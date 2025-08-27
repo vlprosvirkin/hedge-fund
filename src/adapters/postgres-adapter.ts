@@ -184,7 +184,8 @@ export class PostgresAdapter implements FactStore {
         CREATE TABLE IF NOT EXISTS evidence (
           id VARCHAR(255) PRIMARY KEY,
           ticker VARCHAR(20) NOT NULL,
-          news_item_id VARCHAR(255) NOT NULL,
+          type VARCHAR(20) NOT NULL,
+          news_item_id VARCHAR(255),
           relevance DECIMAL(3,2) NOT NULL,
           quote TEXT NOT NULL,
           timestamp TIMESTAMP NOT NULL,
@@ -282,7 +283,7 @@ export class PostgresAdapter implements FactStore {
         CREATE INDEX IF NOT EXISTS idx_news_published_at ON news(published_at);
         CREATE INDEX IF NOT EXISTS idx_news_source ON news(source);
         CREATE INDEX IF NOT EXISTS idx_evidence_ticker ON evidence(ticker);
-        CREATE INDEX IF NOT EXISTS idx_evidence_timestamp ON evidence(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_evidence_timestamp ON evidence(created_at);
         CREATE INDEX IF NOT EXISTS idx_claims_round_id ON claims(round_id);
         CREATE INDEX IF NOT EXISTS idx_claims_ticker ON claims(ticker);
         CREATE INDEX IF NOT EXISTS idx_consensus_round_id ON consensus(round_id);
@@ -306,8 +307,12 @@ export class PostgresAdapter implements FactStore {
         return this.storeEvidence(evidence);
     }
 
-    validateEvidence(evidence: Evidence, cutoff: number): boolean {
-        return evidence.timestamp >= cutoff;
+    validateEvidence(evidence: any, cutoff: number): boolean {
+        if (evidence.kind === 'news') {
+            return new Date(evidence.publishedAt).getTime() >= cutoff;
+        } else {
+            return new Date(evidence.observedAt).getTime() >= cutoff;
+        }
     }
 
     // News operations
@@ -340,6 +345,7 @@ export class PostgresAdapter implements FactStore {
             }
 
             await client.query('COMMIT');
+            console.log(`✅ Successfully stored ${newsItems.length} news items in database`);
         } catch (error) {
             await client.query('ROLLBACK');
             throw error;
@@ -375,28 +381,55 @@ export class PostgresAdapter implements FactStore {
     }
 
     // Evidence operations
-    async storeEvidence(evidenceItems: Evidence[]): Promise<void> {
+    async storeEvidence(evidenceItems: any[]): Promise<void> {
         const client = await this.pool.connect();
 
         try {
             await client.query('BEGIN');
 
             for (const item of evidenceItems) {
-                await client.query(`
-          INSERT INTO evidence (id, ticker, news_item_id, relevance, quote, timestamp, source)
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-          ON CONFLICT (id) DO UPDATE SET
-            relevance = EXCLUDED.relevance,
-            quote = EXCLUDED.quote
-        `, [
-                    item.id,
-                    item.ticker,
-                    item.newsItemId,
-                    item.relevance,
-                    item.quote,
-                    new Date(item.timestamp),
-                    item.source
-                ]);
+                // Handle new discriminated union structure
+                if (item.kind === 'news') {
+                    await client.query(`
+                        INSERT INTO evidence (ticker, kind, source, url, snippet, published_at, relevance, impact, confidence)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                        ON CONFLICT (id) DO UPDATE SET
+                            relevance = EXCLUDED.relevance,
+                            impact = EXCLUDED.impact,
+                            confidence = EXCLUDED.confidence,
+                            updated_at = CURRENT_TIMESTAMP
+                    `, [
+                        item.ticker,
+                        item.kind,
+                        item.source,
+                        item.url,
+                        item.snippet,
+                        new Date(item.publishedAt),
+                        item.relevance,
+                        item.impact || null,
+                        item.confidence || null
+                    ]);
+                } else if (item.kind === 'market' || item.kind === 'tech') {
+                    await client.query(`
+                        INSERT INTO evidence (ticker, kind, source, metric, value, observed_at, relevance, impact, confidence)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                        ON CONFLICT (id) DO UPDATE SET
+                            relevance = EXCLUDED.relevance,
+                            impact = EXCLUDED.impact,
+                            confidence = EXCLUDED.confidence,
+                            updated_at = CURRENT_TIMESTAMP
+                    `, [
+                        item.ticker,
+                        item.kind,
+                        item.source,
+                        item.metric,
+                        item.value,
+                        new Date(item.observedAt),
+                        item.relevance,
+                        item.impact || null,
+                        item.confidence || null
+                    ]);
+                }
             }
 
             await client.query('COMMIT');
@@ -413,54 +446,53 @@ export class PostgresAdapter implements FactStore {
         until?: number;
         minRelevance?: number;
         sources?: string[];
-    }): Promise<Evidence[]> {
+    }): Promise<any[]> {
         const client = await this.pool.connect();
 
         try {
-            let query = `
-        SELECT * FROM evidence 
-        WHERE ticker = $1
-      `;
-            const params: any[] = [ticker];
-            let paramIndex = 2;
+            const cutoff = constraints.since || Date.now() - 24 * 60 * 60 * 1000; // Default to 24 hours ago
 
-            if (constraints.since) {
-                query += ` AND timestamp >= $${paramIndex}`;
-                params.push(new Date(constraints.since));
-                paramIndex++;
-            }
+            const result = await client.query(`
+                SELECT * FROM evidence 
+                WHERE ticker = $1
+                  AND ((kind = 'news' AND published_at >= $2)
+                   OR (kind IN ('market', 'tech') AND observed_at >= $2))
+                ORDER BY 
+                    CASE 
+                        WHEN kind = 'news' THEN published_at 
+                        ELSE observed_at 
+                    END DESC
+            `, [ticker, new Date(cutoff)]);
 
-            if (constraints.until) {
-                query += ` AND timestamp <= $${paramIndex}`;
-                params.push(new Date(constraints.until));
-                paramIndex++;
-            }
-
-            if (constraints.minRelevance) {
-                query += ` AND relevance >= $${paramIndex}`;
-                params.push(constraints.minRelevance);
-                paramIndex++;
-            }
-
-            if (constraints.sources && constraints.sources.length > 0) {
-                query += ` AND source = ANY($${paramIndex})`;
-                params.push(constraints.sources);
-                paramIndex++;
-            }
-
-            query += ` ORDER BY timestamp DESC`;
-
-            const result = await client.query(query, params);
-
-            return result.rows.map(row => ({
-                id: row.id,
-                ticker: row.ticker,
-                newsItemId: row.news_item_id,
-                relevance: row.relevance,
-                quote: row.quote,
-                timestamp: row.timestamp.getTime(),
-                source: row.source
-            }));
+            return result.rows.map(row => {
+                if (row.kind === 'news') {
+                    return {
+                        id: row.id,
+                        ticker: row.ticker,
+                        kind: 'news',
+                        source: row.source,
+                        url: row.url,
+                        snippet: row.snippet,
+                        publishedAt: row.published_at.toISOString(),
+                        relevance: row.relevance,
+                        impact: row.impact,
+                        confidence: row.confidence
+                    };
+                } else {
+                    return {
+                        id: row.id,
+                        ticker: row.ticker,
+                        kind: row.kind,
+                        source: row.source,
+                        metric: row.metric,
+                        value: row.value,
+                        observedAt: row.observed_at.toISOString(),
+                        relevance: row.relevance,
+                        impact: row.impact,
+                        confidence: row.confidence
+                    };
+                }
+            });
         } finally {
             client.release();
         }
@@ -475,8 +507,8 @@ export class PostgresAdapter implements FactStore {
 
             for (const claim of claims) {
                 await client.query(`
-          INSERT INTO claims (id, round_id, ticker, agent_role, claim_text, confidence, evidence_ids, risk_flags, timestamp)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          INSERT INTO claims (id, round_id, ticker, agent_role, claim_text, confidence, evidence_ids, risk_flags, direction, magnitude, rationale, timestamp)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         `, [
                     claim.id,
                     roundId || 'unknown', // Use provided round ID or default
@@ -486,11 +518,15 @@ export class PostgresAdapter implements FactStore {
                     claim.confidence,
                     claim.evidence,
                     claim.riskFlags || [],
+                    claim.direction || null,
+                    claim.magnitude || null,
+                    claim.rationale || null,
                     new Date(claim.timestamp)
                 ]);
             }
 
             await client.query('COMMIT');
+            console.log(`✅ Successfully stored ${claims.length} claims in database`);
         } catch (error) {
             await client.query('ROLLBACK');
             throw error;
@@ -519,6 +555,9 @@ export class PostgresAdapter implements FactStore {
                 confidence: row.confidence,
                 evidence: row.evidence_ids,
                 riskFlags: row.risk_flags,
+                direction: row.direction,
+                magnitude: row.magnitude,
+                rationale: row.rationale,
                 timestamp: row.timestamp.getTime()
             }));
         } finally {
@@ -550,6 +589,7 @@ export class PostgresAdapter implements FactStore {
             }
 
             await client.query('COMMIT');
+            console.log(`✅ Successfully stored ${consensus.length} consensus records in database`);
         } catch (error) {
             await client.query('ROLLBACK');
             throw error;
@@ -588,6 +628,7 @@ export class PostgresAdapter implements FactStore {
             }
 
             await client.query('COMMIT');
+            console.log(`✅ Successfully stored ${orders.length} orders in database`);
         } catch (error) {
             await client.query('ROLLBACK');
             throw error;
@@ -626,6 +667,7 @@ export class PostgresAdapter implements FactStore {
             }
 
             await client.query('COMMIT');
+            console.log(`✅ Successfully stored ${positions.length} positions in database`);
         } catch (error) {
             await client.query('ROLLBACK');
             throw error;
@@ -643,6 +685,7 @@ export class PostgresAdapter implements FactStore {
         INSERT INTO rounds (id, start_time, status)
         VALUES ($1, CURRENT_TIMESTAMP, 'running')
       `, [roundId]);
+            console.log(`✅ Successfully started round ${roundId} in database`);
         } finally {
             client.release();
         }
@@ -661,6 +704,7 @@ export class PostgresAdapter implements FactStore {
             total_pnl = $5
         WHERE id = $1
       `, [roundId, status, claimsCount, ordersCount, totalPnL]);
+            console.log(`✅ Successfully ended round ${roundId} in database`);
         } finally {
             client.release();
         }

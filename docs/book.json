@@ -1,0 +1,36 @@
+{
+  "title": "Hedge Fund AI Trading System",
+  "description": "Документация по интеллектуальной системе торговли криптовалютами",
+  "author": "Vladimir Prosvirkin",
+  "language": "ru",
+  "structure": {
+    "readme": "README.md",
+    "summary": "SUMMARY.md"
+  },
+  "plugins": [
+    "mermaid-gb3",
+    "theme-default",
+    "search",
+    "copy-code-button",
+    "expandable-chapters",
+    "back-to-top-button",
+    "github",
+    "edit-link"
+  ],
+  "pluginsConfig": {
+    "github": {
+      "url": "https://github.com/vlprosvirkin/hedge-fund"
+    },
+    "edit-link": {
+      "base": "https://github.com/vlprosvirkin/hedge-fund/edit/main/docs",
+      "label": "Редактировать эту страницу"
+    },
+    "mermaid-gb3": {
+      "theme": "default"
+    }
+  },
+  "variables": {
+    "version": "1.0.0",
+    "lastUpdated": "2024-08-26"
+  }
+}

@@ -16,20 +16,28 @@ export class ValuationAgent extends BaseAgent {
   }
 
   async processData(context: AgentContext): Promise<any> {
+    console.log(`🔍 Valuation Agent: Processing data for universe: ${context.universe.join(', ')}`);
+
     // Get technical data using TechnicalAnalysisService
     const technicalData = await Promise.all(
       context.universe.map(async (ticker) => {
         try {
+          console.log(`🔍 Valuation Agent: Getting data for ${ticker}...`);
+
           // Get technical data and create comprehensive analysis
           const [technical, metadata] = await Promise.all([
             this.technicalIndicators.getTechnicalIndicators(ticker, '4h'),
             this.technicalIndicators.getAssetMetadata(ticker, '4h')
           ]);
 
+          console.log(`🔍 Valuation Agent: ${ticker} - Technical data received:`, !!technical);
+          console.log(`🔍 Valuation Agent: ${ticker} - Metadata received:`, !!metadata);
+
           // Use TechnicalAnalysisService to analyze the data
           const signalStrength = this.technicalAnalysis.calculateSignalStrength(technical);
+          console.log(`🔍 Valuation Agent: ${ticker} - Signal strength:`, signalStrength.strength);
 
-          return {
+          const result = {
             ticker,
             price: metadata?.price || 0,
             indicators: technical,
@@ -42,6 +50,15 @@ export class ValuationAgent extends BaseAgent {
             volatility: this.calculateVolatility(metadata?.price || 0),
             momentum: this.calculateMomentum(metadata?.price || 0)
           };
+
+          console.log(`🔍 Valuation Agent: ${ticker} - Processed data:`, {
+            price: result.price,
+            rsi: result.rsi,
+            macd: result.macd,
+            signalStrength: result.signalStrength
+          });
+
+          return result;
         } catch (error) {
           console.error(`Failed to get technical data for ${ticker}:`, error);
           return { ticker, error: true };
@@ -49,6 +66,7 @@ export class ValuationAgent extends BaseAgent {
       })
     );
 
+    console.log(`🔍 Valuation Agent: Total processed data:`, technicalData.length);
     return technicalData;
   }
 
@@ -91,10 +109,10 @@ TECHNICAL ANALYSIS CRITERIA:
 - Volatility: Higher volatility = more potential for large moves
 
 CONFIDENCE SCORING:
-- 0.9-1.0: Multiple strong technical signals aligned, clear mathematical evidence
-- 0.7-0.8: Good technical signals with mathematical confirmation
-- 0.5-0.6: Mixed technical signals, moderate mathematical evidence
-- 0.3-0.4: Weak technical signals, limited mathematical evidence
+- 0.8-1.0: Multiple strong technical signals aligned, clear mathematical evidence
+- 0.6-0.7: Good technical signals with mathematical confirmation
+- 0.4-0.5: Mixed technical signals, moderate mathematical evidence
+- 0.2-0.3: Weak technical signals, limited mathematical evidence
 - 0.1-0.2: Very weak signals, insufficient mathematical data
 
 Risk profile: ${riskProfile} - ${this.getRiskProfileContext(riskProfile)}
@@ -103,11 +121,34 @@ STRICT RULES:
 1. Use ONLY provided data and mathematical tools - no external knowledge
 2. Claims must be timestamp-locked to provided data
 3. Confidence must be between 0.1 and 1.0 based on technical signal strength
-4. Return ONLY valid JSON array of claims
-5. If insufficient data, return HOLD with confidence 0.2
-6. Provide mathematical reasoning for each recommendation
+4. If insufficient data, return HOLD with confidence 0.2
+5. Provide mathematical reasoning for each recommendation
+6. REQUIRED: Each claim MUST include at least 1 technical evidence (RSI, MACD, BB, Stochastic) from indicators data
+7. OPTIONAL: Include market evidence (volume, price) for additional context
+
+CRITICAL: You MUST provide a detailed technical analysis BEFORE the JSON claims.
+CRITICAL: For evidence field, use ONLY real evidence IDs from the provided context, NOT placeholder IDs like "evidence_id_1".
+CRITICAL: Each claim MUST reference specific technical indicators (RSI, MACD, etc.) with exact values from the provided data.
 
 OUTPUT FORMAT:
+You MUST follow this exact format:
+
+TECHNICAL ANALYSIS:
+Provide a comprehensive technical analysis of each asset including:
+- RSI interpretation (oversold/overbought levels)
+- MACD signal analysis (bullish/bearish crossovers)
+- Volatility assessment and risk implications
+- Momentum indicators and trend strength
+- Overall technical health and signal quality
+
+For example:
+"TECHNICAL ANALYSIS:
+BTC shows neutral RSI at 35.17, indicating neither oversold nor overbought conditions. The MACD is bearish at -1251.71, suggesting downward momentum. Volatility is moderate at 0.3, indicating potential for significant moves. The signal strength is negative at -0.3, indicating weak technical momentum. Overall, the technical picture is mixed with bearish MACD but neutral RSI.
+
+ETH displays neutral RSI at 45.26, suggesting balanced buying and selling pressure. The MACD is bearish at -25.05, indicating downward momentum. Volatility is moderate at 0.3, similar to BTC. The signal strength is negative at -0.3, indicating weak technical momentum. The technical indicators suggest a cautious approach with mixed signals.
+
+Then provide the claims in JSON format:"
+
 {
   "claims": [
     {
@@ -115,7 +156,9 @@ OUTPUT FORMAT:
       "agentRole": "valuation",
       "claim": "BUY|HOLD|SELL",
       "confidence": 0.85,
-      "horizon": "days|weeks",
+      "direction": "bullish|bearish|neutral",
+      "magnitude": 0.7,
+      "rationale": "Brief reasoning for the recommendation",
       "signals": [
         {"name": "rsi", "value": 38},
         {"name": "macd", "value": 0.15},
@@ -123,15 +166,29 @@ OUTPUT FORMAT:
         {"name": "sharpe_proxy", "value": 1.2},
         {"name": "signal_strength", "value": 0.68}
       ],
-      "evidence": ["evidence_id_1"],
-      "riskFlags": ["high_volatility", "weak_signals"],
-      "notes": "Brief reasoning for the recommendation"
+      "evidence": ["REAL_EVIDENCE_ID_1", "REAL_EVIDENCE_ID_2"],
+      "riskFlags": ["high_volatility", "weak_signals"]
     }
   ]
 }`;
   }
 
   buildUserPrompt(context: AgentContext, processedData?: any[]): string {
+    console.log(`🔍 Valuation Agent: Building prompt with ${processedData?.length || 0} processed data items`);
+    console.log(`🔍 Valuation Agent: Market stats count: ${context.marketStats?.length || 0}`);
+
+    if (processedData) {
+      processedData.forEach((data, index) => {
+        console.log(`🔍 Valuation Agent: Data ${index + 1} - ${data.ticker}:`, {
+          hasError: data.error,
+          price: data.price,
+          rsi: data.rsi,
+          macd: data.macd,
+          signalStrength: data.signalStrength
+        });
+      });
+    }
+
     return `ANALYSIS REQUEST:
 Role: VALUATION/TECHNICAL Analyst
 Risk Profile: ${context.riskProfile}
@@ -164,7 +221,7 @@ ${processedData ? processedData.map((data: any) => {
       const signalStrength = data.signalStrength || 0;
       const volatility = data.volatility || 0;
       const sharpeProxy = volatility > 0 ? (signalStrength / volatility) : 0;
-      
+
       return `• ${data.ticker}: 
   - Signal Strength: ${signalStrength.toFixed(3)}
   - Volatility (σ): ${volatility.toFixed(3)}

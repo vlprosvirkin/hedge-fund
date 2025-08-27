@@ -72,11 +72,11 @@ async function servicesIntegrationTest() {
             assetMetadata = await technicalAdapter.getAssetMetadata(testAsset, '1d');
             // Get technical data and create comprehensive analysis
             const [technical, metadata, news] = await Promise.all([
-              technicalAdapter.getTechnicalIndicators(testAsset, '1d'),
-              technicalAdapter.getAssetMetadata(testAsset, '1d'),
-              technicalAdapter.getNews(testAsset)
+                technicalAdapter.getTechnicalIndicators(testAsset, '1d'),
+                technicalAdapter.getAssetMetadata(testAsset, '1d'),
+                technicalAdapter.getNews(testAsset)
             ]);
-            
+
             const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService();
             comprehensiveAnalysis = technicalAnalysis.createComprehensiveAnalysis(technical, metadata, news);
 
@@ -152,6 +152,7 @@ async function servicesIntegrationTest() {
 
         const marketStats: MarketStats[] = universe.map(token => ({
             symbol: token,
+            timestamp: Date.now(),
             volume24h: Math.random() * 1000000 + 100000,
             spread: Math.random() * 0.1 + 0.01,
             tickSize: 0.01,
@@ -162,12 +163,18 @@ async function servicesIntegrationTest() {
 
         const evidence: Evidence[] = newsData.map((news, index) => ({
             id: `evidence-${index}`,
-            ticker: testAsset,
-            newsItemId: news.id,
+            kind: 'news',
+            source: news.source,
+            url: news.url,
+            snippet: news.title,
+            publishedAt: new Date(news.publishedAt).toISOString(),
+            relevance: 0.8,
+            impact: 0.6,
+            confidence: 0.8,
             quote: news.title,
-            relevance: news.sentiment || 0,
-            timestamp: news.publishedAt,
-            source: news.source
+            timestamp: Date.now(),
+            newsItemId: news.id,
+            ticker: 'BTC'
         }));
 
         console.log(`✅ Test data prepared:`);

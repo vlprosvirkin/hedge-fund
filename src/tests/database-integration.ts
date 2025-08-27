@@ -73,21 +73,33 @@ async function databaseIntegrationTest() {
         const mockEvidence: Evidence[] = [
             {
                 id: uuidv4(),
-                ticker: 'BTC',
-                newsItemId: mockNews[0]?.id || 'unknown',
-                relevance: 0.95,
-                quote: 'Bitcoin has reached a new all-time high of $50,000',
-                timestamp: Date.now() - 3600000,
-                source: 'coindesk.com'
+                kind: 'news',
+                source: 'coindesk.com',
+                url: 'https://coindesk.com/bitcoin-news',
+                snippet: 'Bitcoin reaches new all-time high',
+                publishedAt: new Date().toISOString(),
+                relevance: 0.85,
+                impact: 0.8,
+                confidence: 0.85,
+                quote: 'Bitcoin reaches new all-time high',
+                timestamp: Date.now(),
+                newsItemId: 'news-1',
+                ticker: 'BTC'
             },
             {
                 id: uuidv4(),
-                ticker: 'ETH',
-                newsItemId: mockNews[1]?.id || 'unknown',
-                relevance: 0.87,
-                quote: 'Ethereum 2.0 development continues with promising results',
-                timestamp: Date.now() - 7200000,
-                source: 'cointelegraph.com'
+                kind: 'news',
+                source: 'cointelegraph.com',
+                url: 'https://cointelegraph.com/ethereum-news',
+                snippet: 'Ethereum shows strong momentum',
+                publishedAt: new Date().toISOString(),
+                relevance: 0.72,
+                impact: 0.6,
+                confidence: 0.78,
+                quote: 'Ethereum shows strong momentum',
+                timestamp: Date.now(),
+                newsItemId: 'news-2',
+                ticker: 'ETH'
             }
         ];
 
@@ -118,7 +130,7 @@ async function databaseIntegrationTest() {
                 agentRole: 'fundamental',
                 claim: 'Strong volume indicates high market activity for BTC',
                 confidence: 0.85,
-                evidence: [mockEvidence[0]?.id || 'unknown'],
+                evidence: [mockEvidence[0]!],
                 riskFlags: ['market_volatility'],
                 timestamp: Date.now()
             },
@@ -128,7 +140,7 @@ async function databaseIntegrationTest() {
                 agentRole: 'sentiment',
                 claim: 'Positive sentiment around Ethereum 2.0 development',
                 confidence: 0.78,
-                evidence: [mockEvidence[1]?.id || 'unknown'],
+                evidence: [mockEvidence[1]!],
                 riskFlags: [],
                 timestamp: Date.now()
             }

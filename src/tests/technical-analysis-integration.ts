@@ -280,27 +280,39 @@ async function technicalAnalysisIntegrationTest() {
     const testEvidence: Evidence[] = [
       {
         id: 'evidence-1',
-        ticker: 'BTC',
-        newsItemId: 'test-news-1',
+        kind: 'tech',
+        source: 'indicators',
+        metric: 'RSI(14,1h)',
+        value: technicalData.RSI,
+        observedAt: new Date().toISOString(),
         relevance: 0.9,
+        impact: 0.7,
+        confidence: 0.9,
+        quote: `RSI: ${technicalData.RSI.toFixed(2)}, MACD: ${technicalData['MACD.macd'].toFixed(4)}`,
         timestamp: Date.now(),
-        source: 'technical-analysis',
-        quote: `RSI: ${technicalData.RSI.toFixed(2)}, MACD: ${technicalData['MACD.macd'].toFixed(4)}`
+        newsItemId: undefined,
+        ticker: 'BTC'
       },
       {
         id: 'evidence-2',
-        ticker: 'BTC',
-        newsItemId: 'test-news-2',
+        kind: 'market',
+        source: 'binance',
+        metric: 'vol24h',
+        value: metadata.volume,
+        observedAt: new Date().toISOString(),
         relevance: 0.8,
+        impact: 0.5,
+        confidence: 0.8,
+        quote: `Price: $${metadata.price.toLocaleString()}, Volume: ${metadata.volume.toLocaleString()}`,
         timestamp: Date.now(),
-        source: 'technical-analysis',
-        quote: `Price: $${metadata.price.toLocaleString()}, Volume: ${metadata.volume.toLocaleString()}`
+        newsItemId: undefined,
+        ticker: 'BTC'
       }
     ];
 
     console.log('✅ Test evidence created successfully');
     testEvidence.forEach(evidence => {
-      console.log(`   - ${evidence.source}: ${evidence.quote}`);
+      console.log(`   - ${evidence.source}: ${evidence.quote || 'No quote available'}`);
     });
 
     // 11. Тестирование интерпретации данных агентами

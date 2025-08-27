@@ -51,6 +51,8 @@ export class AgentCoordinator {
     errors: string[];
     openaiResponse?: string;
     analysis?: string;
+    textPart?: string;
+    jsonPart?: any;
   }> {
     const errors: string[] = [];
     const allClaims: Claim[] = [];
@@ -85,13 +87,13 @@ export class AgentCoordinator {
       console.log(`🤝 AgentCoordinator: Collecting responses from ${agentResponses.length} agents...`);
       
       agentResponses.forEach((response, index) => {
-        console.log(`🤝 AgentCoordinator: Agent ${index + 1} - Claims: ${response.claims.length}, Analysis length: ${response.analysis?.length || 0}`);
+        console.log(`🤝 AgentCoordinator: Agent ${index + 1} - Claims: ${response.claims.length}, TextPart length: ${response.textPart?.length || 0}`);
         allClaims.push(...response.claims);
         if (response.openaiResponse) {
           combinedOpenAIResponse += response.openaiResponse + '\n\n';
         }
-        if (response.analysis) {
-          combinedAnalysis += response.analysis + '\n\n';
+        if (response.textPart) {
+          combinedAnalysis += response.textPart + '\n\n';
         }
       });
 
@@ -142,7 +144,9 @@ export class AgentCoordinator {
         debateLog,
         errors,
         openaiResponse: combinedOpenAIResponse,
-        analysis: combinedAnalysis
+        analysis: combinedAnalysis,
+        textPart: combinedAnalysis,
+        jsonPart: null
       };
 
     } catch (error) {
@@ -156,7 +160,9 @@ export class AgentCoordinator {
         debateLog,
         errors,
         openaiResponse: combinedOpenAIResponse,
-        analysis: combinedAnalysis
+        analysis: combinedAnalysis,
+        textPart: combinedAnalysis,
+        jsonPart: null
       };
     }
   }

@@ -36,6 +36,21 @@ async function testCoreServices() {
         console.log('\n🎯 Testing Consensus Service...');
         const consensus = new ConsensusService();
 
+        const mockEvidence = [
+            {
+                id: '1',
+                ticker: 'BTC',
+                kind: 'news' as const,
+                source: 'test',
+                url: 'https://test.com',
+                snippet: 'Test evidence',
+                publishedAt: new Date().toISOString(),
+                relevance: 0.8,
+                impact: 0.6,
+                confidence: 0.8
+            }
+        ];
+
         const mockClaims = [
             {
                 id: '1',
@@ -43,7 +58,7 @@ async function testCoreServices() {
                 agentRole: 'fundamental' as const,
                 claim: 'BTC is undervalued',
                 confidence: 0.8,
-                evidence: ['1'],
+                evidence: mockEvidence,
                 timestamp: Date.now()
             }
         ];
@@ -51,6 +66,7 @@ async function testCoreServices() {
         const mockMarketStats = [
             {
                 symbol: 'BTC',
+                timestamp: Date.now(),
                 volume24h: 1000000,
                 spread: 0.1,
                 tickSize: 0.01,

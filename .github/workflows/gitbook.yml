@@ -1,0 +1,45 @@
+name: Deploy to GitBook
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'docs/**' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'docs/**' ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Install GitBook CLI
+      run: |
+        npm install -g gitbook-cli
+        
+    - name: Build GitBook
+      run: |
+        cd docs
+        gitbook build
+        
+    - name: Deploy to GitBook
+      if: github.ref == 'refs/heads/main'
+      run: |
+        cd docs
+        gitbook build
+        # Здесь нужно добавить команды для деплоя в GitBook
+        # В зависимости от настроек GitBook
+        
+    - name: Create Pull Request Preview
+      if: github.event_name == 'pull_request'
+      run: |
+        echo "Creating preview for PR #${{ github.event.number }}"
+        # Логика для создания preview

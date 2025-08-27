@@ -115,8 +115,11 @@ export class AspisAdapter implements TradingAdapter {
             }
           }
 
+          // Convert wrapped tokens back to original symbols for consistency
+          const originalSymbol = this.convertWrappedToOriginal(balance.asset);
+
           const position = {
-            symbol: balance.asset,
+            symbol: originalSymbol,
             quantity: balance.free + balance.locked,
             avgPrice: currentPrice, // Use current price as approximation
             unrealizedPnL: 0, // Would need historical data to calculate properly
@@ -149,9 +152,14 @@ export class AspisAdapter implements TradingAdapter {
     price?: number;
   }): Promise<string> {
     try {
-      // Convert symbol to token format (BTC -> BTC, ETH -> ETH)
-      const srcToken = params.side === 'buy' ? 'USDT' : params.symbol;
-      const dstToken = params.side === 'buy' ? params.symbol : 'USDT';
+      // Auto-convert BTC to WBTC and ETH to WETH for Aspis API
+      const convertedSymbol = this.convertSymbolForAspis(params.symbol);
+
+      // Convert symbol to token format with automatic conversion
+      const srcToken = params.side === 'buy' ? 'USDT' : convertedSymbol;
+      const dstToken = params.side === 'buy' ? convertedSymbol : 'USDT';
+
+      console.log(`Order conversion: ${params.symbol} -> ${convertedSymbol} (${params.side})`);
 
       const input: ExecuteOrderInput = {
         chainId: '42161',
@@ -365,10 +373,10 @@ export class AspisAdapter implements TradingAdapter {
     try {
       // Calculate portfolio metrics from current positions
       const positions = await this.getPositions();
-      
+
       let totalValue = 0;
       let unrealizedPnL = 0;
-      
+
       for (const position of positions) {
         const positionValue = position.quantity * position.avgPrice;
         totalValue += positionValue;
@@ -466,30 +474,43 @@ export class AspisAdapter implements TradingAdapter {
 
   private isSupportedSymbol(symbol: string): boolean {
     const supported = ['BTC', 'ETH', 'ADA', 'DOT', 'LINK'];
-    return supported.includes(symbol.toUpperCase());
+    const upperSymbol = symbol.toUpperCase();
+
+    // Check if original symbol is supported
+    if (supported.includes(upperSymbol)) {
+      return true;
+    }
+
+    // Check if wrapped version is supported
+    const wrappedSymbol = this.convertSymbolForAspis(upperSymbol);
+    return supported.includes(wrappedSymbol) || supported.includes(upperSymbol);
   }
 
   async getTokenPrice(symbol: string): Promise<number> {
     try {
+      // Convert symbol to wrapped version for price lookup
+      const wrappedSymbol = this.convertSymbolForAspis(symbol);
+
       // Get all prices at once (API returns all available prices)
       const response = await axios.get(`https://v2api.aspis.finance/api/rates`, {
         headers: { 'accept': 'application/json' }
       });
 
-      if (response.data?.data?.[symbol]?.USD) {
-        return response.data.data[symbol].USD;
+      if (response.data?.data?.[wrappedSymbol]?.USD) {
+        console.log(`Found price for ${symbol} (${wrappedSymbol}): ${response.data.data[wrappedSymbol].USD}`);
+        return response.data.data[wrappedSymbol].USD;
       }
 
-      // If symbol not found, try with common variations
-      const variations = this.getSymbolVariations(symbol);
+      // If wrapped symbol not found, try with common variations
+      const variations = this.getSymbolVariations(wrappedSymbol);
       for (const variation of variations) {
         if (response.data?.data?.[variation]?.USD) {
-          console.log(`Found price for ${symbol} using variation: ${variation}`);
+          console.log(`Found price for ${symbol} (${wrappedSymbol}) using variation: ${variation}`);
           return response.data.data[variation].USD;
         }
       }
 
-      throw new Error(`Price not found for ${symbol} (tried variations: ${variations.join(', ')})`);
+      throw new Error(`Price not found for ${symbol} (${wrappedSymbol}) (tried variations: ${variations.join(', ')})`);
     } catch (error) {
       if (error instanceof Error && error.message.includes('Price not found')) {
         throw error;
@@ -509,17 +530,21 @@ export class AspisAdapter implements TradingAdapter {
 
       if (response.data?.data) {
         for (const symbol of symbols) {
-          // Try exact match first
-          if (response.data.data[symbol]?.USD) {
-            prices[symbol] = response.data.data[symbol].USD;
+          // Convert symbol to wrapped version for price lookup
+          const wrappedSymbol = this.convertSymbolForAspis(symbol);
+
+          // Try exact match first with wrapped symbol
+          if (response.data.data[wrappedSymbol]?.USD) {
+            prices[symbol] = response.data.data[wrappedSymbol].USD;
+            console.log(`Found price for ${symbol} (${wrappedSymbol}): ${prices[symbol]}`);
             continue;
           }
 
           // Try variations if exact match not found
-          const variations = this.getSymbolVariations(symbol);
+          const variations = this.getSymbolVariations(wrappedSymbol);
           for (const variation of variations) {
             if (response.data.data[variation]?.USD) {
-              console.log(`Found price for ${symbol} using variation: ${variation}`);
+              console.log(`Found price for ${symbol} (${wrappedSymbol}) using variation: ${variation}`);
               prices[symbol] = response.data.data[variation].USD;
               break;
             }
@@ -531,6 +556,48 @@ export class AspisAdapter implements TradingAdapter {
     } catch (error) {
       throw new Error(`Failed to get prices for ${symbols.join(',')}: ${error}`);
     }
+  }
+
+  /**
+ * Convert trading symbols to Aspis-compatible wrapped tokens
+ */
+  private convertSymbolForAspis(symbol: string): string {
+    const upperSymbol = symbol.toUpperCase();
+
+    // Auto-convert BTC to WBTC and ETH to WETH for Aspis API
+    const symbolMapping: Record<string, string> = {
+      'BTC': 'WBTC',
+      'ETH': 'WETH'
+    };
+
+    const convertedSymbol = symbolMapping[upperSymbol] || upperSymbol;
+
+    if (convertedSymbol !== upperSymbol) {
+      console.log(`Auto-converting ${upperSymbol} to ${convertedSymbol} for Aspis API`);
+    }
+
+    return convertedSymbol;
+  }
+
+  /**
+   * Convert wrapped tokens back to original symbols for display consistency
+   */
+  private convertWrappedToOriginal(symbol: string): string {
+    const upperSymbol = symbol.toUpperCase();
+
+    // Convert wrapped tokens back to original symbols
+    const reverseMapping: Record<string, string> = {
+      'WBTC': 'BTC',
+      'WETH': 'ETH'
+    };
+
+    const originalSymbol = reverseMapping[upperSymbol] || upperSymbol;
+
+    if (originalSymbol !== upperSymbol) {
+      console.log(`Converting ${upperSymbol} back to ${originalSymbol} for display`);
+    }
+
+    return originalSymbol;
   }
 
   /**

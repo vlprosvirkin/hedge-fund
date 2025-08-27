@@ -23,7 +23,8 @@ export function generateEvidenceName(evidence: Evidence, newsItem?: NewsItem): s
   }
 
   // Fallback to source and timestamp
-  const date = new Date(evidence.timestamp).toLocaleDateString();
+  const timestamp = evidence.timestamp ?? Date.now();
+  const date = new Date(timestamp).toLocaleDateString();
   return `${evidence.source} (${date})`;
 }
 
@@ -31,17 +32,38 @@ export function generateEvidenceName(evidence: Evidence, newsItem?: NewsItem): s
  * Generate evidence name by ID when we don't have the full evidence object
  */
 export function generateEvidenceNameById(evidenceId: string): string {
+  console.log(`🔍 EvidenceUtils: Generating name for ID: ${evidenceId}`);
+
+  // Handle numeric IDs (like "3445", "3453")
+  if (/^\d+$/.test(evidenceId)) {
+    return `News Article #${evidenceId}`;
+  }
+
+  // Handle evidence IDs (format: ticker_newsId_timestamp)
+  if (evidenceId.match(/^[A-Z]{2,5}_\d+_\d+$/)) {
+    const parts = evidenceId.split('_');
+    const ticker = parts[0]?.toUpperCase();
+    const newsId = parts[1];
+    const timestamp = parts[2];
+
+    if (ticker && newsId && timestamp && !isNaN(parseInt(timestamp))) {
+      const date = new Date(parseInt(timestamp)).toLocaleDateString();
+      return `${ticker} News #${newsId} (${date})`;
+    }
+  }
+
   // Try to parse the ID to extract meaningful information
   if (evidenceId.includes('_')) {
     const parts = evidenceId.split('_');
     if (parts.length >= 3) {
-      const ticker = parts[1]?.toUpperCase();
-      const type = parts[2];
-      const timestamp = parts[3];
+      const ticker = parts[0]?.toUpperCase();
+      const type = parts[1];
+      const timestamp = parts[2];
 
-      if (ticker && type) {
-        const readableType = type.replace(/([A-Z])/g, ' $1').toLowerCase();
-        return `${ticker} ${readableType} data`;
+      if (ticker && type && timestamp && !isNaN(parseInt(type)) && !isNaN(parseInt(timestamp))) {
+        // This looks like ticker_newsId_timestamp format
+        const date = new Date(parseInt(timestamp)).toLocaleDateString();
+        return `${ticker} News #${type} (${date})`;
       }
     }
   }
@@ -57,6 +79,32 @@ export function generateEvidenceNameById(evidenceId: string): string {
       const readableRole = agentRole.charAt(0).toUpperCase() + agentRole.slice(1);
       const date = new Date(parseInt(timestamp)).toLocaleDateString();
       return `${ticker} ${readableRole} Claim (${date})`;
+    }
+  }
+
+  // Handle "ID X data" format
+  if (evidenceId.match(/^ID \d+ data$/)) {
+    const match = evidenceId.match(/^ID (\d+) data$/);
+    if (match) {
+      return `Market Data #${match[1]}`;
+    }
+  }
+
+  // Handle "evidence_id_X" format
+  if (evidenceId.match(/^evidence_id_\d+$/)) {
+    const match = evidenceId.match(/^evidence_id_(\d+)$/);
+    if (match) {
+      return `Market Data #${match[1]}`;
+    }
+  }
+
+  // Handle "BTC - X" or "ETH - X" format
+  if (evidenceId.match(/^[A-Z]{2,5} - \d+$/)) {
+    const parts = evidenceId.split(' - ');
+    const ticker = parts[0];
+    const index = parts[1];
+    if (ticker && index) {
+      return `${ticker} News Item #${index}`;
     }
   }
 
@@ -82,7 +130,7 @@ export function getEvidenceDetails(evidence: Evidence, newsItem?: NewsItem): {
     name: generateEvidenceName(evidence, newsItem),
     source: evidence.source,
     relevance: `${(evidence.relevance * 100).toFixed(1)}%`,
-    timestamp: new Date(evidence.timestamp).toLocaleString()
+    timestamp: new Date(evidence.timestamp ?? Date.now()).toLocaleString()
   };
 
   if (evidence.quote) {
@@ -101,9 +149,76 @@ export function formatEvidenceForDisplay(
   newsMap?: Map<string, NewsItem>,
   claimText?: string
 ): string[] {
+  console.log(`🔍 EvidenceUtils: Formatting ${evidenceIds.length} evidence IDs`);
+  console.log(`🔍 EvidenceUtils: Evidence map available: ${!!evidenceMap}, News map available: ${!!newsMap}`);
+
   return evidenceIds.map((evidenceId, index) => {
-    const evidence = evidenceMap?.get(evidenceId);
-    const newsItem = evidence?.newsItemId ? newsMap?.get(evidence.newsItemId) : undefined;
+    console.log(`🔍 EvidenceUtils: Processing evidence ID: ${evidenceId}`);
+
+    // Try to find evidence by exact ID first
+    let evidence = evidenceMap?.get(evidenceId);
+    let newsItem = evidence?.newsItemId ? newsMap?.get(evidence.newsItemId) : undefined;
+
+    // If not found, try to find by ticker if evidenceId contains ticker info
+    if (!evidence && evidenceMap) {
+      const tickerMatch = evidenceId.match(/^([A-Z]{2,5})_/);
+      if (tickerMatch) {
+        const ticker = tickerMatch[1];
+        // Find evidence for this ticker
+        for (const [id, ev] of evidenceMap.entries()) {
+          if (ev.ticker === ticker) {
+            evidence = ev;
+            newsItem = ev.newsItemId ? newsMap?.get(ev.newsItemId) : undefined;
+            console.log(`🔍 EvidenceUtils: Found evidence by ticker ${ticker}: ${id}`);
+            break;
+          }
+        }
+      }
+    }
+
+    // If still not found, try to find any evidence for the ticker from claim context
+    if (!evidence && evidenceMap && claimText) {
+      const tickerMatch = claimText.match(/([A-Z]{2,5}):/);
+      if (tickerMatch) {
+        const ticker = tickerMatch[1];
+        for (const [id, ev] of evidenceMap.entries()) {
+          if (ev.ticker === ticker) {
+            evidence = ev;
+            newsItem = ev.newsItemId ? newsMap?.get(ev.newsItemId) : undefined;
+            console.log(`🔍 EvidenceUtils: Found evidence by claim ticker ${ticker}: ${id}`);
+            break;
+          }
+        }
+      }
+    }
+
+    // If still not found, try to find any evidence for the ticker
+    if (!evidence && evidenceMap && claimText) {
+      const tickerMatch = claimText.match(/([A-Z]{2,5}):/);
+      if (tickerMatch) {
+        const ticker = tickerMatch[1];
+        // Find any evidence for this ticker
+        for (const [id, ev] of evidenceMap.entries()) {
+          if (ev.ticker === ticker) {
+            evidence = ev;
+            newsItem = ev.newsItemId ? newsMap?.get(ev.newsItemId) : undefined;
+            console.log(`🔍 EvidenceUtils: Found evidence by ticker ${ticker}: ${id}`);
+            break;
+          }
+        }
+      }
+    }
+
+    // If still not found, create a fallback evidence name based on ticker
+    if (!evidence && claimText) {
+      const tickerMatch = claimText.match(/([A-Z]{2,5}):/);
+      if (tickerMatch) {
+        const ticker = tickerMatch[1];
+        return `Market Data for ${ticker} (${new Date().toLocaleDateString()})`;
+      }
+    }
+
+    console.log(`🔍 EvidenceUtils: Evidence found: ${!!evidence}, News item found: ${!!newsItem}`);
 
     let evidenceName = '';
     if (evidence) {
@@ -111,6 +226,8 @@ export function formatEvidenceForDisplay(
     } else {
       evidenceName = generateEvidenceNameById(evidenceId);
     }
+
+    console.log(`🔍 EvidenceUtils: Base evidence name: ${evidenceName}`);
 
     // Enhance evidence name with more context
     let enhancedName = evidenceName;
@@ -140,6 +257,7 @@ export function formatEvidenceForDisplay(
       }
     }
 
+    console.log(`🔍 EvidenceUtils: Final enhanced name: ${enhancedName}`);
     return enhancedName;
   });
 }
