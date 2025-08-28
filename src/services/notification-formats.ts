@@ -466,9 +466,22 @@ export class NotificationFormats {
             // Show key conflicts and resolutions
             conflicts.forEach((conflict, i) => {
                 text += `🔴 <b>${conflict.ticker} Conflict:</b>\n`;
-                text += `   📊 Fundamental: ${conflict.claim1}\n`;
-                text += `   📈 Technical: ${conflict.claim2}\n`;
-                text += `   ⚡ Severity: ${conflict.severity}\n\n`;
+
+                // Handle different conflict formats
+                if (conflict.claims && Array.isArray(conflict.claims)) {
+                    // New format from consensus service
+                    const fundamentalClaim = conflict.claims.find((c: any) => c.agentRole === 'fundamental');
+                    const technicalClaim = conflict.claims.find((c: any) => c.agentRole === 'technical');
+
+                    text += `   📊 Fundamental: ${fundamentalClaim ? fundamentalClaim.claim : 'No data'}\n`;
+                    text += `   📈 Technical: ${technicalClaim ? technicalClaim.claim : 'No data'}\n`;
+                } else {
+                    // Old format with claim1/claim2
+                    text += `   📊 Fundamental: ${conflict.claim1 || 'No data'}\n`;
+                    text += `   📈 Technical: ${conflict.claim2 || 'No data'}\n`;
+                }
+
+                text += `   ⚡ Severity: ${conflict.severity || 'unknown'}\n\n`;
             });
 
             // Show full debate insights
