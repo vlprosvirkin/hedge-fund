@@ -67,6 +67,14 @@ export class HedgeFundOrchestrator {
     this.telegram = telegram || new TelegramAdapter();
     this.notifications = new NotificationsService(this.telegram);
     this.vaultController = new VaultController(this.trading, this.marketData);
+
+    // Debug logging for configuration
+    this.logger.info('🔧 Orchestrator configuration loaded:', {
+      debateInterval: this.config.debateInterval,
+      rebalanceInterval: this.config.rebalanceInterval,
+      riskProfile: this.config.riskProfile,
+      maxPositions: this.config.maxPositions
+    });
   }
 
   async start(): Promise<void> {

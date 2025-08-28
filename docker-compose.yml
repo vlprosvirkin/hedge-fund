@@ -13,7 +13,6 @@ services:
       - NODE_ENV=production
       - LOG_LEVEL=info
       - RISK_PROFILE=neutral
-      - DEBATE_INTERVAL=3600
       - MAX_POSITIONS=8
       - KILL_SWITCH_ENABLED=true
       

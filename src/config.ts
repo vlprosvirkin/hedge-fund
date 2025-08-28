@@ -225,6 +225,21 @@ export const SYSTEM_CONFIG = {
   environment: process.env.NODE_ENV || 'development'
 };
 
+// Debug logging for environment variables
+console.log('🔧 Environment variables debug:', {
+  DEBATE_INTERVAL: process.env.DEBATE_INTERVAL,
+  REBALANCE_INTERVAL: process.env.REBALANCE_INTERVAL,
+  RISK_PROFILE: process.env.RISK_PROFILE,
+  NODE_ENV: process.env.NODE_ENV
+});
+
+console.log('🔧 SYSTEM_CONFIG loaded:', {
+  debateInterval: SYSTEM_CONFIG.debateInterval,
+  rebalanceInterval: SYSTEM_CONFIG.rebalanceInterval,
+  riskProfile: SYSTEM_CONFIG.riskProfile,
+  environment: SYSTEM_CONFIG.environment
+});
+
 // Load configuration from environment
 export function loadConfig(): SystemConfig {
   return {
