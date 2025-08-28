@@ -69,7 +69,7 @@ export function generateEvidenceNameById(evidenceId: string): string {
   }
 
   // Handle claim IDs (format: ticker_agentRole_timestamp_index)
-  if (evidenceId.match(/^[A-Z]{2,5}_(fundamental|sentiment|valuation)_\d+_\d+$/)) {
+  if (evidenceId.match(/^[A-Z]{2,5}_(fundamental|sentiment|technical)_\d+_\d+$/)) {
     const parts = evidenceId.split('_');
     const ticker = parts[0]?.toUpperCase();
     const agentRole = parts[1];

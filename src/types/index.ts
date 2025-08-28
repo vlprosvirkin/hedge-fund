@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // Re-export technical analysis types
-export * from './technical-analysis.js';
+export * from './signals.js';
 
 // Re-export news types
 export * from './news.js';
@@ -115,17 +115,71 @@ export const TechEvidenceSchema = z.object({
   newsItemId: z.string().optional(),
 });
 
+export const OnChainEvidenceSchema = z.object({
+  id: z.string(),
+  ticker: z.string(), // BTC, ETH, etc.
+  kind: z.literal('onchain'),
+  source: z.literal('indicators'),
+  metric: z.string().min(2), // active_addresses, txs_volume_usd, hash_rate, etc.
+  value: z.number().finite(),
+  observedAt: z.string().datetime(),
+  relevance: z.number(), // 0 to 1
+  impact: z.number().optional(), // -1 to 1
+  confidence: z.number().optional(), // 0 to 1
+  // Legacy properties for backward compatibility
+  quote: z.string().optional(),
+  timestamp: z.number().optional(),
+  newsItemId: z.string().optional(),
+});
+
+export const SocialEvidenceSchema = z.object({
+  id: z.string(),
+  ticker: z.string(), // BTC, ETH, etc.
+  kind: z.literal('social'),
+  source: z.literal('indicators'),
+  metric: z.string().min(2), // social_volume_24h, galaxyscore, tweets, etc.
+  value: z.number().finite(),
+  observedAt: z.string().datetime(),
+  relevance: z.number(), // 0 to 1
+  impact: z.number().optional(), // -1 to 1
+  confidence: z.number().optional(), // 0 to 1
+  // Legacy properties for backward compatibility
+  quote: z.string().optional(),
+  timestamp: z.number().optional(),
+  newsItemId: z.string().optional(),
+});
+
+export const IndexEvidenceSchema = z.object({
+  id: z.string(),
+  ticker: z.string(), // BTC, ETH, etc. or 'GLOBAL' for market-wide indices
+  kind: z.literal('index'),
+  source: z.string(), // 'fear_greed', 'google_trends', etc.
+  name: z.string(), // 'fear_greed', 'google_trends_SOL', etc.
+  value: z.number().finite(),
+  observedAt: z.string().datetime(),
+  relevance: z.number(), // 0 to 1
+  impact: z.number().optional(), // -1 to 1
+  confidence: z.number().optional(), // 0 to 1
+  // Legacy properties for backward compatibility
+  quote: z.string().optional(),
+  timestamp: z.number().optional(),
+  newsItemId: z.string().optional(),
+});
+
 export const EvidenceSchema = z.discriminatedUnion('kind', [
   NewsEvidenceSchema,
   MarketEvidenceSchema,
-  TechEvidenceSchema
+  TechEvidenceSchema,
+  OnChainEvidenceSchema,
+  SocialEvidenceSchema,
+  IndexEvidenceSchema
 ]);
 
 // ===== Claim Types (Updated) =====
 export const ClaimSchema = z.object({
   id: z.string(),
   ticker: z.string(),
-  agentRole: z.enum(['fundamental', 'sentiment', 'valuation']),
+  agentRole: z.enum(['fundamental', 'sentiment', 'technical']),
   claim: z.string(),
   confidence: z.number(), // 0 to 1
   evidence: z.array(EvidenceSchema), // Use structured evidence directly

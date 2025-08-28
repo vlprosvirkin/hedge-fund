@@ -44,6 +44,14 @@ export const API_CONFIG = {
     rateLimit: parseInt(process.env.TECHNICAL_INDICATORS_RATE_LIMIT || '60') // requests per minute
   },
 
+  // CoinMarketCap API
+  cmc: {
+    apiKey: process.env.CMC_API_KEY,
+    baseUrl: 'https://pro-api.coinmarketcap.com/v1',
+    timeout: parseInt(process.env.CMC_TIMEOUT || '10000'),
+    rateLimit: parseInt(process.env.CMC_RATE_LIMIT || '30') // requests per day on free tier
+  },
+
   // News API
   news: {
     baseUrl: process.env.NEWS_API_URL || 'http://3.79.47.238:4500',
@@ -153,14 +161,14 @@ export const NEWS_CONFIG = {
 
 // Agent configuration
 export const AGENT_CONFIG = {
-  roles: ['fundamental', 'sentiment', 'valuation'] as const,
+  roles: ['fundamental', 'sentiment', 'technical'] as const,
   maxClaimsPerRole: 10,
   minConfidence: 0.3,
   maxConfidence: 0.95,
   systemPrompts: {
-    fundamental: `You are a fundamental analyst specializing in on-chain metrics, network activity, and institutional adoption. Focus on data-driven insights only.`,
-    sentiment: `You are a sentiment analyst specializing in news sentiment, social media analysis, and market sentiment indicators.`,
-    valuation: `You are a valuation analyst specializing in price-to-metrics ratios, technical analysis, and risk-adjusted returns.`
+    fundamental: `You are a fundamental analyst specializing in on-chain metrics, social sentiment, and market cap analysis.`,
+    sentiment: `You are a sentiment analyst specializing in news analysis, social media sentiment, and market mood indicators.`,
+    technical: `You are a technical analyst specializing in technical indicators, volatility analysis, and price action patterns.`
   }
 };
 
@@ -222,8 +230,14 @@ export const SYSTEM_CONFIG = {
   maxPositions: parseInt(process.env.MAX_POSITIONS || DEFAULT_CONFIG.maxPositions.toString()),
   killSwitchEnabled: process.env.KILL_SWITCH_ENABLED !== 'false',
   logLevel: process.env.LOG_LEVEL || 'info',
-  environment: process.env.NODE_ENV || 'development'
-};
+  environment: process.env.NODE_ENV || 'development',
+  roles: ['fundamental', 'sentiment', 'technical'] as const,
+  agentDescriptions: {
+    fundamental: `You are a fundamental analyst specializing in on-chain metrics, social sentiment, and market cap analysis.`,
+    sentiment: `You are a sentiment analyst specializing in news analysis, social media sentiment, and market mood indicators.`,
+    technical: `You are a technical analyst specializing in technical indicators, volatility analysis, and price action patterns.`
+  }
+} as const;
 
 // Debug logging for environment variables
 console.log('🔧 Environment variables debug:', {

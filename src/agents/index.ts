@@ -4,7 +4,7 @@ export { BaseAgent, type AgentContext, type AgentResponse } from './base-agent.j
 // Export concrete agents
 export { FundamentalAgent } from './fundamental-agent.js';
 export { SentimentAgent } from './sentiment-agent.js';
-export { ValuationAgent } from './valuation-agent.js';
+export { TechnicalAnalysisAgent } from './valuation-agent.js';
 
 // Export factory and coordinator
 export { AgentFactory } from './agent-factory.js';

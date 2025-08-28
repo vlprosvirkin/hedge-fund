@@ -26,7 +26,7 @@ import { NotificationsService } from '../services/notifications.service.js';
 import { PostgresAdapter } from '../adapters/postgres-adapter.js';
 import { BinanceAdapter } from '../adapters/binance-adapter.js';
 import { NewsAPIAdapter } from '../adapters/news-adapter.js';
-import { TechnicalIndicatorsAdapter } from '../adapters/technical-indicators-adapter.js';
+import { Signals } from '../adapters/signals-adapter.js';
 import { AspisAdapter } from '../adapters/aspis-adapter.js';
 import { AgentFactory } from '../agents/agent-factory.js';
 import { SignalProcessorService } from '../services/signal-processor.service.js';
@@ -51,7 +51,7 @@ async function runRealTelegramTest() {
         const factStore = new PostgresAdapter();
         const marketData = new BinanceAdapter();
         const news = new NewsAPIAdapter();
-        const technicalIndicators = new TechnicalIndicatorsAdapter();
+        const technicalIndicators = new Signals();
         const trading = new AspisAdapter();
         const telegram = new TelegramAdapter();
         const notifications = new NotificationsService(telegram);

@@ -14,7 +14,7 @@ interface AgentResponse {
 async function testAgentParsing() {
   console.log('🧪 TESTING AGENT PARSING\n');
 
-  const agentRoles = ['fundamental', 'sentiment', 'valuation'] as const;
+  const agentRoles = ['fundamental', 'sentiment', 'technical'] as const;
 
   for (const role of agentRoles) {
     console.log(`\n📊 Testing ${role.toUpperCase()} agent parsing:`);

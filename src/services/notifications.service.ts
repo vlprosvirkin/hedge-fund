@@ -390,7 +390,7 @@ export class NotificationsService {
                 analysis = this.extractSentimentAnalysis(content);
             } else if (agentRole === 'fundamental') {
                 analysis = this.extractFundamentalAnalysis(content);
-            } else if (agentRole === 'valuation') {
+            } else if (agentRole === 'technical') {
                 analysis = this.extractTechnicalAnalysis(content);
             }
 

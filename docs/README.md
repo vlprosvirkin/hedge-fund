@@ -1,84 +1,92 @@
-# Hedge Fund AI Trading System
+# Hedge Fund AI Trading System - Documentation
 
-> Интеллектуальная система торговли криптовалютами на основе многоагентного консенсуса
+## 📚 Welcome to the Documentation
 
-## 🚀 Обзор системы
+This documentation provides comprehensive guides for the Hedge Fund AI Trading System - a sophisticated multi-agent cryptocurrency trading platform.
 
-Hedge Fund AI Trading System - это продвинутая система автоматической торговли криптовалютами, использующая искусственный интеллект и многоагентный подход для принятия торговых решений.
+## 🚀 Quick Navigation
 
-### 🎯 Ключевые особенности
+### **Getting Started**
+- **[Quick Start Guide](./quickstart.md)** - Install, configure, and run the system
+- **[System Overview](./ARCHITECTURE.md)** - Complete architecture and data flow
+- **[AI Agents](./AGENTS.md)** - Understanding the multi-agent system
 
-- **🤖 Многоагентная архитектура** - три специализированных AI агента
-- **📊 Консенсусное принятие решений** - объединение мнений агентов
-- **📈 Технический анализ** - RSI, MACD, Bollinger Bands и другие индикаторы
-- **📰 Анализ новостей** - обработка настроений рынка
-- **💰 Управление рисками** - автоматический контроль позиций
-- **📱 Telegram уведомления** - детальная отчетность в реальном времени
+### **Core Components**
+- **[Architecture](./ARCHITECTURE.md)** - System architecture and components
+- **[AI Agents](./AGENTS.md)** - Multi-agent system documentation
+- **[API Integration](./API_TYPES.md)** - All API types and interfaces
+- **[Database Schema](./DATABASE_SCHEMA.md)** - Database design and storage
 
-### 🏗️ Архитектура системы
+### **Trading & Analysis**
+- **[Decision Process](./DECISION_PROCESS.md)** - Trading decision-making workflow
+- **[Signal Processing](./SIGNAL_PROCESSING.md)** - Technical analysis and signal processing
+- **[Methodology](./METHODOLOGY.md)** - Trading strategies and mathematical models
 
-```mermaid
-graph TB
-    A[Market Data] --> B[AI Agents]
-    C[News API] --> B
-    D[Technical Indicators] --> B
-    B --> E[Consensus Engine]
-    E --> F[Risk Management]
-    F --> G[Trading Execution]
-    G --> H[Portfolio Management]
-    H --> I[Telegram Notifications]
-```
+### **Setup & Configuration**
+- **[Aspis Setup](./ASPIS_SETUP.md)** - Trading API configuration
+- **[GitBook Setup](./GITBOOK_SETUP.md)** - Documentation setup and maintenance
+- **[Testing Guide](./TESTS_README.md)** - Testing procedures and examples
 
-## 📖 Содержание документации
+### **Monitoring & Notifications**
+- **[Enhanced Notifications](./ENHANCED_NOTIFICATIONS.md)** - Telegram notifications system
 
-### 🚀 Быстрый старт
-- [Установка и настройка](./QUICKSTART.md)
-- [Конфигурация](./CONFIGURATION.md)
-- [Первые шаги](./FIRST_STEPS.md)
+## 🎯 Key Features
 
-### 🏗️ Архитектура
-- [Обзор системы](./ARCHITECTURE.md)
-- [AI агенты](./AGENTS.md)
-- [База данных](./DATABASE_SCHEMA.md)
-- [API интеграции](./API_INTEGRATIONS.md)
+### **Multi-Agent Architecture**
+- **Fundamental Agent**: On-chain metrics, social sentiment, market cap analysis
+- **Sentiment Agent**: News analysis, social media sentiment, Fear & Greed Index
+- **Technical Analysis Agent**: Technical indicators, price action patterns
+- **Consensus Building**: Weighted decision-making with risk profiles
 
-### 🔧 Разработка
-- [API методы](./ASPIS_API_METHODS.md)
-- [Типы данных](./API_TYPES.md)
-- [Тестирование](./TESTS_README.md)
-- [Логирование](./LOGGING.md)
+### **Advanced Analytics**
+- **45+ Technical Indicators**: RSI, MACD, ADX, Bollinger Bands, and more
+- **50+ Fundamental Metrics**: On-chain data, social sentiment, market cap health
+- **Real-time News Analysis**: Sentiment scoring with credibility assessment
+- **Kelly Criterion Position Sizing**: Mathematical optimization for risk-adjusted returns
 
-### 📊 Торговля
-- [Сигналы и анализ](./SIGNAL_PROCESSING.md)
-- [Технические индикаторы](./TECHNICAL_INDICATORS.md)
-- [Управление рисками](./RISK_MANAGEMENT.md)
-- [Исполнение ордеров](./ORDER_EXECUTION.md)
+### **Professional Infrastructure**
+- **Multiple API Integrations**: Binance, CoinMarketCap, News APIs, Technical Indicators
+- **PostgreSQL Database**: Complete audit trail and performance tracking
+- **Telegram Notifications**: Real-time transparency and monitoring
+- **Risk Management**: Comprehensive controls and kill-switch functionality
 
-### 📰 Новости и анализ
-- [API новостей](./NEWS_API.md)
-- [Анализ настроений](./SENTIMENT_ANALYSIS.md)
-- [Обработка новостей](./NEWS_PROCESSING.md)
+## 🔧 Technology Stack
 
-### 📱 Уведомления
-- [Telegram бот](./TELEGRAM_BOT.md)
-- [Форматирование сообщений](./MESSAGE_FORMATTING.md)
-- [Настройка уведомлений](./NOTIFICATIONS.md)
+- **Backend**: Node.js, TypeScript
+- **Database**: PostgreSQL, Redis
+- **APIs**: Binance, CoinMarketCap, News APIs, Technical Indicators API
+- **AI/ML**: OpenAI GPT models for agent reasoning
+- **Notifications**: Telegram Bot API
+- **Testing**: Jest, Supertest
+- **Documentation**: GitBook, Markdown
 
-### 🚀 Развертывание
-- [Docker развертывание](./DEPLOYMENT.md)
-- [EC2 настройка](./EC2_SETUP.md)
-- [Мониторинг](./MONITORING.md)
+## 📈 Performance Metrics
 
-## 🎯 Начало работы
+- **API Response Time**: < 100ms for cached data
+- **Agent Processing**: < 5 seconds per agent
+- **Consensus Generation**: < 10 seconds total
+- **Database Queries**: < 50ms average
+- **Uptime**: 99.9% target
 
-Для быстрого старта смотрите [QUICKSTART.md](./QUICKSTART.md)
+## 🚀 Getting Started
 
-## 📞 Поддержка
+1. **Read the Architecture**: Start with [ARCHITECTURE.md](./ARCHITECTURE.md)
+2. **Understand Agents**: Review [AGENTS.md](./AGENTS.md)
+3. **Setup Environment**: Follow [quickstart.md](./quickstart.md)
+4. **Configure APIs**: See [ASPIS_SETUP.md](./ASPIS_SETUP.md)
+5. **Run Tests**: Check [TESTS_README.md](./TESTS_README.md)
 
-- **GitHub Issues**: [Создать issue](https://github.com/vlprosvirkin/hedge-fund/issues)
-- **Документация**: Этот GitBook
-- **Telegram**: @hedge_fund_support
+## 🤝 Contributing
+
+Please read [README_DOCS.md](./README_DOCS.md) for guidelines on contributing to the documentation.
+
+## 📞 Support
+
+For technical support or questions about the system:
+- Check the [quickstart.md](./quickstart.md) for common issues
+- Review [TESTS_README.md](./TESTS_README.md) for testing procedures
+- Consult [METHODOLOGY.md](./METHODOLOGY.md) for trading strategies
 
 ---
 
-*Последнее обновление: {{ new Date().toLocaleDateString() }}*
+**Built with ❤️ for robust cryptocurrency trading**

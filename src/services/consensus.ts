@@ -65,7 +65,7 @@ export class ConsensusService {
 
     // Calculate coverage (how many different agent roles covered this ticker)
     const roles = new Set(claims.map(claim => claim.agentRole));
-    const coverage = roles.size / 3; // 3 possible roles: fundamental, sentiment, valuation
+    const coverage = roles.size / 3; // 3 possible roles: fundamental, sentiment, technical
 
     // Calculate liquidity score (normalized volume/spread)
     const liquidity = this.calculateLiquidityScore(marketStat);
@@ -108,13 +108,13 @@ export class ConsensusService {
     const roleConfidences = {
       fundamental: 0,
       sentiment: 0,
-      valuation: 0
+      technical: 0
     };
 
     const roleCounts = {
       fundamental: 0,
       sentiment: 0,
-      valuation: 0
+      technical: 0
     };
 
     for (const claim of claims) {
@@ -142,7 +142,7 @@ export class ConsensusService {
     if (claims.length === 0) return 0;
 
     // Weight claims by their confidence and agent role
-    const roleWeights = { fundamental: 0.3, sentiment: 0.3, valuation: 0.4 };
+    const roleWeights = { fundamental: 0.3, sentiment: 0.3, technical: 0.4 };
     let totalWeightedStrength = 0;
     let totalWeight = 0;
 

@@ -1,7 +1,7 @@
 import { BaseAgent, type AgentContext, type AgentResponse } from './base-agent.js';
 import { AgentFactory } from './agent-factory.js';
 import type { Claim } from '../types/index.js';
-import { TechnicalIndicatorsAdapter } from '../adapters/technical-indicators-adapter.js';
+import { Signals } from '../adapters/signals-adapter.js';
 import { TechnicalAnalysisService } from '../services/technical-analysis.service.js';
 
 export interface DebateRound {
@@ -26,14 +26,14 @@ export class AgentCoordinator {
   private agents: BaseAgent[] = [];
   private maxDebateRounds = 3;
   private consensusThreshold = 0.7;
-  private technicalIndicators: TechnicalIndicatorsAdapter;
+  private technicalIndicators: Signals;
   private technicalAnalysis: TechnicalAnalysisService;
 
   constructor(
-    technicalIndicators?: TechnicalIndicatorsAdapter,
+    technicalIndicators?: Signals,
     technicalAnalysis?: TechnicalAnalysisService
   ) {
-    this.technicalIndicators = technicalIndicators || new TechnicalIndicatorsAdapter();
+    this.technicalIndicators = technicalIndicators || new Signals();
     this.technicalAnalysis = technicalAnalysis || new TechnicalAnalysisService();
   }
 
@@ -85,7 +85,7 @@ export class AgentCoordinator {
       let combinedAnalysis = '';
 
       console.log(`🤝 AgentCoordinator: Collecting responses from ${agentResponses.length} agents...`);
-      
+
       agentResponses.forEach((response, index) => {
         console.log(`🤝 AgentCoordinator: Agent ${index + 1} - Claims: ${response.claims.length}, TextPart length: ${response.textPart?.length || 0}`);
         allClaims.push(...response.claims);
@@ -252,12 +252,13 @@ export class AgentCoordinator {
     const consensus: ConsensusResult[] = [];
 
     for (const [ticker, agentClaims] of claimsByTicker) {
+      // Get claims by role
       const fundamental = agentClaims.get('fundamental');
       const sentiment = agentClaims.get('sentiment');
-      const valuation = agentClaims.get('valuation');
+      const technical = agentClaims.get('technical');
 
-      // Calculate weighted consensus with confidence-based scoring
-      const weights = { fundamental: 0.3, sentiment: 0.3, valuation: 0.4 };
+      // Calculate weighted consensus
+      const weights = { fundamental: 0.3, sentiment: 0.3, technical: 0.4 };
       let finalScore = 0;
       let totalWeight = 0;
       let buyScore = 0;
@@ -285,14 +286,12 @@ export class AgentCoordinator {
         else holdScore += weight;
       }
 
-      if (valuation) {
-        const weight = weights.valuation * valuation.confidence;
-        finalScore += valuation.confidence * weights.valuation;
-        totalWeight += weight;
+      if (technical) {
+        const weight = weights.technical * technical.confidence;
+        finalScore += technical.confidence * weights.technical;
 
-        if (valuation.claim === 'BUY') buyScore += weight;
-        else if (valuation.claim === 'SELL') sellScore += weight;
-        else holdScore += weight;
+        if (technical.claim === 'BUY') buyScore += weight;
+        else if (technical.claim === 'SELL') sellScore += weight;
       }
 
       // Normalize scores
@@ -316,7 +315,7 @@ export class AgentCoordinator {
         // Otherwise, keep HOLD
       }
 
-      const rationale = this.generateRationale(fundamental, sentiment, valuation, finalAction);
+      const rationale = this.generateRationale(fundamental, sentiment, technical, finalAction);
 
       consensus.push({
         ticker,
@@ -336,7 +335,7 @@ export class AgentCoordinator {
   private generateRationale(
     fundamental: Claim | undefined,
     sentiment: Claim | undefined,
-    valuation: Claim | undefined,
+    technical: Claim | undefined,
     finalAction: string
   ): string {
     const reasons: string[] = [];
@@ -349,8 +348,8 @@ export class AgentCoordinator {
       reasons.push(`Sentiment analysis: ${sentiment.claim} (${(sentiment.confidence * 100).toFixed(0)}% confidence)`);
     }
 
-    if (valuation && valuation.confidence > 0.6) {
-      reasons.push(`Technical analysis: ${valuation.claim} (${(valuation.confidence * 100).toFixed(0)}% confidence)`);
+    if (technical && technical.confidence > 0.6) {
+      reasons.push(`Technical analysis: ${technical.claim} (${(technical.confidence * 100).toFixed(0)}% confidence)`);
     }
 
     if (reasons.length === 0) {
@@ -368,7 +367,7 @@ ROLE: Coordinate specialized agents to reach consensus on investment decisions t
 AGENTS:
 - Fundamental Agent: Analyzes market fundamentals, liquidity, volatility, trend sustainability
 - Sentiment Agent: Analyzes news sentiment using SUMMARIZE → REFLECT → REVISE → AGGREGATE process
-- Valuation Agent: Analyzes technical indicators using mathematical tools (volatility, Sharpe-proxy, momentum)
+- Technical Agent: Analyzes technical indicators using mathematical tools (volatility, Sharpe-proxy, momentum)
 
 COLLABORATION PROCESS:
 1. Each agent provides their analysis for each ticker with confidence scores
@@ -384,7 +383,7 @@ DEBATE PROTOCOL:
 - If no consensus after 3 rounds: Default to HOLD
 
 CONSENSUS CALCULATION:
-- Weight agents: Fundamental (0.3), Sentiment (0.3), Valuation (0.4)
+- Weight agents: Fundamental (0.3), Sentiment (0.3), Technical (0.4)
 - Final score = weighted average of agent confidences
 - Final action = majority vote, or HOLD if tied
 
@@ -399,7 +398,7 @@ OUTPUT FORMAT:
       "agent_decisions": [
         {"agent": "fundamental", "action": "BUY", "confidence": 0.8},
         {"agent": "sentiment", "action": "BUY", "confidence": 0.7},
-        {"agent": "valuation", "action": "HOLD", "confidence": 0.6}
+        {"agent": "technical", "action": "HOLD", "confidence": 0.6}
       ],
       "debate_rounds": 2,
       "risk_flags": ["high_volatility"]

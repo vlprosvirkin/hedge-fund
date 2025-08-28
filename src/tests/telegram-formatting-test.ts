@@ -258,13 +258,13 @@ AGGREGATE:
 }`
       },
       {
-        role: 'valuation',
+        role: 'technical',
         name: 'TECHNICAL ANALYST',
         claims: [
           {
             id: 'claim_5',
             ticker: 'BTC',
-            agentRole: 'valuation' as const,
+            agentRole: 'technical' as const,
             claim: 'HOLD',
             confidence: 0.2,
             evidence: [mockEvidence[0]!],
@@ -274,7 +274,7 @@ AGGREGATE:
           {
             id: 'claim_6',
             ticker: 'ETH',
-            agentRole: 'valuation' as const,
+            agentRole: 'technical' as const,
             claim: 'HOLD',
             confidence: 0.2,
             evidence: [mockEvidence[2]!],

@@ -64,30 +64,45 @@ export const exampleClaims: Claim[] = [
         riskFlags: []
     },
 
-    // Valuation/Tech claim for SOL
+    // Technical claim for SOL
     {
-        id: "VAL-1:SOLUSDT",
+        id: "SOL_technical_1704067200000_1",
         ticker: "SOL",
-        agentRole: "valuation",
+        agentRole: "technical",
         claim: "BUY",
-        thesis: "есть апсайд без явного перегрева",
-        confidence: 0.6,
+        confidence: 0.85,
+        direction: "bullish",
+        magnitude: 0.7,
+        rationale: "Strong technical indicators with RSI at 35 (oversold) and MACD showing bullish crossover",
         evidence: [
             {
-                id: "tech-1",
+                id: "SOL_tech_1",
                 ticker: "SOL",
                 kind: "tech",
                 source: "indicators",
                 metric: "RSI(14,4h)",
-                value: 56.0,
+                value: 35.0,
                 observedAt: "2025-08-27T09:56:00Z",
                 relevance: 0.85
+            },
+            {
+                id: "SOL_tech_2",
+                ticker: "SOL",
+                kind: "tech",
+                source: "indicators",
+                metric: "MACD(12,26,9,4h)",
+                value: 0.15,
+                observedAt: "2025-08-27T09:56:00Z",
+                relevance: 0.75
             }
         ],
-        timestamp: Date.now(),
-        direction: "bullish",
-        magnitude: 0.25,
-        riskFlags: []
+        signals: [
+            { name: "rsi", value: 35 },
+            { name: "macd", value: 0.15 },
+            { name: "signal_strength", value: 0.68 }
+        ],
+        timestamp: 1704067200000,
+        riskFlags: ["high_volatility"]
     },
 
     // Fundamental claim for BTC
@@ -152,39 +167,34 @@ export const exampleClaims: Claim[] = [
         riskFlags: []
     },
 
-    // Valuation claim for BTC
+    // Technical claim for BTC
     {
-        id: "VAL-1:BTCUSDT",
+        id: "BTC_technical_1704067200000_2",
         ticker: "BTC",
-        agentRole: "valuation",
-        claim: "BUY",
-        thesis: "RSI показывает умеренный бычий импульс",
+        agentRole: "technical",
+        claim: "HOLD",
         confidence: 0.65,
+        direction: "neutral",
+        magnitude: 0.3,
+        rationale: "Mixed technical signals with neutral RSI and weak MACD momentum",
         evidence: [
             {
-                id: "tech-2",
+                id: "BTC_tech_1",
                 ticker: "BTC",
                 kind: "tech",
                 source: "indicators",
-                metric: "RSI(14,1h)",
-                value: 58.5,
+                metric: "RSI(14,4h)",
+                value: 45.0,
                 observedAt: "2025-08-27T09:56:00Z",
                 relevance: 0.8
-            },
-            {
-                id: "tech-3",
-                ticker: "BTC",
-                kind: "tech",
-                source: "indicators",
-                metric: "MACD(12,26,9,1h)",
-                value: 0.15,
-                observedAt: "2025-08-27T09:56:00Z",
-                relevance: 0.75
             }
         ],
-        timestamp: Date.now(),
-        direction: "bullish",
-        magnitude: 0.35,
+        signals: [
+            { name: "rsi", value: 45 },
+            { name: "macd", value: -0.05 },
+            { name: "signal_strength", value: 0.32 }
+        ],
+        timestamp: 1704067200000,
         riskFlags: []
     }
 ];

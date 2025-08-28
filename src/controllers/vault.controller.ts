@@ -1,7 +1,7 @@
 import type { TradingAdapter, MarketDataAdapter } from '../interfaces/adapters.js';
 import type { Position, Order } from '../types/index.js';
 import { convertQuantityToUsdt, convertUsdtToQuantity } from '../utils.js';
-import { TechnicalIndicatorsAdapter } from '../adapters/technical-indicators-adapter.js';
+import { Signals } from '../adapters/signals-adapter.js';
 import { TechnicalAnalysisService } from '../services/technical-analysis.service.js';
 import pino from 'pino';
 
@@ -26,7 +26,7 @@ export interface VaultPosition {
 
 export class VaultController {
     private logger: pino.Logger;
-    private technicalIndicators: TechnicalIndicatorsAdapter;
+    private technicalIndicators: Signals;
     private technicalAnalysis: TechnicalAnalysisService;
 
     constructor(
@@ -42,7 +42,7 @@ export class VaultController {
                 }
             }
         });
-        this.technicalIndicators = new TechnicalIndicatorsAdapter();
+        this.technicalIndicators = new Signals();
         this.technicalAnalysis = new TechnicalAnalysisService();
     }
 

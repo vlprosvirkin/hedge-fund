@@ -158,7 +158,7 @@ export interface UniverseService {
 // ===== LLM Service Interface =====
 export interface LLMService {
   // Generate claims for a specific role
-  runRole(role: 'fundamental' | 'sentiment' | 'valuation', context: {
+  runRole(role: 'fundamental' | 'sentiment' | 'technical', context: {
     universe: string[];
     facts: Evidence[];
     marketStats: MarketStats[];

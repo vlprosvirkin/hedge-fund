@@ -26,7 +26,7 @@ import { ConsensusService } from './services/consensus.js';
 import { SignalProcessorService } from './services/signal-processor.service.js';
 import { TelegramAdapter } from './adapters/telegram-adapter.js';
 import { NotificationsService } from './services/notifications.service.js';
-import { TechnicalIndicatorsAdapter } from './adapters/technical-indicators-adapter.js';
+import { Signals } from './adapters/signals-adapter.js';
 import { VaultController } from './controllers/vault.controller.js';
 import { OpenAIService } from './services/openai.service.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -50,7 +50,7 @@ export class HedgeFundOrchestrator {
     private universe: UniverseService,
     private agents: LLMService,
     private risk: RiskService,
-    private technicalIndicators: TechnicalIndicatorsAdapter,
+    private technicalIndicators: Signals,
     private openaiService: OpenAIService,
     telegram?: TelegramAdapter
   ) {
@@ -279,7 +279,7 @@ export class HedgeFundOrchestrator {
 
       // Step 3: Generate claims from agents
       this.logger.info('Step 3: Generating claims from agents');
-      const agentRoles: Array<'fundamental' | 'sentiment' | 'valuation'> = ['fundamental', 'sentiment', 'valuation'];
+      const agentRoles: Array<'fundamental' | 'sentiment' | 'technical'> = ['fundamental', 'sentiment', 'technical'];
       const allClaims: Claim[] = [];
 
       for (const role of agentRoles) {
@@ -370,7 +370,7 @@ export class HedgeFundOrchestrator {
         claimsByAgent: {
           fundamental: allClaims.filter(c => c.agentRole === 'fundamental').length,
           sentiment: allClaims.filter(c => c.agentRole === 'sentiment').length,
-          valuation: allClaims.filter(c => c.agentRole === 'valuation').length
+          technical: allClaims.filter(c => c.agentRole === 'technical').length
         },
         sampleClaims: allClaims.slice(0, 3).map(c => ({
           ticker: c.ticker,
@@ -918,7 +918,7 @@ export class HedgeFundOrchestrator {
     const tickerClaims = allClaims.filter(c => c.ticker === ticker);
     const fundamentalClaim = tickerClaims.find(c => c.agentRole === 'fundamental');
     const sentimentClaim = tickerClaims.find(c => c.agentRole === 'sentiment');
-    const technicalClaim = tickerClaims.find(c => c.agentRole === 'valuation');
+    const technicalClaim = tickerClaims.find(c => c.agentRole === 'technical');
 
     // Build context for GPT analysis
     const analysisContext = {

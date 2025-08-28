@@ -1,6 +1,6 @@
 import { HedgeFundOrchestrator } from '../orchestrator.js';
 import { AspisAdapter } from '../adapters/aspis-adapter.js';
-import { TechnicalIndicatorsAdapter } from '../adapters/technical-indicators-adapter.js';
+import { Signals } from '../adapters/signals-adapter.js';
 import { NewsAPIAdapter } from '../adapters/news-adapter.js';
 import { AgentsService } from '../services/agents.js';
 import { ConsensusService } from '../services/consensus.js';
@@ -35,7 +35,7 @@ async function decisionExecutionIntegrationTest() {
         };
 
         // Инициализация адаптеров
-        const technicalAdapter = new TechnicalIndicatorsAdapter();
+        const technicalAdapter = new Signals();
         const newsAdapter = new NewsAPIAdapter();
         // Создаем AspisAdapter с реальными учетными данными
         const aspisAdapter = new AspisAdapter();
@@ -98,7 +98,6 @@ async function decisionExecutionIntegrationTest() {
         console.log('\n🔌 Step 2: Connecting to services...');
 
         await Promise.all([
-            technicalAdapter.connect(),
             newsAdapter.connect(),
             aspisAdapter.connect(),
             agentsService.connect()
@@ -157,7 +156,7 @@ async function decisionExecutionIntegrationTest() {
         console.log(`✅ Market stats: ${marketStats.length} entries`);
 
         // Генерируем claims от агентов
-        const agentRoles = ['fundamental', 'sentiment', 'valuation'] as const;
+        const agentRoles = ['fundamental', 'sentiment', 'technical'] as const;
         const allClaims = [];
 
         for (const role of agentRoles) {

@@ -13,22 +13,22 @@ export const AGENT_CONFIGS: Record<string, AgentConfig> = {
         emoji: '📊',
         name: 'FUNDAMENTAL ANALYST',
         color: '🔵',
-        expertise: 'Analysis of financial indicators, trading volumes, liquidity',
-        personality: 'Conservative analyst, relies on data and facts'
+        expertise: 'On-chain metrics, network health, liquidity analysis, market cap dynamics',
+        personality: 'Data-driven analyst, focuses on blockchain fundamentals and institutional metrics'
     },
     sentiment: {
         emoji: '📰',
         name: 'SENTIMENT ANALYST',
         color: '🟡',
-        expertise: 'News analysis, social media, market psychology',
-        personality: 'Emotional analyst, feels market sentiment'
+        expertise: 'News sentiment, social media analysis, Fear & Greed Index, community engagement',
+        personality: 'Sentiment-focused analyst, evaluates market mood and social signals'
     },
-    valuation: {
+    technical: {
         emoji: '📈',
         name: 'TECHNICAL ANALYST',
         color: '🟢',
-        expertise: 'Technical indicators, chart patterns, price action',
-        personality: 'Pragmatic analyst, trusts technical signals'
+        expertise: 'RSI, MACD, Bollinger Bands, volatility analysis, price action patterns',
+        personality: 'Technical analyst, relies on chart patterns and momentum indicators'
     }
 };
 
@@ -95,13 +95,29 @@ export class NotificationFormats {
                     text += `   💭 <b>Reasoning:</b> ${claim.rationale}\n`;
                 }
 
-                // Show signals/indicators
+                // Show signals/indicators with proper formatting
                 if (claim.signals && claim.signals.length > 0) {
                     text += `   📈 <b>Key Indicators:</b>\n`;
-                    claim.signals.forEach(signal => {
-                        const value = typeof signal.value === 'number' ? signal.value.toFixed(3) : signal.value;
-                        text += `      • ${signal.name}: ${value}\n`;
-                    });
+
+                    // Filter out zero values and show only meaningful indicators
+                    const meaningfulSignals = claim.signals.filter(signal =>
+                        signal && signal.value !== undefined && signal.value !== null &&
+                        (typeof signal.value === 'number' ? Math.abs(signal.value) > 0.001 : true)
+                    );
+
+                    if (meaningfulSignals.length > 0) {
+                        meaningfulSignals.slice(0, 5).forEach(signal => {
+                            const value = typeof signal.value === 'number' ? signal.value.toFixed(3) : signal.value;
+                            const signalEmoji = this.getSignalEmoji(signal.name);
+                            text += `      ${signalEmoji} ${signal.name}: ${value}\n`;
+                        });
+
+                        if (meaningfulSignals.length > 5) {
+                            text += `      • ... and ${meaningfulSignals.length - 5} more\n`;
+                        }
+                    } else {
+                        text += `      ⚠️ No significant indicators available\n`;
+                    }
                 }
 
                 // Show risk assessment
@@ -126,6 +142,12 @@ export class NotificationFormats {
                                     details = evidence.snippet || evidence.url || 'No details';
                                 } else if (evidence.kind === 'market' || evidence.kind === 'tech') {
                                     details = evidence.metric || 'No details';
+                                } else if (evidence.kind === 'onchain') {
+                                    details = evidence.metric || 'On-chain data';
+                                } else if (evidence.kind === 'social') {
+                                    details = evidence.metric || 'Social metrics';
+                                } else if (evidence.kind === 'index') {
+                                    details = evidence.name || 'Market index';
                                 }
 
                                 text += `      ${j + 1}. 📄 ${source}: ${details}\n`;
@@ -213,23 +235,31 @@ export class NotificationFormats {
                     text += `   💭 <b>Reasoning:</b> ${claim.rationale}\n`;
                 }
 
-                // Show key signals/indicators (top 3 most important)
+                // Show key signals/indicators (top 5 most important)
                 if (claim.signals && claim.signals.length > 0) {
                     text += `   📊 <b>Key Signals:</b>\n`;
-                    // Show only top 3 most important indicators
-                    const topSignals = claim.signals.slice(0, 3);
-                    topSignals.forEach(signal => {
-                        if (signal && signal.name && signal.value !== undefined) {
-                            const value = typeof signal.value === 'number' ? signal.value.toFixed(3) : signal.value;
-                            const signalEmoji = signal.name.includes('rsi') ? '📈' :
-                                signal.name.includes('macd') ? '📊' :
-                                    signal.name.includes('sentiment') ? '📰' :
-                                        signal.name.includes('liquidity') ? '💰' : '📋';
-                            text += `      ${signalEmoji} ${signal.name}: ${value}\n`;
+
+                    // Filter out zero values and show only meaningful indicators
+                    const meaningfulSignals = claim.signals.filter(signal =>
+                        signal && signal.value !== undefined && signal.value !== null &&
+                        (typeof signal.value === 'number' ? Math.abs(signal.value) > 0.001 : true)
+                    );
+
+                    if (meaningfulSignals.length > 0) {
+                        // Show only top 5 most important indicators
+                        const topSignals = meaningfulSignals.slice(0, 5);
+                        topSignals.forEach(signal => {
+                            if (signal && signal.name && signal.value !== undefined) {
+                                const value = typeof signal.value === 'number' ? signal.value.toFixed(3) : signal.value;
+                                const signalEmoji = this.getSignalEmoji(signal.name);
+                                text += `      ${signalEmoji} ${signal.name}: ${value}\n`;
+                            }
+                        });
+                        if (meaningfulSignals.length > 5) {
+                            text += `      • ... and ${meaningfulSignals.length - 5} more\n`;
                         }
-                    });
-                    if (claim.signals.length > 3) {
-                        text += `      • ... and ${claim.signals.length - 3} more\n`;
+                    } else {
+                        text += `      ⚠️ No significant signals available\n`;
                     }
                 }
 
@@ -276,6 +306,12 @@ export class NotificationFormats {
                         details = evidence.snippet || evidence.url || 'No details';
                     } else if (evidence.kind === 'market' || evidence.kind === 'tech') {
                         details = evidence.metric || 'No details';
+                    } else if (evidence.kind === 'onchain') {
+                        details = evidence.metric || 'On-chain data';
+                    } else if (evidence.kind === 'social') {
+                        details = evidence.metric || 'Social metrics';
+                    } else if (evidence.kind === 'index') {
+                        details = evidence.name || 'Market index';
                     }
 
                     text += `${i + 1}. 📄 ${source}: ${details}\n`;
@@ -288,16 +324,17 @@ export class NotificationFormats {
         if (analysis && analysis.trim().length > 0) {
             text += `🧠 <b>ANALYSIS:</b>\n`;
 
-            // Create compact analysis summary
-            let compactAnalysis = analysis;
+            // Try to extract clean analysis text (avoid raw JSON)
+            let cleanAnalysis = analysis;
 
-            // Remove common verbose patterns
-            compactAnalysis = compactAnalysis
+            // Remove JSON blocks that might be mixed in
+            cleanAnalysis = cleanAnalysis
+                .replace(/\{[^{}]*"claims"[^{}]*\}/g, '') // Remove JSON claims blocks
+                .replace(/CLAIMS:\s*\n\s*\{[\s\S]*?\}\s*\n/g, '') // Remove CLAIMS: JSON blocks
                 .replace(/FUNDAMENTAL ANALYSIS:\s*/gi, '')
                 .replace(/TECHNICAL ANALYSIS:\s*/gi, '')
                 .replace(/SENTIMENT ANALYSIS:\s*/gi, '')
                 .replace(/Based on the above analysis, here are the claims for each ticker:/gi, '')
-                .replace(/CLAIMS:\s*/gi, '')
                 .replace(/\n\n+/g, '\n') // Remove multiple newlines
                 .trim();
 
@@ -336,9 +373,9 @@ export class NotificationFormats {
                 }
 
                 text += '\n';
-            } else {
-                // Fallback to truncated analysis if no insights extracted
-                const truncatedAnalysis = compactAnalysis.length > 400 ? compactAnalysis.substring(0, 400) + '...' : compactAnalysis;
+            } else if (cleanAnalysis.length > 0) {
+                // Show clean analysis if no insights extracted but analysis exists
+                const truncatedAnalysis = cleanAnalysis.length > 300 ? cleanAnalysis.substring(0, 300) + '...' : cleanAnalysis;
                 text += `<i>"${truncatedAnalysis}"</i>\n\n`;
             }
         }
@@ -452,9 +489,9 @@ export class NotificationFormats {
 
         // Add consensus methodology explanation
         text += `🔬 <b>CONSENSUS METHODOLOGY:</b>\n`;
-        text += `• 📊 <b>Fundamental Agent</b> (35% weight): Market data, volume, liquidity\n`;
-        text += `• 📰 <b>Sentiment Agent</b> (25% weight): News sentiment, social media\n`;
-        text += `• 📈 <b>Technical Agent</b> (40% weight): RSI, MACD, technical indicators\n`;
+        text += `• 📊 <b>Fundamental Agent</b> (30% weight): On-chain metrics, market cap dynamics, social sentiment\n`;
+        text += `• 📰 <b>Sentiment Agent</b> (30% weight): News sentiment, social media, Fear & Greed Index\n`;
+        text += `• 📈 <b>Technical Agent</b> (40% weight): RSI, MACD, technical indicators, price action\n`;
         text += `• 🎯 <b>Final Score</b> = Weighted average of agent signals\n`;
         text += `• ⚖️ <b>Decision Thresholds</b>: BUY &gt; 0.3, SELL &lt; -0.3, HOLD otherwise\n`;
         text += `• 🔄 <b>Process</b>: Individual analysis → Signal processing → Consensus building → Final decision\n\n`;
@@ -742,6 +779,49 @@ export class NotificationFormats {
     }
 
     /**
+     * Get emoji for signal type
+     */
+    private static getSignalEmoji(signalName: string): string {
+        const name = signalName.toLowerCase();
+
+        // Technical indicators
+        if (name.includes('rsi')) return '📈';
+        if (name.includes('macd')) return '📊';
+        if (name.includes('bollinger') || name.includes('bb')) return '📉';
+        if (name.includes('stochastic')) return '📊';
+        if (name.includes('volatility')) return '📊';
+        if (name.includes('momentum')) return '⚡';
+
+        // Fundamental indicators
+        if (name.includes('liquidity')) return '💰';
+        if (name.includes('volume')) return '📊';
+        if (name.includes('market_cap')) return '🏢';
+        if (name.includes('on_chain') || name.includes('network')) return '🔗';
+        if (name.includes('transaction')) return '💳';
+        if (name.includes('address')) return '🏠';
+        if (name.includes('utxo')) return '📦';
+
+        // Sentiment indicators
+        if (name.includes('sentiment')) return '📰';
+        if (name.includes('social')) return '👥';
+        if (name.includes('galaxy')) return '⭐';
+        if (name.includes('fear_greed') || name.includes('feargreed')) return '😨';
+        if (name.includes('news')) return '📰';
+        if (name.includes('coverage')) return '📊';
+        if (name.includes('freshness')) return '🆕';
+        if (name.includes('consistency')) return '🔄';
+        if (name.includes('credibility')) return '✅';
+
+        // Risk indicators
+        if (name.includes('risk') || name.includes('correlation')) return '⚠️';
+        if (name.includes('drawdown')) return '📉';
+        if (name.includes('profit')) return '💰';
+
+        // Default
+        return '📋';
+    }
+
+    /**
      * Get agent-specific analysis summary
      */
     private static getAgentAnalysisSummary(agentRole: string, claims: Claim[]): string {
@@ -754,13 +834,13 @@ export class NotificationFormats {
 
         switch (agentRole) {
             case 'fundamental':
-                return `Analyzed ${claims.length} assets using market fundamentals. ${buyCount} BUY, ${sellCount} SELL, ${holdCount} HOLD recommendations with ${(avgConfidence * 100).toFixed(1)}% avg confidence. Focused on liquidity, volatility, and market cap analysis.`;
+                return `Analyzed ${claims.length} assets using on-chain metrics, network health, and market fundamentals. ${buyCount} BUY, ${sellCount} SELL, ${holdCount} HOLD recommendations with ${(avgConfidence * 100).toFixed(1)}% avg confidence. Evaluated liquidity, transaction efficiency, address growth, and institutional metrics.`;
 
             case 'sentiment':
-                return `Analyzed ${claims.length} assets using news sentiment. ${buyCount} BUY, ${sellCount} SELL, ${holdCount} HOLD recommendations with ${(avgConfidence * 100).toFixed(1)}% avg confidence. Evaluated news coverage, sentiment scores, and emotional market indicators.`;
+                return `Analyzed ${claims.length} assets using news sentiment, social media, and market mood indicators. ${buyCount} BUY, ${sellCount} SELL, ${holdCount} HOLD recommendations with ${(avgConfidence * 100).toFixed(1)}% avg confidence. Evaluated news coverage, sentiment scores, Fear & Greed Index, and community engagement.`;
 
-            case 'valuation':
-                return `Analyzed ${claims.length} assets using technical indicators. ${buyCount} BUY, ${sellCount} SELL, ${holdCount} HOLD recommendations with ${(avgConfidence * 100).toFixed(1)}% avg confidence. Applied RSI, MACD, volatility, and momentum analysis.`;
+            case 'technical':
+                return `Analyzed ${claims.length} assets using technical indicators and price action patterns. ${buyCount} BUY, ${sellCount} SELL, ${holdCount} HOLD recommendations with ${(avgConfidence * 100).toFixed(1)}% avg confidence. Applied RSI, MACD, Bollinger Bands, volatility, and momentum analysis.`;
 
             default:
                 return `Analyzed ${claims.length} assets. ${buyCount} BUY, ${sellCount} SELL, ${holdCount} HOLD recommendations with ${(avgConfidence * 100).toFixed(1)}% avg confidence.`;

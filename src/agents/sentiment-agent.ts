@@ -1,38 +1,71 @@
 import { BaseAgent, type AgentContext } from './base-agent.js';
 import { NewsAPIAdapter } from '../adapters/news-adapter.js';
+import { CMCAdapter } from '../adapters/cmc-adapter.js';
+import { Signals } from '../adapters/signals-adapter.js';
+import { SentimentAnalysisService } from '../services/sentiment-analysis.service.js';
+import type { FearGreedInterpretation } from '../types/cmc.js';
 
 export class SentimentAgent extends BaseAgent {
   private newsAdapter: NewsAPIAdapter;
+  private cmcAdapter: CMCAdapter;
+  private signalsAdapter: Signals;
+  private sentimentAnalysis: SentimentAnalysisService;
 
-  constructor() {
+  constructor(
+    signalsAdapter?: Signals,
+    sentimentAnalysis?: SentimentAnalysisService
+  ) {
     super('sentiment');
     this.newsAdapter = new NewsAPIAdapter();
+    this.cmcAdapter = new CMCAdapter();
+    this.signalsAdapter = signalsAdapter || new Signals();
+    this.sentimentAnalysis = sentimentAnalysis || new SentimentAnalysisService();
   }
 
   async processData(context: AgentContext): Promise<any> {
     console.log(`🔍 SentimentAgent: Starting processData for universe: ${context.universe.join(', ')}`);
 
-    // Get sentiment data from NewsAPIAdapter
+    // Get Fear & Greed Index from CMC
+    let fearGreedIndex: number | null = null;
+    try {
+      console.log(`📊 SentimentAgent: Fetching Fear & Greed Index from CMC...`);
+      fearGreedIndex = await this.cmcAdapter.getFearGreedIndex();
+      console.log(`📊 SentimentAgent: Fear & Greed Index: ${fearGreedIndex}`);
+    } catch (error) {
+      console.warn(`⚠️ SentimentAgent: Failed to get Fear & Greed Index:`, error);
+    }
+
+    // Get sentiment data from multiple sources
     const sentimentData = await Promise.all(
       context.universe.map(async (ticker) => {
         try {
-          console.log(`📰 SentimentAgent: Fetching news for ${ticker}...`);
-          const news = await this.newsAdapter.search(ticker, Date.now() - 86400000, Date.now());
+          console.log(`📰 SentimentAgent: Fetching data for ${ticker}...`);
+
+          // Get data from multiple sources
+          const [news, signalsData] = await Promise.all([
+            this.newsAdapter.search(ticker, Date.now() - 86400000, Date.now()),
+            this.signalsAdapter.getIndicators(ticker, '4h')
+          ]);
+
           console.log(`📰 SentimentAgent: Got ${news.length} news articles for ${ticker}`);
 
-          // Calculate actual sentiment from news data
-          const sentiment = this.calculateSentimentFromNews(news);
-          const freshness = this.calculateFreshness(news);
+          // Use SentimentAnalysisService for comprehensive analysis
+          const analysis = this.sentimentAnalysis.createComprehensiveSentimentAnalysis(
+            news,
+            signalsData,
+            fearGreedIndex || 50 // Default to neutral if not available
+          );
 
           const result = {
             ticker,
             news: news.slice(0, 10), // Top 10 news articles
-            sentiment,
-            coverage: news.length,
-            freshness
+            signalsData,
+            analysis,
+            finalSentimentScore: analysis.finalSentimentScore,
+            fearGreedIndex: fearGreedIndex || null
           };
 
-          console.log(`📊 SentimentAgent: ${ticker} - Sentiment: ${sentiment.toFixed(3)}, Coverage: ${news.length}, Freshness: ${freshness.toFixed(3)}`);
+          console.log(`📊 SentimentAgent: ${ticker} - Final Score: ${analysis.finalSentimentScore.toFixed(3)}, News Coverage: ${analysis.newsSentiment.coverage}, Social Score: ${analysis.socialSentiment.galaxyscore}, FearGreed: ${fearGreedIndex || 'N/A'}`);
           return result;
         } catch (error) {
           console.error(`❌ SentimentAgent: Failed to get sentiment data for ${ticker}:`, error);
@@ -44,33 +77,6 @@ export class SentimentAgent extends BaseAgent {
     console.log(`✅ SentimentAgent: processData completed with ${sentimentData.length} results`);
     return sentimentData;
   }
-
-  private calculateSentimentFromNews(news: any[]): number {
-    if (news.length === 0) return 0.5; // Neutral if no news
-
-    // Calculate average sentiment from news articles
-    const totalSentiment = news.reduce((sum, article) => {
-      return sum + (article.sentiment || 0.5);
-    }, 0);
-
-    return totalSentiment / news.length;
-  }
-
-  private calculateFreshness(news: any[]): number {
-    if (news.length === 0) return 0;
-
-    const now = Date.now();
-    const avgAge = news.reduce((sum, article) => {
-      const age = now - article.publishedAt;
-      return sum + age;
-    }, 0) / news.length;
-
-    // Convert to hours and normalize (0 = very fresh, 1 = very old)
-    const hoursOld = avgAge / (1000 * 60 * 60);
-    return Math.min(1, hoursOld / 72); // 72 hours = 3 days max
-  }
-
-
 
   buildSystemPrompt(context: AgentContext): string {
     const riskProfile = context.riskProfile || 'neutral';
@@ -88,13 +94,15 @@ PROCESS (follow this exact sequence):
 2. REFLECT/CRITICIZE: Question your initial summary - is it biased? missing context?
 3. REVISE: Update summary based on reflection
 4. AGGREGATE: Combine all revised summaries into final sentiment
-5. SCORE: Calculate sentiment_score = coverage × freshness × consistency
+5. SCORE: Calculate sentiment_score = avg_sentiment × coverage_norm × freshness_score × consistency × credibility × market_mood_factor
 
 ANALYSIS CRITERIA:
-- COVERAGE: Number of relevant news articles (more = better)
-- FRESHNESS: How recent the news is (newer = better)
-- CONSISTENCY: Agreement between different sources
-- SOURCE CREDIBILITY: Trustworthiness of news sources
+- COVERAGE: Number of relevant news articles (more = better, with log saturation)
+- FRESHNESS: How recent the news is (newer = better, 1 = fresh, 0 = old)
+- CONSISTENCY: Agreement between different sources (std deviation of sentiment)
+- SOURCE CREDIBILITY: Trustworthiness of news sources (weighted average)
+- MARKET MOOD: Fear & Greed Index influence (0.9-1.1 factor)
+- SOCIAL ENGAGEMENT: Social volume, tweets, interactions, GalaxyScore
 - TIME-LOCK: Anti-leak protection - ignore old news
 
 CONFIDENCE SCORING:
@@ -130,10 +138,21 @@ Return ONLY a valid JSON object with this exact structure:
       "signals": [
         {"name": "sentiment_score", "value": 0.72},
         {"name": "news_coverage", "value": 15},
-        {"name": "freshness_score", "value": 0.85}
+        {"name": "freshness_score", "value": 0.85},
+        {"name": "consistency", "value": 0.78},
+        {"name": "credibility", "value": 0.82},
+        {"name": "coverage_norm", "value": 0.65},
+        {"name": "market_mood_factor", "value": 1.05},
+        {"name": "social_volume", "value": 0.45},
+        {"name": "galaxyscore", "value": 67.4},
+        {"name": "social_engagement", "value": 0.73}
       ],
-      "evidence": [],
-      "riskFlags": ["low_coverage", "old_news"]
+      "evidence": [
+        {"kind": "news", "source": "coindesk", "url": "https://...", "publishedAt": "2024-01-01T00:00:00Z", "snippet": "..."},
+        {"kind": "index", "name": "fear_greed", "value": 72, "observedAt": "2024-01-01T00:00:00Z"},
+        {"kind": "social", "source": "signals", "metric": "galaxyscore", "value": 67.4, "observedAt": "2024-01-01T00:00:00Z"}
+      ],
+      "riskFlags": ["low_coverage", "old_news", "inconsistent_sentiment"]
     }
   ]
 }
@@ -145,7 +164,7 @@ CRITICAL: Return ONLY the JSON object, no additional text, markdown, or explanat
     console.log(`🔍 SentimentAgent: buildUserPrompt called with ${processedData?.length || 0} processed data items`);
     if (processedData) {
       processedData.forEach((data, index) => {
-        console.log(`📊 SentimentAgent: Data ${index} - ${data.ticker}: ${data.news?.length || 0} news, sentiment: ${data.sentiment?.toFixed(3) || 'N/A'}`);
+        console.log(`📊 SentimentAgent: Data ${index} - ${data.ticker}: ${data.news?.length || 0} news, sentiment: ${data.analysis?.finalSentimentScore?.toFixed(3) || 'N/A'}`);
       });
     }
 
@@ -170,29 +189,41 @@ ${processedData ? processedData.map((data: any) =>
     ).join('\n') : 'No news data available'}
 
 PROCESSED SENTIMENT DATA:
-${processedData ? processedData.map((data: any) =>
-      `• ${data.ticker}: Sentiment=${data.sentiment}, Coverage=${data.coverage}, Freshness=${data.freshness}, NewsCount=${data.news ? data.news.length : 0}`
-    ).join('\n') : 'No processed data available'}
+${processedData ? processedData.map((data: any) => {
+      const analysis = data.analysis;
+      if (!analysis) return `• ${data.ticker}: No analysis available`;
 
-NEWS DETAILS:
-${processedData ? processedData.map((data: any) =>
-      `• ${data.ticker}: ${data.news ? data.news.slice(0, 3).map((article: any) => `${article.title || 'No title'} (${article.timestamp})`).join(', ') : 'No news'}`
-    ).join('\n') : 'No news available'}
+      return `• ${data.ticker}: FinalScore=${analysis.finalSentimentScore?.toFixed(3) || 'N/A'}, NewsCoverage=${analysis.newsSentiment?.coverage || 0}, Freshness=${analysis.newsSentiment?.freshness?.toFixed(3) || 'N/A'}, Consistency=${analysis.newsSentiment?.consistency?.toFixed(3) || 'N/A'}, Credibility=${analysis.newsSentiment?.credibility?.toFixed(3) || 'N/A'}, CoverageNorm=${analysis.newsSentiment?.coverageNorm?.toFixed(3) || 'N/A'}, MarketMood=${analysis.newsSentiment?.marketMoodFactor?.toFixed(3) || 'N/A'}, SocialVolume=${analysis.socialSentiment?.socialVolume || 0}, GalaxyScore=${analysis.socialSentiment?.galaxyscore || 0}, FearGreed=${data.fearGreedIndex || 'N/A'}`;
+    }).join('\n') : 'No processed data available'}
+
+SOCIAL METRICS:
+${processedData ? processedData.map((data: any) => {
+      const social = data.analysis?.socialSentiment;
+      if (!social) return `• ${data.ticker}: No social data available`;
+
+      return `• ${data.ticker}: SocialVolume=${social.socialVolume || 0}, Tweets=${social.tweets || 0}, Interactions=${social.interactions || 0}, GalaxyScore=${social.galaxyscore || 0}, Popularity=${social.popularity || 0}, SocialDominance=${social.socialDominance || 0}`;
+    }).join('\n') : 'No social data available'}
 
 SENTIMENT ANALYSIS BREAKDOWN:
 ${processedData ? processedData.map((data: any) => {
-      const sentimentScore = data.sentiment || 0;
-      const coverage = data.coverage || 0;
-      const freshness = data.freshness || 0;
-      const consistency = data.consistency || 0;
-      const finalScore = sentimentScore * coverage * freshness * consistency;
+      const analysis = data.analysis;
+      if (!analysis) return `• ${data.ticker}: No analysis available`;
+
+      const newsSentiment = analysis.newsSentiment;
+      const socialSentiment = analysis.socialSentiment;
+      const finalScore = analysis.finalSentimentScore;
 
       return `• ${data.ticker}: 
-  - Raw Sentiment: ${sentimentScore.toFixed(3)}
-  - Coverage: ${coverage} articles
-  - Freshness: ${freshness.toFixed(3)}
-  - Consistency: ${consistency.toFixed(3)}
-  - Final Score: ${finalScore.toFixed(3)}`;
+  - Final Sentiment Score: ${finalScore?.toFixed(3) || 'N/A'}
+  - News Sentiment: ${newsSentiment?.sentiment?.toFixed(3) || 'N/A'}
+  - News Coverage: ${newsSentiment?.coverage || 0} articles (norm: ${newsSentiment?.coverageNorm?.toFixed(3) || 'N/A'})
+  - News Freshness: ${newsSentiment?.freshness?.toFixed(3) || 'N/A'}
+  - News Consistency: ${newsSentiment?.consistency?.toFixed(3) || 'N/A'}
+  - News Credibility: ${newsSentiment?.credibility?.toFixed(3) || 'N/A'}
+  - Market Mood Factor: ${newsSentiment?.marketMoodFactor?.toFixed(3) || 'N/A'}
+  - Social Volume: ${socialSentiment?.socialVolume || 0}
+  - GalaxyScore: ${socialSentiment?.galaxyscore || 0}
+  - Social Engagement: ${socialSentiment?.interactions || 0}`;
     }).join('\n') : 'No sentiment breakdown available'}
 
 INSTRUCTIONS:

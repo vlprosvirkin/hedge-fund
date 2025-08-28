@@ -2,29 +2,27 @@ import type { LLMService } from '../interfaces/adapters.js';
 import type { Claim, Evidence, MarketStats } from '../types/index.js';
 import { AgentCoordinator } from '../agents/agent-coordinator.js';
 import type { AgentContext } from '../agents/base-agent.js';
-import { TechnicalIndicatorsAdapter } from '../adapters/technical-indicators-adapter.js';
+import { Signals } from '../adapters/signals-adapter.js';
 import { TechnicalAnalysisService } from '../services/technical-analysis.service.js';
 
 export class AgentsService implements LLMService {
   private isConnectedFlag = false;
   private coordinator: AgentCoordinator;
-  private technicalIndicators: TechnicalIndicatorsAdapter;
+  private technicalIndicators: Signals;
   private technicalAnalysis: TechnicalAnalysisService;
 
   constructor(
-    technicalIndicators?: TechnicalIndicatorsAdapter,
+    technicalIndicators?: Signals,
     technicalAnalysis?: TechnicalAnalysisService
   ) {
-    this.technicalIndicators = technicalIndicators || new TechnicalIndicatorsAdapter();
+    this.technicalIndicators = technicalIndicators || new Signals();
     this.technicalAnalysis = technicalAnalysis || new TechnicalAnalysisService();
     this.coordinator = new AgentCoordinator(this.technicalIndicators, this.technicalAnalysis);
   }
 
   async connect(): Promise<void> {
     try {
-      // Connect technical indicators adapter
-      await this.technicalIndicators.connect();
-
+      // Technical indicators adapter is always ready (no connection needed)
       this.isConnectedFlag = true;
       console.log('✅ AgentsService connected');
     } catch (error) {
@@ -34,7 +32,7 @@ export class AgentsService implements LLMService {
 
   async disconnect(): Promise<void> {
     try {
-      await this.technicalIndicators.disconnect();
+      // No disconnection needed for technical indicators adapter
     } catch (error) {
       console.error('Error disconnecting technical indicators:', error);
     }
@@ -46,7 +44,7 @@ export class AgentsService implements LLMService {
   }
 
   async runRole(
-    role: 'fundamental' | 'sentiment' | 'valuation',
+    role: 'fundamental' | 'sentiment' | 'technical',
     context: {
       universe: string[];
       facts: Evidence[];

@@ -1,4 +1,4 @@
-import { TechnicalIndicatorsAdapter } from '../adapters/technical-indicators-adapter.js';
+import { Signals } from '../adapters/signals-adapter.js';
 import { AgentsService } from '../services/agents.js';
 import type {
   IndicatorData,
@@ -19,15 +19,14 @@ import type {
  * - Адаптер автоматически конвертирует в USD формат для API (BTC → BTCUSD)
  */
 async function technicalAnalysisIntegrationTest() {
-  const adapter = new TechnicalIndicatorsAdapter();
+  const adapter = new Signals();
   const agentsService = new AgentsService();
 
   try {
     console.log('🚀 Starting Technical Analysis Integration Test...\n');
 
-    // 1. Подключение к API
-    await adapter.connect();
-    console.log('✅ Connected to Technical Indicators API');
+    // 1. API is always ready (no connection needed)
+    console.log('✅ Technical Indicators API is ready');
 
     // 2. Получение списка поддерживаемых токенов
     console.log('\n🪙 Step 1: Getting supported tokens...');
@@ -53,7 +52,10 @@ async function technicalAnalysisIntegrationTest() {
       console.log(`   Close Price: ${btcTechnicalData.close}`);
 
       try {
-        btcMetadata = await adapter.getAssetMetadata('BTC', '1d');
+        // Use TechnicalAnalysisService to get metadata
+        const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
+        const btcData = await technicalAnalysis.getTechnicalDataForAsset('BTC', '1d');
+        btcMetadata = btcData.metadata;
         console.log('✅ BTC metadata received successfully');
         console.log(`   Price: $${btcMetadata.price.toLocaleString()}`);
         console.log(`   Volume: ${btcMetadata.volume.toLocaleString()}`);
@@ -77,7 +79,10 @@ async function technicalAnalysisIntegrationTest() {
       console.log(`   MACD: ${ethTechnicalData['MACD.macd']}`);
       console.log(`   Close Price: ${ethTechnicalData.close}`);
 
-      ethMetadata = await adapter.getAssetMetadata('ETH', '1d');
+      // Use TechnicalAnalysisService to get metadata
+      const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
+      const ethData = await technicalAnalysis.getTechnicalDataForAsset('ETH', '1d');
+      ethMetadata = ethData.metadata;
       console.log('✅ ETH metadata received successfully');
       console.log(`   Price: $${ethMetadata.price.toLocaleString()}`);
       console.log(`   Volume: ${ethMetadata.volume.toLocaleString()}`);
@@ -106,7 +111,10 @@ async function technicalAnalysisIntegrationTest() {
         try {
           console.log(`\n🔄 Trying ${token} as fallback...`);
           technicalData = await adapter.getTechnicalIndicators(token, '1d');
-          metadata = await adapter.getAssetMetadata(token, '1d');
+          // Use TechnicalAnalysisService to get metadata
+          const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
+          const tokenData = await technicalAnalysis.getTechnicalDataForAsset(token, '1d');
+          metadata = tokenData.metadata;
           testAsset = token;
           console.log(`✅ ${token} is supported!`);
           break;
@@ -125,7 +133,10 @@ async function technicalAnalysisIntegrationTest() {
             const cleanToken = fullToken.replace('USD', '').replace('USDT', '');
             console.log(`\n🔄 Trying ${cleanToken} (API supports ${fullToken}) as fallback...`);
             technicalData = await adapter.getTechnicalIndicators(cleanToken, '1d');
-            metadata = await adapter.getAssetMetadata(cleanToken, '1d');
+            // Use TechnicalAnalysisService to get metadata
+            const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
+            const tokenData = await technicalAnalysis.getTechnicalDataForAsset(cleanToken, '1d');
+            metadata = tokenData.metadata;
             testAsset = cleanToken;
             console.log(`✅ ${cleanToken} is supported!`);
             break;
@@ -161,7 +172,10 @@ async function technicalAnalysisIntegrationTest() {
     // 5. Получение метаданных актива (если еще не получены)
     if (!metadata) {
       console.log(`\n💰 Step 4: Getting asset metadata for ${testAsset}...`);
-      const assetMetadata: AssetMetadata = await adapter.getAssetMetadata(testAsset, '1D');
+      // Use TechnicalAnalysisService to get metadata
+      const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
+      const assetData = await technicalAnalysis.getTechnicalDataForAsset(testAsset, '1D');
+      const assetMetadata: AssetMetadata = assetData.metadata;
 
       if (assetMetadata.price <= 0) {
         throw new Error('Invalid price data received');
@@ -220,13 +234,17 @@ async function technicalAnalysisIntegrationTest() {
     // 8. Комплексный анализ
     console.log(`\n🔍 Step 7: Getting comprehensive analysis for ${testAsset}...`);
     // Get all data and create comprehensive analysis
-    const [technicalForAnalysis, metadataForAnalysis, newsForAnalysis] = await Promise.all([
+    const [technicalForAnalysis, newsForAnalysis] = await Promise.all([
       adapter.getTechnicalIndicators(testAsset, '1D'),
-      adapter.getAssetMetadata(testAsset, '1D'),
       adapter.getNews(testAsset)
     ]);
 
-    const analysis: ComprehensiveAnalysis = technicalAnalysis.createComprehensiveAnalysis(technicalForAnalysis, metadataForAnalysis, newsForAnalysis);
+    // Use TechnicalAnalysisService to get metadata
+    const technicalAnalysisService = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
+    const assetData = await technicalAnalysisService.getTechnicalDataForAsset(testAsset, '1D');
+    const metadataForAnalysis = assetData.metadata;
+
+    const analysis: ComprehensiveAnalysis = technicalAnalysisService.createComprehensiveAnalysis(technicalForAnalysis, metadataForAnalysis, newsForAnalysis);
 
     console.log('✅ Comprehensive analysis completed');
     console.log(`   Recommendation: ${analysis.recommendation}`);
@@ -260,7 +278,7 @@ async function technicalAnalysisIntegrationTest() {
       {
         id: 'test-claim-3',
         ticker: testAsset,
-        agentRole: 'valuation',
+        agentRole: 'technical',
         claim: `${testAsset} price at $${metadata.price.toLocaleString()} with ${metadata.changePercent.toFixed(2)}% daily change`,
         confidence: 0.8,
         evidence: [],
@@ -379,7 +397,7 @@ async function technicalAnalysisIntegrationTest() {
     const integrationChecks = [
       {
         name: 'API Connection',
-        status: adapter.isConnected(),
+        status: true, // API is always ready (no connection needed)
         description: 'Technical indicators API connection'
       },
       {
@@ -418,9 +436,8 @@ async function technicalAnalysisIntegrationTest() {
     console.error('Error:', error);
     throw error;
   } finally {
-    // Отключение от API
-    await adapter.disconnect();
-    console.log('\n🔌 Disconnected from Technical Indicators API');
+    // No disconnection needed for technical indicators API
+    console.log('\n🔌 Technical Indicators API cleanup completed');
   }
 }
 

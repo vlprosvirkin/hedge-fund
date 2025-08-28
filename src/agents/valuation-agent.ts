@@ -1,41 +1,40 @@
 import { BaseAgent, type AgentContext } from './base-agent.js';
-import { TechnicalIndicatorsAdapter } from '../adapters/technical-indicators-adapter.js';
+import { Signals } from '../adapters/signals-adapter.js';
 import { TechnicalAnalysisService } from '../services/technical-analysis.service.js';
 
-export class ValuationAgent extends BaseAgent {
-  private technicalIndicators: TechnicalIndicatorsAdapter;
+export class TechnicalAnalysisAgent extends BaseAgent {
+  private technicalIndicators: Signals;
   private technicalAnalysis: TechnicalAnalysisService;
 
   constructor(
-    technicalIndicators?: TechnicalIndicatorsAdapter,
+    technicalIndicators?: Signals,
     technicalAnalysis?: TechnicalAnalysisService
   ) {
-    super('valuation');
-    this.technicalIndicators = technicalIndicators || new TechnicalIndicatorsAdapter();
+    super('technical');
+    this.technicalIndicators = technicalIndicators || new Signals();
     this.technicalAnalysis = technicalAnalysis || new TechnicalAnalysisService();
   }
 
   async processData(context: AgentContext): Promise<any> {
-    console.log(`🔍 Valuation Agent: Processing data for universe: ${context.universe.join(', ')}`);
+    console.log(`🔍 Technical Analysis Agent: Processing data for universe: ${context.universe.join(', ')}`);
 
     // Get technical data using TechnicalAnalysisService
     const technicalData = await Promise.all(
       context.universe.map(async (ticker) => {
         try {
-          console.log(`🔍 Valuation Agent: Getting data for ${ticker}...`);
+          console.log(`🔍 Technical Analysis Agent: Getting data for ${ticker}...`);
 
-          // Get technical data and create comprehensive analysis
-          const [technical, metadata] = await Promise.all([
-            this.technicalIndicators.getTechnicalIndicators(ticker, '4h'),
-            this.technicalIndicators.getAssetMetadata(ticker, '4h')
-          ]);
+          // Get technical data using TechnicalAnalysisService
+          const technicalData = await this.technicalAnalysis.getTechnicalDataForAsset(ticker, '4h');
+          const technical = technicalData.technical;
+          const metadata = technicalData.metadata;
 
-          console.log(`🔍 Valuation Agent: ${ticker} - Technical data received:`, !!technical);
-          console.log(`🔍 Valuation Agent: ${ticker} - Metadata received:`, !!metadata);
+          console.log(`🔍 Technical Analysis Agent: ${ticker} - Technical data received:`, !!technical);
+          console.log(`🔍 Technical Analysis Agent: ${ticker} - Metadata received:`, !!metadata);
 
           // Use TechnicalAnalysisService to analyze the data
           const signalStrength = this.technicalAnalysis.calculateSignalStrength(technical);
-          console.log(`🔍 Valuation Agent: ${ticker} - Signal strength:`, signalStrength.strength);
+          console.log(`🔍 Technical Analysis Agent: ${ticker} - Signal strength:`, signalStrength.strength);
 
           const result = {
             ticker,
@@ -51,7 +50,7 @@ export class ValuationAgent extends BaseAgent {
             momentum: this.calculateMomentum(metadata?.price || 0)
           };
 
-          console.log(`🔍 Valuation Agent: ${ticker} - Processed data:`, {
+          console.log(`🔍 Technical Analysis Agent: ${ticker} - Processed data:`, {
             price: result.price,
             rsi: result.rsi,
             macd: result.macd,
@@ -66,7 +65,7 @@ export class ValuationAgent extends BaseAgent {
       })
     );
 
-    console.log(`🔍 Valuation Agent: Total processed data:`, technicalData.length);
+    console.log(`🔍 Technical Analysis Agent: Total processed data:`, technicalData.length);
     return technicalData;
   }
 
@@ -87,7 +86,7 @@ export class ValuationAgent extends BaseAgent {
   buildSystemPrompt(context: AgentContext): string {
     const riskProfile = context.riskProfile || 'neutral';
 
-    return `You are a VALUATION/TECHNICAL analyst specializing in technical indicators.
+    return `You are a TECHNICAL ANALYSIS analyst specializing in technical indicators.
 
 ROLE: Technical evaluation of assets using mathematical indicators and volatility calculations.
 
@@ -170,7 +169,7 @@ Then provide the claims in JSON format:"
   "claims": [
     {
       "ticker": "BTC",
-      "agentRole": "valuation",
+      "agentRole": "technical",
       "claim": "BUY|HOLD|SELL",
       "confidence": 0.85,
       "direction": "bullish|bearish|neutral",
@@ -191,12 +190,12 @@ Then provide the claims in JSON format:"
   }
 
   buildUserPrompt(context: AgentContext, processedData?: any[]): string {
-    console.log(`🔍 Valuation Agent: Building prompt with ${processedData?.length || 0} processed data items`);
-    console.log(`🔍 Valuation Agent: Market stats count: ${context.marketStats?.length || 0}`);
+    console.log(`🔍 Technical Analysis Agent: Building prompt with ${processedData?.length || 0} processed data items`);
+    console.log(`🔍 Technical Analysis Agent: Market stats count: ${context.marketStats?.length || 0}`);
 
     if (processedData) {
       processedData.forEach((data, index) => {
-        console.log(`🔍 Valuation Agent: Data ${index + 1} - ${data.ticker}:`, {
+        console.log(`🔍 Technical Analysis Agent: Data ${index + 1} - ${data.ticker}:`, {
           hasError: data.error,
           price: data.price,
           rsi: data.rsi,
@@ -207,7 +206,7 @@ Then provide the claims in JSON format:"
     }
 
     return `ANALYSIS REQUEST:
-Role: VALUATION/TECHNICAL Analyst
+Role: TECHNICAL ANALYSIS Analyst
 Risk Profile: ${context.riskProfile}
 Timestamp: ${context.timestamp}
 Universe: ${context.universe.join(', ')}

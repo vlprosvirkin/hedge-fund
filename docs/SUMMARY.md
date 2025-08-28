@@ -1,48 +1,37 @@
-# Содержание
+# Table of contents
 
-* [Введение](README.md)
+* [Introduction](README.md)
 
-## 🚀 Быстрый старт
+## 🚀 Getting Started
 
-* [Установка и настройка](QUICKSTART.md)
-* [Конфигурация](CONFIGURATION.md)
-* [Первые шаги](FIRST_STEPS.md)
+* [Quick Start Guide](quickstart.md)
+* [System Overview](ARCHITECTURE.md)
+* [AI Agents](AGENTS.md)
 
-## 🏗️ Архитектура
+## 🏗️ Core Components
 
-* [Обзор системы](ARCHITECTURE.md)
-* [AI агенты](AGENTS.md)
-* [База данных](DATABASE_SCHEMA.md)
-* [API интеграции](API_INTEGRATIONS.md)
+* [Architecture](ARCHITECTURE.md)
+* [AI Agents](AGENTS.md)
+* [API Integration](API_TYPES.md)
+* [Database Schema](DATABASE_SCHEMA.md)
 
-## 🔧 Разработка
+## 📊 Trading & Analysis
 
-* [API методы](ASPIS_API_METHODS.md)
-* [Типы данных](API_TYPES.md)
-* [Тестирование](TESTS_README.md)
-* [Логирование](LOGGING.md)
+* [Decision Process](DECISION_PROCESS.md)
+* [Signal Processing](SIGNAL_PROCESSING.md)
+* [Methodology](METHODOLOGY.md)
 
-## 📊 Торговля
+## 🛠️ Setup & Configuration
 
-* [Сигналы и анализ](SIGNAL_PROCESSING.md)
-* [Технические индикаторы](TECHNICAL_INDICATORS.md)
-* [Управление рисками](RISK_MANAGEMENT.md)
-* [Исполнение ордеров](ORDER_EXECUTION.md)
+* [Aspis Setup](ASPIS_SETUP.md)
+* [GitBook Setup](GITBOOK_SETUP.md)
+* [Testing Guide](TESTS_README.md)
 
-## 📰 Новости и анализ
+## 📱 Monitoring & Notifications
 
-* [API новостей](NEWS_API.md)
-* [Анализ настроений](SENTIMENT_ANALYSIS.md)
-* [Обработка новостей](NEWS_PROCESSING.md)
+* [Enhanced Notifications](ENHANCED_NOTIFICATIONS.md)
 
-## 📱 Уведомления
+## 📋 Additional Resources
 
-* [Telegram бот](TELEGRAM_BOT.md)
-* [Форматирование сообщений](MESSAGE_FORMATTING.md)
-* [Настройка уведомлений](NOTIFICATIONS.md)
-
-## 🚀 Развертывание
-
-* [Docker развертывание](DEPLOYMENT.md)
-* [EC2 настройка](EC2_SETUP.md)
-* [Мониторинг](MONITORING.md)
+* [System Summary](SUMMARY.md)
+* [Documentation Guide](README_DOCS.md)

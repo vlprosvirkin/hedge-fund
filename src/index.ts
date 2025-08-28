@@ -3,7 +3,7 @@
 import { HedgeFundOrchestrator } from './orchestrator.js';
 import { BinanceAdapter } from './adapters/binance-adapter.js';
 import { AspisAdapter } from './adapters/aspis-adapter.js';
-import { TechnicalIndicatorsAdapter } from './adapters/technical-indicators-adapter.js';
+import { Signals } from './adapters/signals-adapter.js';
 import { TechnicalAnalysisService } from './services/technical-analysis.service.js';
 import { AgentsService } from './services/agents.js';
 import type { SystemConfig } from './types/index.js';
@@ -102,7 +102,7 @@ async function startProductionSystem() {
     const factStore = new PostgresAdapter();
 
     // Create technical services
-    const technicalIndicators = new TechnicalIndicatorsAdapter();
+    const technicalIndicators = new Signals();
     const technicalAnalysis = new TechnicalAnalysisService();
 
     // Create agents service with shared technical services

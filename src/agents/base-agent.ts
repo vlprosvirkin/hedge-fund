@@ -9,6 +9,7 @@ export interface AgentContext {
   marketStats: MarketStats[];
   riskProfile: string;
   timestamp: number;
+  fearGreedIndex?: number; // Optional Fear & Greed Index (0-100)
 }
 
 export interface AgentResponse {
@@ -20,11 +21,11 @@ export interface AgentResponse {
 }
 
 export abstract class BaseAgent {
-  protected role: 'fundamental' | 'sentiment' | 'valuation';
+  protected role: 'fundamental' | 'sentiment' | 'technical';
   protected riskProfile: string = 'neutral';
   protected openaiService: OpenAIService;
 
-  constructor(role: 'fundamental' | 'sentiment' | 'valuation') {
+  constructor(role: 'fundamental' | 'sentiment' | 'technical') {
     this.role = role;
     this.openaiService = new OpenAIService();
   }

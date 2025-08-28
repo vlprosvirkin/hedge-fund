@@ -242,13 +242,13 @@ export function extractClaimsFromJSON(jsonPart: any, context: any): any[] {
                 ) || [];
                 evidenceIds = tickerEvidence.map((e: any) => e.id || `${e.ticker}_${e.kind}_${Date.now()}`).slice(0, 3);
                 console.log(`🔍 extractClaimsFromJSON: ${claimData.ticker} fundamental - Found ${tickerEvidence.length} market evidence, using ${evidenceIds.length} IDs:`, evidenceIds);
-            } else if (claimData.agentRole === 'valuation') {
-                // Technical agent uses technical indicators evidence
+            } else if (claimData.agentRole === 'technical') {
+                // Technical analysis evidence
                 const tickerEvidence = context.facts?.filter((e: any) =>
                     e.ticker === claimData.ticker && e.kind === 'technical'
                 ) || [];
                 evidenceIds = tickerEvidence.map((e: any) => e.id || `${e.ticker}_${e.kind}_${Date.now()}`).slice(0, 3);
-                console.log(`🔍 extractClaimsFromJSON: ${claimData.ticker} valuation - Found ${tickerEvidence.length} technical evidence, using ${evidenceIds.length} IDs:`, evidenceIds);
+                console.log(`🔍 extractClaimsFromJSON: ${claimData.ticker} technical - Found ${tickerEvidence.length} technical evidence, using ${evidenceIds.length} IDs:`, evidenceIds);
             }
 
             const validClaim = {

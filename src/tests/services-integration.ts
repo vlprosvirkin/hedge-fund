@@ -1,7 +1,7 @@
 import { AgentsService } from '../services/agents.js';
 import { ConsensusService } from '../services/consensus.js';
 import { VerifierService } from '../services/verifier.js';
-import { TechnicalIndicatorsAdapter } from '../adapters/technical-indicators-adapter.js';
+import { Signals } from '../adapters/signals-adapter.js';
 import { NewsAPIAdapter } from '../adapters/news-adapter.js';
 import type {
     Claim,
@@ -23,14 +23,14 @@ async function servicesIntegrationTest() {
     console.log('🚀 Starting Services Integration Test...\n');
 
     // Инициализация адаптеров и сервисов
-    let technicalAdapter: TechnicalIndicatorsAdapter | undefined;
+    let technicalAdapter: Signals | undefined;
     let newsAdapter: NewsAPIAdapter | undefined;
     let agentsService: AgentsService | undefined;
     let consensusService: ConsensusService | undefined;
     let verifierService: VerifierService | undefined;
 
     try {
-        technicalAdapter = new TechnicalIndicatorsAdapter();
+        technicalAdapter = new Signals();
         newsAdapter = new NewsAPIAdapter();
         agentsService = new AgentsService();
         consensusService = new ConsensusService();
@@ -38,7 +38,6 @@ async function servicesIntegrationTest() {
 
         // 1. Подключение к API
         console.log('🔌 Step 1: Connecting to APIs...');
-        await technicalAdapter.connect();
         await newsAdapter.connect();
         await agentsService.connect();
         console.log('✅ All services connected successfully');
@@ -69,15 +68,19 @@ async function servicesIntegrationTest() {
 
         try {
             technicalData = await technicalAdapter.getTechnicalIndicators(testAsset, '1d');
-            assetMetadata = await technicalAdapter.getAssetMetadata(testAsset, '1d');
+
+            // Get technical data using TechnicalAnalysisService
+            const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService(technicalAdapter);
+            const technicalDataResult = await technicalAnalysis.getTechnicalDataForAsset(testAsset, '1d');
+            assetMetadata = technicalDataResult.metadata;
+
             // Get technical data and create comprehensive analysis
             const [technical, metadata, news] = await Promise.all([
                 technicalAdapter.getTechnicalIndicators(testAsset, '1d'),
-                technicalAdapter.getAssetMetadata(testAsset, '1d'),
+                technicalDataResult.metadata,
                 technicalAdapter.getNews(testAsset)
             ]);
 
-            const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService();
             comprehensiveAnalysis = technicalAnalysis.createComprehensiveAnalysis(technical, metadata, news);
 
             console.log('✅ Technical data retrieved successfully');
@@ -194,7 +197,7 @@ async function servicesIntegrationTest() {
         };
 
         // Тестируем все роли агентов
-        const agentRoles = ['fundamental', 'sentiment', 'valuation'] as const;
+        const agentRoles = ['fundamental', 'sentiment', 'technical'] as const;
         const allClaims: Claim[] = [];
 
         for (const role of agentRoles) {
@@ -362,7 +365,7 @@ async function servicesIntegrationTest() {
         const integrationChecks = [
             {
                 name: 'API Connections',
-                status: technicalAdapter.isConnected() && newsAdapter.isConnected() && agentsService.isConnected(),
+                status: newsAdapter.isConnected() && agentsService.isConnected(),
                 description: 'All adapters and services connected'
             },
             {

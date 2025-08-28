@@ -86,7 +86,7 @@ export class SignalProcessorService {
     // 1. Extract agent-specific signals
     const fundamental = claims.find(c => c.agentRole === 'fundamental');
     const sentiment = claims.find(c => c.agentRole === 'sentiment');
-    const technical = claims.find(c => c.agentRole === 'valuation');
+    const technical = claims.find(c => c.agentRole === 'technical');
 
     // 2. Calculate multi-dimensional metrics
     console.log(`🔍 analyzeTickerSignals: ${ticker} - fundamental=${!!fundamental}, sentiment=${!!sentiment}, technical=${!!technical}, technicalData=${!!technicalData}`);
@@ -566,7 +566,7 @@ export class SignalProcessorService {
    */
   private determineTimeHorizon(claims: Claim[], momentum: number): 'short' | 'medium' | 'long' {
     // Check for technical indicators that suggest time horizon
-    const technicalClaim = claims.find(c => c.agentRole === 'valuation');
+    const technicalClaim = claims.find(c => c.agentRole === 'technical');
     const signals = technicalClaim?.signals || [];
 
     const rsi = signals.find((s: { name: string; value: number }) => s.name === 'rsi')?.value;
@@ -596,7 +596,7 @@ export class SignalProcessorService {
   ): string {
     const fundamental = claims.find(c => c.agentRole === 'fundamental');
     const sentiment = claims.find(c => c.agentRole === 'sentiment');
-    const technical = claims.find(c => c.agentRole === 'valuation');
+    const technical = claims.find(c => c.agentRole === 'technical');
 
     const reasons: string[] = [];
 

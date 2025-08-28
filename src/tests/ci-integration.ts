@@ -104,7 +104,7 @@ async function testBasicImports() {
         console.log('✅ All service imports successful');
 
         // Test adapters imports
-        const { TechnicalIndicatorsAdapter } = await import('../adapters/technical-indicators-adapter.js');
+        const { Signals } = await import('../adapters/signals-adapter.js');
         const { NewsAPIAdapter } = await import('../adapters/news-adapter.js');
 
         console.log('✅ All adapter imports successful');
