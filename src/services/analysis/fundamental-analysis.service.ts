@@ -1,7 +1,7 @@
 import type {
     AssetMetadata,
     ComprehensiveAnalysis
-} from '../types/index.js';
+} from '../../types/index.js';
 
 export interface OnChainMetrics {
     networkActivity: number;
@@ -70,7 +70,7 @@ export interface FundamentalData {
     };
 }
 
-import { Signals } from '../adapters/signals-adapter.js';
+import { Signals } from '../../adapters/signals-adapter.js';
 
 export class FundamentalAnalysisService {
     private signals: Signals;
@@ -505,39 +505,118 @@ export class FundamentalAnalysisService {
     }
 
     /**
-     * Process raw API data to RiskMetrics structure
+     * Process raw API data to RiskMetrics structure with improved validation
      */
     private processRawDataToRiskMetrics(rawData: any): RiskMetrics {
-        // Volatility Score (0-1, lower is better)
-        const volatilityScore = Math.max(
+        // Volatility Score (0-1) - higher is more volatile
+        const volatilityScore = this.normalizeRiskValue(
+            rawData.volatility_30 || 0,
+            'volatility',
             0,
-            1 - ((rawData.volatility_30 || 0) / 100) // Normalize by 100% volatility
+            100
         );
 
-        // Correlation Score (0-1, lower correlation is better for diversification)
-        const correlationScore = Math.max(
+        // Correlation Score (0-1) - higher means more correlated with BTC
+        const correlationScore = this.normalizeRiskValue(
+            Math.abs(rawData.btc_correlation_30 || 0),
+            'correlation',
             0,
-            1 - Math.abs(rawData.btc_correlation_30 || 0) // Lower absolute correlation
+            1
         );
 
-        // Drawdown Risk Score (0-1, lower drawdown is better)
-        const drawdownRisk = Math.max(
+        // Drawdown Risk (0-1) - higher means higher risk of drawdown
+        const drawdownRisk = this.normalizeRiskValue(
+            Math.abs(rawData.price_drawdown || 0),
+            'drawdown',
             0,
-            1 + (rawData.price_drawdown || 0) // Convert negative drawdown to positive score
+            1
         );
 
-        // Profit Taking Pressure Score (0-1, SOPR > 1 indicates profit taking)
-        const profitTakingPressure = Math.max(
-            0,
-            1 - ((rawData.sopr || 1) - 1) // SOPR of 1 means no profit taking
-        );
+        // Profit Taking Pressure (0-1) - based on SOPR
+        const sopr = rawData.sopr || 1.0;
+        const profitTakingPressure = sopr > 1.1 ? 0.8 : sopr > 1.05 ? 0.6 : sopr > 1.0 ? 0.4 : 0.2;
 
         return {
             volatilityScore,
             correlationScore,
             drawdownRisk,
-            profitTakingPressure,
+            profitTakingPressure
         };
+    }
+
+    /**
+     * Normalize risk values to 0-1 range with validation
+     */
+    private normalizeRiskValue(value: number, type: string, min: number, max: number): number {
+        // Handle invalid values
+        if (!isFinite(value) || isNaN(value)) {
+            console.warn(`⚠️ Invalid ${type} value: ${value}, using default`);
+            return 0.5; // Default to medium risk
+        }
+
+        // Clamp to expected range
+        const clampedValue = Math.max(min, Math.min(max, value));
+
+        // Normalize to 0-1
+        return (clampedValue - min) / (max - min);
+    }
+
+    /**
+     * Generate risk flags based on actual metrics
+     */
+    private generateRiskFlags(
+        fundamentalData: FundamentalData,
+        onChainMetrics: OnChainMetrics,
+        socialMetrics: SocialMetrics,
+        riskMetrics: RiskMetrics
+    ): string[] {
+        const flags: string[] = [];
+
+        // Liquidity risk
+        if (fundamentalData.volume.total24h < 1000000) { // Less than 1M daily volume
+            flags.push('low_liquidity');
+        }
+
+        // On-chain activity risk
+        if (onChainMetrics.networkActivity < 0.1) {
+            flags.push('low_onchain_activity');
+        } else if (onChainMetrics.networkActivity < 0.3) {
+            flags.push('moderate_onchain');
+        }
+
+        // Market cap health risk
+        if (fundamentalData.marketCap < 100000000) { // Less than 100M market cap
+            flags.push('low_market_cap');
+        } else if (fundamentalData.marketCap < 1000000000) { // Less than 1B market cap
+            flags.push('moderate_market_cap');
+        }
+
+        // Volatility risk
+        if (riskMetrics.volatilityScore > 0.7) {
+            flags.push('high_volatility');
+        }
+
+        // Correlation risk
+        if (riskMetrics.correlationScore > 0.8) {
+            flags.push('high_correlation');
+        }
+
+        // Drawdown risk
+        if (riskMetrics.drawdownRisk > 0.6) {
+            flags.push('high_drawdown_risk');
+        }
+
+        // Social sentiment risk
+        if (socialMetrics.sentimentScore < 0.3) {
+            flags.push('negative_sentiment');
+        }
+
+        // Network security risk
+        if (onChainMetrics.networkSecurity < 0.2) {
+            flags.push('low_network_security');
+        }
+
+        return flags;
     }
 
     /**
@@ -607,6 +686,7 @@ export class FundamentalAnalysisService {
         confidence: number;
         summary: any;
         signals: Array<{ name: string, value: number }>;
+        riskFlags: string[];
     } {
         // Calculate component scores
         const liquidityScore = this.calculateLiquidityScore(marketData);
@@ -671,11 +751,15 @@ export class FundamentalAnalysisService {
             { name: 'profit_taking_pressure', value: riskMetrics.profitTakingPressure }
         ];
 
+        // Generate risk flags
+        const riskFlags = this.generateRiskFlags(fundamentalData, onChainMetrics, socialMetrics, riskMetrics);
+
         return {
             fundamentalScore,
             confidence,
             summary,
-            signals
+            signals,
+            riskFlags
         };
     }
 }

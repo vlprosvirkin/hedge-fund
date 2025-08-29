@@ -1,9 +1,9 @@
 import type { LLMService } from '../interfaces/adapters.js';
 import type { Claim, Evidence, MarketStats } from '../types/index.js';
-import { AgentCoordinator } from '../agents/agent-coordinator.js';
-import type { AgentContext } from '../agents/base-agent.js';
+import { AgentCoordinator } from '../agents/coordination/agent-coordinator.js';
+import type { AgentContext } from '../agents/base/base-agent.js';
 import { Signals } from '../adapters/signals-adapter.js';
-import { TechnicalAnalysisService } from '../services/technical-analysis.service.js';
+import { TechnicalAnalysisService } from './analysis/technical-analysis.service.js';
 
 export class AgentsService implements LLMService {
   private isConnectedFlag = false;
@@ -88,6 +88,15 @@ export class AgentsService implements LLMService {
 
     if (result.jsonPart) {
       response.jsonPart = result.jsonPart;
+    }
+
+    // Add prompts from the agent response
+    if (result.systemPrompt) {
+      response.systemPrompt = result.systemPrompt;
+    }
+
+    if (result.userPrompt) {
+      response.userPrompt = result.userPrompt;
     }
 
     return response;

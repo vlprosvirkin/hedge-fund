@@ -21,6 +21,7 @@ This documentation provides comprehensive guides for the Hedge Fund AI Trading S
 - **[Decision Process](./DECISION_PROCESS.md)** - Trading decision-making workflow
 - **[Signal Processing](./SIGNAL_PROCESSING.md)** - Technical analysis and signal processing
 - **[Methodology](./METHODOLOGY.md)** - Trading strategies and mathematical models
+- **[Recent Improvements](./COMPREHENSIVE_IMPROVEMENTS_SUMMARY.md)** - Latest system enhancements
 
 ### **Setup & Configuration**
 - **[Aspis Setup](./ASPIS_SETUP.md)** - Trading API configuration
@@ -33,10 +34,10 @@ This documentation provides comprehensive guides for the Hedge Fund AI Trading S
 ## 🎯 Key Features
 
 ### **Multi-Agent Architecture**
-- **Fundamental Agent**: On-chain metrics, social sentiment, market cap analysis
-- **Sentiment Agent**: News analysis, social media sentiment, Fear & Greed Index
-- **Technical Analysis Agent**: Technical indicators, price action patterns
-- **Consensus Building**: Weighted decision-making with risk profiles
+- **Fundamental Agent**: On-chain metrics, social sentiment, market cap analysis (40-90% confidence)
+- **Sentiment Agent**: News analysis, social media sentiment, Fear & Greed Index (30-80% confidence)
+- **Technical Analysis Agent**: Technical indicators, price action patterns (50-90% confidence)
+- **Consensus Building**: Weighted decision-making with risk profiles and position sizing
 
 ### **Advanced Analytics**
 - **45+ Technical Indicators**: RSI, MACD, ADX, Bollinger Bands, and more

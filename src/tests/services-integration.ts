@@ -1,6 +1,6 @@
 import { AgentsService } from '../services/agents.js';
-import { ConsensusService } from '../services/consensus.js';
-import { VerifierService } from '../services/verifier.js';
+import { ConsensusService } from '../services/trading/consensus.js';
+import { VerifierService } from '../services/trading/verifier.js';
 import { Signals } from '../adapters/signals-adapter.js';
 import { NewsAPIAdapter } from '../adapters/news-adapter.js';
 import type {
@@ -70,7 +70,7 @@ async function servicesIntegrationTest() {
             technicalData = await technicalAdapter.getTechnicalIndicators(testAsset, '1d');
 
             // Get technical data using TechnicalAnalysisService
-            const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService(technicalAdapter);
+            const technicalAnalysis = new (await import('../services/analysis/technical-analysis.service.js')).TechnicalAnalysisService(technicalAdapter);
             const technicalDataResult = await technicalAnalysis.getTechnicalDataForAsset(testAsset, '1d');
             assetMetadata = technicalDataResult.metadata;
 

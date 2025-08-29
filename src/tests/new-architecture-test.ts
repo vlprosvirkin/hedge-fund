@@ -1,5 +1,5 @@
-import { VerifierService } from '../services/verifier.js';
-import { ConsensusService } from '../services/consensus.js';
+import { VerifierService } from '../services/trading/verifier.js';
+import { ConsensusService } from '../services/trading/consensus.js';
 import { exampleClaims, invalidClaim } from './example-claims.js';
 import type { MarketStats } from '../types/index.js';
 

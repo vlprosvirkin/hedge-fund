@@ -1,11 +1,11 @@
-import { FundamentalAgent } from './fundamental-agent.js';
-import { SentimentAgent } from './sentiment-agent.js';
-import { TechnicalAnalysisAgent } from './valuation-agent.js';
-import { BaseAgent } from './base-agent.js';
+import { FundamentalAgent } from '../agents/implementations/fundamental-agent.js';
+import { SentimentAgent } from '../agents/implementations/sentiment-agent.js';
+import { TechnicalAnalysisAgent } from '../agents/implementations/technical-agent.js';
+import { BaseAgent } from '../agents/base/base-agent.js';
 import { Signals } from '../adapters/signals-adapter.js';
-import { TechnicalAnalysisService } from '../services/technical-analysis.service.js';
-import { FundamentalAnalysisService } from '../services/fundamental-analysis.service.js';
-import { SentimentAnalysisService } from '../services/sentiment-analysis.service.js';
+import { TechnicalAnalysisService } from '../services/analysis/technical-analysis.service.js';
+import { FundamentalAnalysisService } from '../services/analysis/fundamental-analysis.service.js';
+import { SentimentAnalysisService } from '../services/analysis/sentiment-analysis.service.js';
 
 export class AgentFactory {
   private static agents: Map<string, BaseAgent> = new Map();

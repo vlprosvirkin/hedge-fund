@@ -947,9 +947,9 @@ const consensusScore = claims.reduce((score, claim) => {
 ```
 
 #### **Agent Weights:**
-- **Fundamental Agent**: 35% (market fundamentals)
-- **Sentiment Agent**: 25% (news sentiment)
-- **Valuation Agent**: 40% (technical analysis)
+- **Fundamental Agent**: 30% (market fundamentals)
+- **Sentiment Agent**: 30% (news sentiment)
+- **Technical Agent**: 40% (technical analysis)
 
 ### Conflict Detection
 

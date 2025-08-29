@@ -1,11 +1,11 @@
-import { HedgeFundOrchestrator } from '../orchestrator.js';
+import { HedgeFundOrchestrator } from '../core/orchestrator.js';
 import { AspisAdapter } from '../adapters/aspis-adapter.js';
 import { Signals } from '../adapters/signals-adapter.js';
 import { NewsAPIAdapter } from '../adapters/news-adapter.js';
 import { AgentsService } from '../services/agents.js';
-import { ConsensusService } from '../services/consensus.js';
-import { VerifierService } from '../services/verifier.js';
-import { OpenAIService } from '../services/openai.service.js';
+import { ConsensusService } from '../services/trading/consensus.js';
+import { VerifierService } from '../services/trading/verifier.js';
+import { OpenAIService } from '../services/ai/openai.service.js';
 import type {
     SystemConfig,
     PipelineArtifact,

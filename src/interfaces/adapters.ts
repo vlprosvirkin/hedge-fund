@@ -169,6 +169,8 @@ export interface LLMService {
     errors: string[];
     openaiResponse?: string;
     analysis?: string;
+    systemPrompt?: string;
+    userPrompt?: string;
   }>;
 
   // Validate claim format

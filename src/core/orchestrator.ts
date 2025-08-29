@@ -6,7 +6,7 @@ import type {
   UniverseService,
   LLMService,
   RiskService
-} from './interfaces/adapters.js';
+} from '../interfaces/adapters.js';
 import type {
   Claim,
   ConsensusRec,
@@ -19,18 +19,20 @@ import type {
   SignalAnalysis,
   NewsItem,
   Evidence
-} from './types/index.js';
-import { AgentsService } from './services/agents.js';
-import { VerifierService } from './services/verifier.js';
-import { ConsensusService } from './services/consensus.js';
-import { SignalProcessorService } from './services/signal-processor.service.js';
-import { TelegramAdapter } from './adapters/telegram-adapter.js';
-import { NotificationsService } from './services/notifications.service.js';
-import { Signals } from './adapters/signals-adapter.js';
-import { VaultController } from './controllers/vault.controller.js';
-import { OpenAIService } from './services/openai.service.js';
+} from '../types/index.js';
+import { AgentsService } from '../services/agents.js';
+import { VerifierService } from '../services/trading/verifier.js';
+import { ConsensusService } from '../services/trading/consensus.js';
+import { SignalProcessorService } from '../services/trading/signal-processor.service.js';
+import { TelegramAdapter } from '../adapters/telegram-adapter.js';
+import { NotificationsService } from '../services/notifications/notifications.service.js';
+import { Signals } from '../adapters/signals-adapter.js';
+import { VaultController } from '../controllers/vault.controller.js';
+import { AIProviderFactory } from '../factories/ai-provider-factory.js';
+import type { AIProvider } from '../types/ai-provider.js';
 import { v4 as uuidv4 } from 'uuid';
 import pino from 'pino';
+import { DevelopmentLoggerService } from '../services/development-logger.service.js';
 
 export class HedgeFundOrchestrator {
   private logger: pino.Logger;
@@ -40,6 +42,9 @@ export class HedgeFundOrchestrator {
   private telegram: TelegramAdapter;
   private notifications: NotificationsService;
   private vaultController: VaultController;
+
+  // Development logging
+  private devLogger: DevelopmentLoggerService;
 
   constructor(
     private config: SystemConfig,
@@ -51,7 +56,7 @@ export class HedgeFundOrchestrator {
     private agents: LLMService,
     private risk: RiskService,
     private technicalIndicators: Signals,
-    private openaiService: OpenAIService,
+    private aiProvider: AIProvider,
     telegram?: TelegramAdapter
   ) {
     this.logger = pino({
@@ -67,6 +72,7 @@ export class HedgeFundOrchestrator {
     this.telegram = telegram || new TelegramAdapter();
     this.notifications = new NotificationsService(this.telegram);
     this.vaultController = new VaultController(this.trading, this.marketData);
+    this.devLogger = new DevelopmentLoggerService();
 
     // Debug logging for configuration
     this.logger.info('🔧 Orchestrator configuration loaded:', {
@@ -125,6 +131,8 @@ export class HedgeFundOrchestrator {
       await this.notifications.postEmergencyAlert('api_failure', `Emergency stop failed: ${error}`);
     }
   }
+
+
 
   private async connectServices(): Promise<void> {
     this.logger.info('Connecting to services...');
@@ -286,13 +294,23 @@ export class HedgeFundOrchestrator {
         this.logger.info(`Step 3.${agentRoles.indexOf(role) + 1}: Running ${role} agent`);
         const agentStartTime = Date.now();
 
-        const result = await this.agents.runRole(role, {
+        const context = {
           universe,
           facts: evidence,
           marketStats,
           riskProfile: this.config.riskProfile,
           timestamp
-        });
+        };
+
+        const result = await this.agents.runRole(role, context);
+
+        // Capture agent response for development logging
+        this.devLogger.captureAgentResponse(role, context, result);
+
+        // Capture agent prompts if available
+        if (result.systemPrompt && result.userPrompt) {
+          this.devLogger.captureAgentPrompt(role, context, result.systemPrompt, result.userPrompt);
+        }
 
         const processingTime = Date.now() - agentStartTime;
         allClaims.push(...result.claims);
@@ -324,10 +342,9 @@ export class HedgeFundOrchestrator {
           console.log(`🔍 Orchestrator: ${role} agent - Sample news:`, news.slice(0, 2).map(n => ({ id: n.id, title: n.title?.substring(0, 50) })));
         }
 
-        // Log raw OpenAI response for debugging
+        // Log response summary for debugging
         if (result.openaiResponse) {
-          console.log(`🔍 Orchestrator: ${role} agent - Raw OpenAI response length: ${result.openaiResponse.length} chars`);
-          console.log(`🔍 Orchestrator: ${role} agent - Raw OpenAI response preview: ${result.openaiResponse.substring(0, 200)}...`);
+          console.log(`🔍 Orchestrator: ${role} agent - Response received (${result.openaiResponse.length} chars)`);
         }
 
         // 📱 Complete agent analysis in one message
@@ -640,6 +657,10 @@ export class HedgeFundOrchestrator {
       this.logger.info('Step 8.2: Ending round in database');
       await this.factStore.endRound(this.roundId, 'completed', verifiedClaims.length, orders.length, portfolioMetrics?.unrealizedPnL || 0);
       this.logger.info('✅ Round ended successfully in database');
+
+      // Save development data
+      this.devLogger.setRoundId(this.roundId);
+      await this.devLogger.saveDevelopmentData();
 
       return artifact;
     } catch (error) {
@@ -980,7 +1001,7 @@ Generate a concise summary (max 200 words) that explains:
 
 Format as a professional investment analysis.`;
 
-      const response = await this.openaiService.generateResponse(prompt, {
+      const response = await this.aiProvider.generateResponse(prompt, {
         maxTokens: 300,
         temperature: 0.3
       });

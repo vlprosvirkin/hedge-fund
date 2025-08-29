@@ -2,7 +2,7 @@ import type { TradingAdapter, MarketDataAdapter } from '../interfaces/adapters.j
 import type { Position, Order } from '../types/index.js';
 import { convertQuantityToUsdt, convertUsdtToQuantity } from '../utils.js';
 import { Signals } from '../adapters/signals-adapter.js';
-import { TechnicalAnalysisService } from '../services/technical-analysis.service.js';
+import { TechnicalAnalysisService } from '../services/analysis/technical-analysis.service.js';
 import pino from 'pino';
 
 export interface VaultOrder {

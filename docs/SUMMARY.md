@@ -20,9 +20,13 @@
 * [Decision Process](DECISION_PROCESS.md)
 * [Signal Processing](SIGNAL_PROCESSING.md)
 * [Methodology](METHODOLOGY.md)
+* [Recent Improvements](COMPREHENSIVE_IMPROVEMENTS_SUMMARY.md)
 
 ## 🛠️ Setup & Configuration
 
+* [Environment Setup](ENVIRONMENT_SETUP.md)
+* [AI Provider Switcher](AI_PROVIDER_SWITCHER.md)
+* [OpenAI Model Switcher](OPENAI_MODEL_SWITCHER.md)
 * [Aspis Setup](ASPIS_SETUP.md)
 * [GitBook Setup](GITBOOK_SETUP.md)
 * [Testing Guide](TESTS_README.md)
@@ -35,3 +39,4 @@
 
 * [System Summary](SUMMARY.md)
 * [Documentation Guide](README_DOCS.md)
+* [Changes Summary](CHANGES_SUMMARY.md)

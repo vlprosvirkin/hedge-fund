@@ -1,4 +1,4 @@
-import type { SystemConfig, RiskLimits } from './types/index.js';
+import type { SystemConfig, RiskLimits } from '../types/index.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -10,53 +10,53 @@ export const API_CONFIG = {
   binance: {
     apiKey: process.env.BINANCE_API_KEY || '',
     secretKey: process.env.BINANCE_SECRET_KEY || '',
-    baseUrl: process.env.BINANCE_BASE_URL || 'https://api.binance.com',
-    wsUrl: process.env.BINANCE_WS_URL || 'wss://stream.binance.com:9443/ws',
-    timeout: parseInt(process.env.BINANCE_TIMEOUT || '10000'),
-    rateLimit: parseInt(process.env.BINANCE_RATE_LIMIT || '1200') // requests per minute
+    baseUrl: 'https://api.binance.com',
+    wsUrl: 'wss://stream.binance.com:9443/ws',
+    timeout: 10000,
+    rateLimit: 1200 // requests per minute
   },
 
   // Aspis API
   aspis: {
     apiKey: process.env.ASPIS_API_KEY || '',
     vaultAddress: process.env.ASPIS_VAULT_ADDRESS || '',
-    baseUrl: process.env.ASPIS_BASE_URL || 'https://trading-api.aspis.finance',
-    wsUrl: process.env.ASPIS_WS_URL || 'wss://trading-api.aspis.finance/ws',
-    timeout: parseInt(process.env.ASPIS_TIMEOUT || '30000'),
-    retryAttempts: parseInt(process.env.ASPIS_RETRY_ATTEMPTS || '3'),
-    rateLimit: parseInt(process.env.ASPIS_RATE_LIMIT || '100') // requests per minute
+    baseUrl: 'https://trading-api.aspis.finance',
+    wsUrl: 'wss://trading-api.aspis.finance/ws',
+    timeout: 30000,
+    retryAttempts: 3,
+    rateLimit: 100 // requests per minute
   },
 
   // OpenAI API
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
-    model: process.env.OPENAI_MODEL || 'gpt-4',
-    maxTokens: parseInt(process.env.OPENAI_MAX_TOKENS || '2000'),
-    temperature: parseFloat(process.env.OPENAI_TEMPERATURE || '0.7'),
-    timeout: parseInt(process.env.OPENAI_TIMEOUT || '30000')
+    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    maxTokens: 2000,
+    temperature: 0.7,
+    timeout: 30000
   },
 
   // Technical Indicators API
   technicalIndicators: {
-    baseUrl: process.env.TECHNICAL_INDICATORS_URL || 'http://63.176.129.185:8000',
-    timeout: parseInt(process.env.TECHNICAL_INDICATORS_TIMEOUT || '10000'),
-    retryAttempts: parseInt(process.env.TECHNICAL_INDICATORS_RETRY || '3'),
-    rateLimit: parseInt(process.env.TECHNICAL_INDICATORS_RATE_LIMIT || '60') // requests per minute
+    baseUrl: 'http://63.176.129.185:8000',
+    timeout: 10000,
+    retryAttempts: 3,
+    rateLimit: 60 // requests per minute
   },
 
   // CoinMarketCap API
   cmc: {
     apiKey: process.env.CMC_API_KEY,
     baseUrl: 'https://pro-api.coinmarketcap.com/v1',
-    timeout: parseInt(process.env.CMC_TIMEOUT || '10000'),
-    rateLimit: parseInt(process.env.CMC_RATE_LIMIT || '30') // requests per day on free tier
+    timeout: 10000,
+    rateLimit: 30 // requests per day on free tier
   },
 
   // News API
   news: {
-    baseUrl: process.env.NEWS_API_URL || 'http://3.79.47.238:4500',
-    timeout: parseInt(process.env.NEWS_API_TIMEOUT || '30000'),
-    sources: process.env.NEWS_SOURCES?.split(',') || ['coindesk', 'cointelegraph'],
+    baseUrl: 'http://3.79.47.238:4500',
+    timeout: 30000,
+    sources: ['coindesk', 'cointelegraph', 'bitcoin.com', 'decrypt.co'],
     apiKeys: {
       newsapi: process.env.NEWS_API_KEY || '',
       alpha_vantage: process.env.ALPHA_VANTAGE_KEY || '',
@@ -75,10 +75,30 @@ export const API_CONFIG = {
 
 // Default system configuration
 export const DEFAULT_CONFIG: SystemConfig = {
+  // Risk profile options:
+  // - 'averse': Conservative strategy, max 15% per position, 5% max daily loss
+  // - 'neutral': Balanced strategy, max 20% per position, 10% max daily loss  
+  // - 'bold': Aggressive strategy, max 25% per position, 15% max daily loss
   riskProfile: 'neutral',
+
+  // Trading intervals (in seconds)
+  // - 1800: 30 minutes (for testing)
+  // - 3600: 1 hour (recommended for development)
+  // - 7200: 2 hours (for production)
   debateInterval: 3600, // 1 hour
+
+  // Rebalancing interval (in seconds)
+  // - 1800: 30 minutes (frequent rebalancing)
+  // - 3600: 1 hour (balanced)
+  // - 7200: 2 hours (less frequent)
   rebalanceInterval: 3600, // 1 hour
+
+  // Maximum number of concurrent positions
+  // - 5: Conservative (fewer positions, more focused)
+  // - 8: Balanced (recommended)
+  // - 12: Aggressive (more positions, more diversified)
   maxPositions: 8,
+
   killSwitchEnabled: true
 };
 
@@ -224,10 +244,16 @@ export const MONITORING_CONFIG = {
 
 // System Configuration from Environment
 export const SYSTEM_CONFIG = {
-  riskProfile: (process.env.RISK_PROFILE as any) || DEFAULT_CONFIG.riskProfile,
-  debateInterval: parseInt(process.env.DEBATE_INTERVAL || DEFAULT_CONFIG.debateInterval.toString()),
-  rebalanceInterval: parseInt(process.env.REBALANCE_INTERVAL || DEFAULT_CONFIG.rebalanceInterval.toString()),
-  maxPositions: parseInt(process.env.MAX_POSITIONS || DEFAULT_CONFIG.maxPositions.toString()),
+  // Risk profile is now set in DEFAULT_CONFIG with detailed comments
+  riskProfile: DEFAULT_CONFIG.riskProfile,
+
+  // Trading intervals are now set in DEFAULT_CONFIG with detailed comments
+  debateInterval: DEFAULT_CONFIG.debateInterval,
+  rebalanceInterval: DEFAULT_CONFIG.rebalanceInterval,
+
+  // Max positions is now set in DEFAULT_CONFIG with detailed comments
+  maxPositions: DEFAULT_CONFIG.maxPositions,
+
   killSwitchEnabled: process.env.KILL_SWITCH_ENABLED !== 'false',
   logLevel: process.env.LOG_LEVEL || 'info',
   environment: process.env.NODE_ENV || 'development',
@@ -241,9 +267,6 @@ export const SYSTEM_CONFIG = {
 
 // Debug logging for environment variables
 console.log('🔧 Environment variables debug:', {
-  DEBATE_INTERVAL: process.env.DEBATE_INTERVAL,
-  REBALANCE_INTERVAL: process.env.REBALANCE_INTERVAL,
-  RISK_PROFILE: process.env.RISK_PROFILE,
   NODE_ENV: process.env.NODE_ENV
 });
 

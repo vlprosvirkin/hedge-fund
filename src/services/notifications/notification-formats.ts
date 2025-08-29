@@ -1,4 +1,4 @@
-import type { Claim, ConsensusRec, Position, Order, Evidence, NewsItem } from '../types/index.js';
+import type { Claim, ConsensusRec, Position, Order, Evidence, NewsItem } from '../../types/index.js';
 
 export interface AgentConfig {
     emoji: string;

@@ -1,6 +1,6 @@
-import { BaseAgent, type AgentContext } from './base-agent.js';
-import { Signals } from '../adapters/signals-adapter.js';
-import { TechnicalAnalysisService } from '../services/technical-analysis.service.js';
+import { BaseAgent, type AgentContext } from '../base/base-agent.js';
+import { Signals } from '../../adapters/signals-adapter.js';
+import { TechnicalAnalysisService } from '../../services/analysis/technical-analysis.service.js';
 
 export class TechnicalAnalysisAgent extends BaseAgent {
   private technicalIndicators: Signals;
@@ -108,13 +108,16 @@ TECHNICAL ANALYSIS CRITERIA:
 - Volatility: Higher volatility = more potential for large moves
 
 CONFIDENCE SCORING:
-- 0.8-1.0: Strong positive signals (signal_strength > 0.5, multiple indicators aligned)
-- 0.6-0.7: Good positive signals (signal_strength > 0.2, some indicators aligned)
-- 0.4-0.5: Mixed signals (signal_strength between -0.2 and 0.2, conflicting indicators)
-- 0.2-0.3: Weak negative signals (signal_strength < -0.2, bearish indicators)
-- 0.1-0.2: Very weak signals (signal_strength < -0.5, strongly bearish)
+- Base confidence = signal_strength (0.4 to 1.0)
+- RSI bonus: If RSI < 30 or > 70, increase confidence by 15%
+- MACD bonus: If MACD absolute value > 100, increase confidence by 10%
+- Volatility bonus: If volatility > 0.5, increase confidence by 10%
+- Multiple indicators bonus: If 3+ indicators aligned, increase confidence by 15%
+- Signal strength bonus: If signal_strength absolute value > 0.3, increase confidence by 10%
+- Final confidence must be between 0.5 and 1.0 (minimum 50% for any valid data)
+- If insufficient data, return HOLD with confidence 0.2
 
-IMPORTANT: Be more confident in your analysis. If you have clear technical data, use higher confidence scores (0.6-0.8). Only use low confidence (0.2-0.4) when indicators are truly conflicting or data is insufficient.
+IMPORTANT: Be more confident in your analysis. If you have clear technical data, use higher confidence scores (0.6-0.9). Only use low confidence (0.2-0.4) when indicators are truly conflicting or data is insufficient.
 
 CALCULATE CONFIDENCE BASED ON:
 - signal_strength: Use absolute value and direction

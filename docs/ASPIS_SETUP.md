@@ -30,7 +30,7 @@ BINANCE_SECRET_KEY=your_binance_secret_key
 OPENAI_API_KEY=your_openai_api_key
 
 # System configuration
-RISK_PROFILE=neutral
+NODE_ENV=development
 ```
 
 **Note**: Replace `0x1234567890abcdef...` with your actual vault address from the Aspis platform.

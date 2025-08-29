@@ -1,5 +1,5 @@
 import { TelegramAdapter } from '../adapters/telegram-adapter.js';
-import { NotificationsService } from '../services/notifications.service.js';
+import { NotificationsService } from '../services/notifications/notifications.service.js';
 import type { Claim, ConsensusRec, Evidence, NewsItem } from '../types/index.js';
 
 /**

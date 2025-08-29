@@ -264,16 +264,16 @@ Signals.getTechnicalIndicators()
 ### **Agent Weights**
 ```typescript
 const weights = { 
-  fundamental: 0.35, 
-  sentiment: 0.25, 
+  fundamental: 0.30, 
+  sentiment: 0.30, 
   technical: 0.40 
 };
 ```
 
 ### **Final Consensus Score**
 ```typescript
-final_score = (fundamental_score × 0.35) + 
-              (sentiment_score × 0.25) + 
+final_score = (fundamental_score × 0.30) + 
+              (sentiment_score × 0.30) + 
               (technical_score × 0.40)
 ```
 

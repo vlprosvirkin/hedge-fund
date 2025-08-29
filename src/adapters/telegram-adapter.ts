@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_CONFIG } from '../config.js';
+import { API_CONFIG } from '../core/config.js';
 
 export interface TelegramMessage {
     text: string;

@@ -1,6 +1,6 @@
 import type { MarketDataAdapter } from '../interfaces/adapters.js';
 import type { Candle, OrderBook, MarketStats } from '../types/index.js';
-import { API_CONFIG } from '../config.js';
+import { API_CONFIG } from '../core/config.js';
 import { addUSDTSuffixForBinance } from '../utils.js';
 import axios from 'axios';
 

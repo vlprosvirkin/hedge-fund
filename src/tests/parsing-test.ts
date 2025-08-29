@@ -1,6 +1,6 @@
-import { AgentFactory } from '../agents/agent-factory.js';
-import { BaseAgent } from '../agents/base-agent.js';
-import { OpenAIService } from '../services/openai.service.js';
+import { AgentFactory } from '../factories/agent-factory.js';
+import { BaseAgent } from '../agents/base/base-agent.js';
+import { OpenAIService } from '../services/ai/openai.service.js';
 import { splitResponseIntoParts, extractClaimsFromJSON, extractClaimsFromText, testJSONParsing } from '../utils/json-parsing-utils.js';
 import type { Claim } from '../types/index.js';
 

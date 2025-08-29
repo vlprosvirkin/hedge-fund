@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { HedgeFundOrchestrator } from './orchestrator.js';
+import { HedgeFundOrchestrator } from './core/orchestrator.js';
 import { BinanceAdapter } from './adapters/binance-adapter.js';
 import { AspisAdapter } from './adapters/aspis-adapter.js';
 import { Signals } from './adapters/signals-adapter.js';
-import { TechnicalAnalysisService } from './services/technical-analysis.service.js';
+import { TechnicalAnalysisService } from './services/analysis/technical-analysis.service.js';
 import { AgentsService } from './services/agents.js';
 import type { SystemConfig } from './types/index.js';
 
@@ -56,7 +56,7 @@ async function startProductionSystem() {
     logger.info('Starting production trading system...');
 
     // Import config
-    const { SYSTEM_CONFIG } = await import('./config.js');
+    const { SYSTEM_CONFIG } = await import('./core/config.js');
 
     // Log configuration
     logger.info('System configuration loaded:', {
@@ -69,7 +69,7 @@ async function startProductionSystem() {
     });
 
     // Validate configuration
-    const { validateConfig, validateAPIConfig } = await import('./config.js');
+    const { validateConfig, validateAPIConfig } = await import('./core/config.js');
     const configErrors = validateConfig(SYSTEM_CONFIG);
     const apiValidation = validateAPIConfig();
 
@@ -93,7 +93,7 @@ async function startProductionSystem() {
     const { NewsAPIAdapter } = await import('./adapters/news-adapter.js');
     const { PostgresAdapter } = await import('./adapters/postgres-adapter.js');
     const { AgentsService } = await import('./services/agents.js');
-    const { OpenAIService } = await import('./services/openai.service.js');
+    const { AIProviderFactory } = await import('./factories/ai-provider-factory.js');
 
     // Create adapters
     const marketData = new BinanceAdapter();
@@ -109,7 +109,7 @@ async function startProductionSystem() {
     const agents = new AgentsService(technicalIndicators, technicalAnalysis);
 
     // Create OpenAI service
-    const openaiService = new OpenAIService();
+    const aiProvider = AIProviderFactory.createProvider();
 
     // Create orchestrator
     const orchestrator = new HedgeFundOrchestrator(
@@ -136,7 +136,7 @@ async function startProductionSystem() {
         isKillSwitchActive: () => false
       }, // TODO: implement risk service
       technicalIndicators,
-      openaiService
+      aiProvider
     );
 
     logger.info('✅ Orchestrator created successfully');

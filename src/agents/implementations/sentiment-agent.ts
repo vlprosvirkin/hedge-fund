@@ -1,9 +1,9 @@
-import { BaseAgent, type AgentContext } from './base-agent.js';
-import { NewsAPIAdapter } from '../adapters/news-adapter.js';
-import { CMCAdapter } from '../adapters/cmc-adapter.js';
-import { Signals } from '../adapters/signals-adapter.js';
-import { SentimentAnalysisService } from '../services/sentiment-analysis.service.js';
-import type { FearGreedInterpretation } from '../types/cmc.js';
+import { BaseAgent, type AgentContext } from '../base/base-agent.js';
+import { NewsAPIAdapter } from '../../adapters/news-adapter.js';
+import { CMCAdapter } from '../../adapters/cmc-adapter.js';
+import { Signals } from '../../adapters/signals-adapter.js';
+import { SentimentAnalysisService } from '../../services/analysis/sentiment-analysis.service.js';
+import type { FearGreedInterpretation } from '../../types/cmc.js';
 
 export class SentimentAgent extends BaseAgent {
   private newsAdapter: NewsAPIAdapter;
@@ -106,20 +106,22 @@ ANALYSIS CRITERIA:
 - TIME-LOCK: Anti-leak protection - ignore old news
 
 CONFIDENCE SCORING:
-- 0.8-1.0: High coverage, fresh news, consistent sentiment, credible sources
-- 0.6-0.7: Good coverage, recent news, mostly consistent
-- 0.4-0.5: Moderate coverage, mixed sentiment, some uncertainty
-- 0.2-0.3: Low coverage, old news, inconsistent sentiment
-- 0.1-0.2: Very low coverage, very old news, insufficient data
+- Base confidence = coverage_norm × consistency × credibility
+- Freshness penalty: If freshness < 0.3, reduce confidence by 20% (not 80%)
+- Coverage bonus: If coverage > 10 articles, increase confidence by 10%
+- Social bonus: If galaxyscore > 50, increase confidence by 15%
+- Fear & Greed bonus: If Fear & Greed index is available, increase confidence by 10%
+- Final confidence must be between 0.3 and 1.0 (minimum 30% for any valid data)
+- If insufficient data (no news + no social), return HOLD with confidence 0.2
 
 Risk profile: ${riskProfile} - ${this.getRiskProfileContext(riskProfile)}
 
 STRICT RULES:
 1. Use ONLY provided data and tools - no external knowledge
 2. Claims must be timestamp-locked to provided data
-3. Confidence must be between 0.1 and 1.0 based on coverage × freshness × consistency
+3. Confidence must be between 0.3 and 1.0 based on coverage × consistency × credibility with bonuses
 4. Return ONLY valid JSON - no explanations, no markdown, no additional text
-5. If insufficient data, return HOLD with confidence 0.2
+5. If insufficient data (no news + no social), return HOLD with confidence 0.2
 6. Follow the SUMMARIZE → REFLECT → REVISE → AGGREGATE process
 7. DO NOT include any text before or after the JSON object
 
@@ -232,7 +234,7 @@ INSTRUCTIONS:
 3. Generate claims for each ticker in the universe based on sentiment analysis
 4. Use only the provided news data and sentiment calculations - no external knowledge
 5. Return claims in the exact JSON format specified with signals array
-6. If data is insufficient, return HOLD with confidence 0.2
+6. If data is insufficient (no news + no social), return HOLD with confidence 0.2
 7. Provide reasoning focused on sentiment and emotional market indicators
 8. REMEMBER: You are analyzing how news affects market emotions, not technical indicators`;
   }

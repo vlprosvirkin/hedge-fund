@@ -1,8 +1,8 @@
-import { BaseAgent, type AgentContext, type AgentResponse } from './base-agent.js';
-import { AgentFactory } from './agent-factory.js';
-import type { Claim } from '../types/index.js';
-import { Signals } from '../adapters/signals-adapter.js';
-import { TechnicalAnalysisService } from '../services/technical-analysis.service.js';
+import { BaseAgent, type AgentContext, type AgentResponse } from '../base/base-agent.js';
+import { AgentFactory } from '../../factories/agent-factory.js';
+import type { Claim } from '../../types/index.js';
+import { Signals } from '../../adapters/signals-adapter.js';
+import { TechnicalAnalysisService } from '../../services/analysis/technical-analysis.service.js';
 
 export interface DebateRound {
   round: number;
@@ -53,6 +53,8 @@ export class AgentCoordinator {
     analysis?: string;
     textPart?: string;
     jsonPart?: any;
+    systemPrompt?: string;
+    userPrompt?: string;
   }> {
     const errors: string[] = [];
     const allClaims: Claim[] = [];

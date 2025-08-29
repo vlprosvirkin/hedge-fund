@@ -2,11 +2,11 @@ import type {
     FearGreedInterpretation,
     MarketSentimentInterpretation,
     CMCSentimentData
-} from '../types/cmc.js';
-import { FearGreedLevel } from '../types/cmc.js';
+} from '../../types/cmc.js';
+import { FearGreedLevel } from '../../types/cmc.js';
 import type {
     IndicatorsResponse
-} from '../types/signals.js';
+} from '../../types/signals.js';
 
 export interface NewsSentimentData {
     sentiment: number; // 0-1

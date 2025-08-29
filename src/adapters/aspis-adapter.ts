@@ -16,7 +16,7 @@ import type {
   OrderValidationResult,
   AccountInfo
 } from '../types/index.js';
-import { API_CONFIG } from '../config.js';
+import { API_CONFIG } from '../core/config.js';
 import { v4 as uuidv4 } from 'uuid';
 import axios, { AxiosError } from 'axios';
 
@@ -265,7 +265,7 @@ export class AspisAdapter implements TradingAdapter {
       });
 
       // Convert Aspis balance format to our format
-      console.log('Raw API response:', JSON.stringify(response.data, null, 2));
+              console.log('✅ Aspis API response received');
 
       const balances = Object.entries(response.data).map(([asset, balance]) => {
         const scaledBalance = parseFloat(balance.scaled || '0');

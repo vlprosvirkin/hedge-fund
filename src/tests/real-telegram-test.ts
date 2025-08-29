@@ -20,21 +20,21 @@
  * in production, using the same formatting logic and structure.
  */
 
-import { HedgeFundOrchestrator } from '../orchestrator.js';
+import { HedgeFundOrchestrator } from '../core/orchestrator.js';
 import { TelegramAdapter } from '../adapters/telegram-adapter.js';
-import { NotificationsService } from '../services/notifications.service.js';
+import { NotificationsService } from '../services/notifications/notifications.service.js';
 import { PostgresAdapter } from '../adapters/postgres-adapter.js';
 import { BinanceAdapter } from '../adapters/binance-adapter.js';
 import { NewsAPIAdapter } from '../adapters/news-adapter.js';
 import { Signals } from '../adapters/signals-adapter.js';
 import { AspisAdapter } from '../adapters/aspis-adapter.js';
-import { AgentFactory } from '../agents/agent-factory.js';
-import { SignalProcessorService } from '../services/signal-processor.service.js';
-import { ConsensusService } from '../services/consensus.js';
+import { AgentFactory } from '../factories/agent-factory.js';
+import { SignalProcessorService } from '../services/trading/signal-processor.service.js';
+import { ConsensusService } from '../services/trading/consensus.js';
 import type { RiskService } from '../interfaces/adapters.js';
 import { VaultController } from '../controllers/vault.controller.js';
-import { OpenAIService } from '../services/openai.service.js';
-import { DEFAULT_CONFIG } from '../config.js';
+import { AIProviderFactory } from '../factories/ai-provider-factory.js';
+import { DEFAULT_CONFIG } from '../core/config.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -168,7 +168,7 @@ async function runRealTelegramTest() {
 
         // Create orchestrator with real Telegram adapter (but mocked sendMessage)
         // Create OpenAI service
-        const openaiService = new OpenAIService();
+        const aiProvider = AIProviderFactory.createProvider();
 
         const orchestrator = new HedgeFundOrchestrator(
             config,
@@ -180,7 +180,7 @@ async function runRealTelegramTest() {
             llmService,
             risk,
             technicalIndicators,
-            openaiService,
+            aiProvider,
             telegram
         );
 

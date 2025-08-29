@@ -1,4 +1,4 @@
-import type { NewsItem, DigestItem } from '../types/index.js';
+import type { NewsItem, DigestItem } from '../../types/index.js';
 
 export class NewsAnalysisService {
     /**

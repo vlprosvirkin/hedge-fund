@@ -10,15 +10,15 @@ The system implements a **multi-agent consensus framework** that combines fundam
 
 ### Agent Distribution
 ```
-📊 Fundamental Agent: 35% weight
-📰 Sentiment Agent: 25% weight  
+📊 Fundamental Agent: 30% weight
+📰 Sentiment Agent: 30% weight  
 📈 Technical Agent: 40% weight
 ```
 
 ### Weight Rationale
 - **Technical Agent (40%)**: Most reliable for short-term price movements
-- **Fundamental Agent (35%)**: Important for long-term value assessment
-- **Sentiment Agent (25%)**: Captures market psychology and news impact
+- **Fundamental Agent (30%)**: Important for long-term value assessment
+- **Sentiment Agent (30%)**: Captures market psychology and news impact
 
 ## 🔬 Mathematical Models
 
@@ -41,8 +41,8 @@ const directionMultipliers = {
 ```typescript
 // Final consensus score
 const finalScore = (
-  fundamentalSignal * 0.35 +
-  sentimentSignal * 0.25 + 
+  fundamentalSignal * 0.30 +
+  sentimentSignal * 0.30 + 
   technicalSignal * 0.40
 );
 
@@ -252,9 +252,9 @@ const consensusScore = claims.reduce((score, claim) => {
 
 // Agent weights
 const agentWeights = {
-  fundamental: 0.35,
-  sentiment: 0.25,
-  technical: 0.40
+  fundamental: 0.30,
+sentiment: 0.30,
+technical: 0.40
 };
 ```
 

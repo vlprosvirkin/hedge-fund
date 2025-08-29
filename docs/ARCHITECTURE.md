@@ -277,8 +277,8 @@ social_score = (galaxyscore/100 × 0.4) + (social_volume_norm × 0.3) + (interac
 ### **Final Consensus Score**
 ```typescript
 // Weighted combination of all agents
-final_score = (fundamental_score × 0.35) + 
-              (sentiment_score × 0.25) + 
+final_score = (fundamental_score × 0.30) +
+              (sentiment_score × 0.30) + 
               (technical_score × 0.40)
 ```
 

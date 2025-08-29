@@ -1,4 +1,4 @@
-import type { Claim, ConsensusRec, MarketStats } from '../types/index.js';
+import type { Claim, ConsensusRec, MarketStats } from '../../types/index.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export class ConsensusService {
@@ -223,5 +223,133 @@ export class ConsensusService {
     if (confidenceDiff < 0.2) return 'high';
     if (confidenceDiff < 0.4) return 'medium';
     return 'low';
+  }
+
+  /**
+   * Generate trading decisions based on consensus
+   */
+  async generateTradingDecisions(
+    consensus: ConsensusRec[],
+    riskProfile: 'averse' | 'neutral' | 'bold' = 'neutral',
+    maxPositions: number = 5
+  ): Promise<{
+    decisions: Array<{
+      ticker: string;
+      action: 'BUY' | 'SELL' | 'HOLD';
+      confidence: number;
+      score: number;
+      rationale: string;
+      positionSize: number;
+      stopLoss?: number;
+      takeProfit?: number;
+    }>;
+    portfolioAllocation: number;
+  }> {
+    const decisions: Array<{
+      ticker: string;
+      action: 'BUY' | 'SELL' | 'HOLD';
+      confidence: number;
+      score: number;
+      rationale: string;
+      positionSize: number;
+      stopLoss?: number;
+      takeProfit?: number;
+    }> = [];
+
+    // Risk profile thresholds
+    const thresholds = {
+      averse: { buy: 0.4, sell: -0.4, minConfidence: 0.7 },
+      neutral: { buy: 0.3, sell: -0.3, minConfidence: 0.6 },
+      bold: { buy: 0.2, sell: -0.2, minConfidence: 0.5 }
+    };
+
+    const threshold = thresholds[riskProfile];
+    let totalAllocation = 0;
+
+    for (const rec of consensus.slice(0, maxPositions)) {
+      // Determine action based on score and thresholds
+      let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+      if (rec.finalScore > threshold.buy && rec.avgConfidence >= threshold.minConfidence) {
+        action = 'BUY';
+      } else if (rec.finalScore < threshold.sell && rec.avgConfidence >= threshold.minConfidence) {
+        action = 'SELL';
+      }
+
+      // Calculate position size based on confidence and score strength
+      let positionSize = 0;
+      if (action !== 'HOLD') {
+        const scoreStrength = Math.abs(rec.finalScore);
+        const confidenceMultiplier = rec.avgConfidence;
+        const liquidityMultiplier = rec.liquidity;
+
+        // Base position size (0-20% of portfolio)
+        const baseSize = 0.20;
+
+        // Adjust based on risk profile
+        const riskMultiplier = {
+          averse: 0.5,
+          neutral: 1.0,
+          bold: 1.5
+        }[riskProfile];
+
+        positionSize = baseSize * scoreStrength * confidenceMultiplier * liquidityMultiplier * riskMultiplier;
+        positionSize = Math.min(positionSize, 0.20); // Cap at 20%
+
+        totalAllocation += positionSize;
+      }
+
+      // Generate rationale
+      const rationale = this.generateRationale(rec, action, riskProfile);
+
+      // Calculate stop loss and take profit for BUY/SELL actions
+      let stopLoss: number | undefined;
+      let takeProfit: number | undefined;
+
+      if (action === 'BUY') {
+        stopLoss = 0.05; // 5% stop loss
+        takeProfit = 0.15; // 15% take profit
+      } else if (action === 'SELL') {
+        stopLoss = 0.05; // 5% stop loss (for short positions)
+        takeProfit = 0.15; // 15% take profit
+      }
+
+      decisions.push({
+        ticker: rec.ticker,
+        action,
+        confidence: rec.avgConfidence,
+        score: rec.finalScore,
+        rationale,
+        positionSize,
+        ...(stopLoss !== undefined && { stopLoss }),
+        ...(takeProfit !== undefined && { takeProfit })
+      });
+    }
+
+    return {
+      decisions,
+      portfolioAllocation: totalAllocation
+    };
+  }
+
+  /**
+   * Generate human-readable rationale for trading decision
+   */
+  private generateRationale(
+    consensus: ConsensusRec,
+    action: 'BUY' | 'SELL' | 'HOLD',
+    riskProfile: string
+  ): string {
+    const scorePercent = (Math.abs(consensus.finalScore) * 100).toFixed(1);
+    const confidencePercent = (consensus.avgConfidence * 100).toFixed(1);
+    const coveragePercent = (consensus.coverage * 100).toFixed(1);
+    const liquidityPercent = (consensus.liquidity * 100).toFixed(1);
+
+    if (action === 'BUY') {
+      return `Strong BUY signal with ${scorePercent}% score strength. ${confidencePercent}% agent confidence with ${coveragePercent}% coverage. High liquidity (${liquidityPercent}%) supports position entry. Risk profile: ${riskProfile}.`;
+    } else if (action === 'SELL') {
+      return `Strong SELL signal with ${scorePercent}% score strength. ${confidencePercent}% agent confidence with ${coveragePercent}% coverage. Adequate liquidity (${liquidityPercent}%) for position exit. Risk profile: ${riskProfile}.`;
+    } else {
+      return `HOLD recommendation due to weak signal (${scorePercent}% strength) or low confidence (${confidencePercent}%). ${coveragePercent}% agent coverage. Risk profile: ${riskProfile}.`;
+    }
   }
 }

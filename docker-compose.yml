@@ -12,8 +12,6 @@ services:
       # Application settings
       - NODE_ENV=production
       - LOG_LEVEL=info
-      - RISK_PROFILE=neutral
-      - MAX_POSITIONS=8
       - KILL_SWITCH_ENABLED=true
       
       # Database (AWS RDS)

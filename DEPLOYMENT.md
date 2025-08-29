@@ -33,14 +33,7 @@ NEWS_API_KEY=your_news_api_key
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 TELEGRAM_CHAT_ID=your_telegram_chat_id
 
-# External APIs
-TECHNICAL_INDICATORS_URL=http://63.176.129.185:8000
-NEWS_API_URL=http://3.79.47.238:4500
-
 # System Configuration
-RISK_PROFILE=neutral
-DEBATE_INTERVAL=3600
-MAX_POSITIONS=8
 KILL_SWITCH_ENABLED=true
 ```
 

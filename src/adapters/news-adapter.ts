@@ -1,6 +1,6 @@
 import type { NewsAdapter } from '../interfaces/adapters.js';
-import { API_CONFIG } from '../config.js';
-import { NewsAnalysisService } from '../services/news-analysis.service.js';
+import { API_CONFIG } from '../core/config.js';
+import { NewsAnalysisService } from '../services/analysis/news-analysis.service.js';
 
 import axios from 'axios';
 

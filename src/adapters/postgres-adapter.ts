@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import type { PoolClient } from 'pg';
-import { DATABASE_CONFIG } from '../config.js';
+import { DATABASE_CONFIG } from '../core/config.js';
 import type { NewsItem, Evidence, Claim, ConsensusRec, Order, Position } from '../types/index.js';
 import type { FactStore } from '../interfaces/adapters.js';
 

@@ -1,7 +1,8 @@
-import type { Claim, Evidence, MarketStats } from '../types/index.js';
-import { ClaimSchema } from '../types/index.js';
+import type { Claim, Evidence, MarketStats } from '../../types/index.js';
+import { ClaimSchema } from '../../types/index.js';
 import { v4 as uuidv4 } from 'uuid';
-import { OpenAIService } from '../services/openai.service.js';
+import { AIProviderFactory } from '../../factories/ai-provider-factory.js';
+import type { AIProvider } from '../../types/ai-provider.js';
 
 export interface AgentContext {
   universe: string[];
@@ -18,16 +19,18 @@ export interface AgentResponse {
   openaiResponse?: string; // Raw AI reasoning
   textPart?: string; // Human-readable text analysis
   jsonPart?: any; // Parsed JSON data
+  systemPrompt?: string; // System prompt used
+  userPrompt?: string; // User prompt used
 }
 
 export abstract class BaseAgent {
   protected role: 'fundamental' | 'sentiment' | 'technical';
   protected riskProfile: string = 'neutral';
-  protected openaiService: OpenAIService;
+  protected aiProvider: AIProvider;
 
   constructor(role: 'fundamental' | 'sentiment' | 'technical') {
     this.role = role;
-    this.openaiService = new OpenAIService();
+    this.aiProvider = AIProviderFactory.createProvider();
   }
 
   abstract buildSystemPrompt(context: AgentContext): string;
@@ -41,6 +44,8 @@ export abstract class BaseAgent {
     let openaiResponse: string = '';
     let textPart: string = '';
     let jsonPart: any = null;
+    let systemPrompt: string = '';
+    let userPrompt: string = '';
 
     try {
       console.log(`🤖 ${this.role.toUpperCase()} Agent: Starting analysis...`);
@@ -59,18 +64,14 @@ export abstract class BaseAgent {
       console.log(`🤖 ${this.role.toUpperCase()} Agent: User prompt preview: ${userPrompt.substring(0, 200)}...`);
 
       console.log(`🤖 ${this.role.toUpperCase()} Agent: Calling OpenAI...`);
-      // Call OpenAI to generate claims with reasoning
-      const result = await this.openaiService.generateClaimsWithReasoning(
+      // Call AI provider to generate claims with reasoning
+      const result = await this.aiProvider.generateClaimsWithReasoning(
         systemPrompt,
         userPrompt,
         { ...context, processedData, agentRole: this.role }
       );
 
       console.log(`🤖 ${this.role.toUpperCase()} Agent: OpenAI response received, claims: ${result.claims.length}`);
-      console.log(`🤖 ${this.role.toUpperCase()} Agent: Raw OpenAI response length: ${result.openaiResponse?.length || 0} chars`);
-      console.log(`🤖 ${this.role.toUpperCase()} Agent: Raw OpenAI response preview: ${result.openaiResponse?.substring(0, 300)}...`);
-      console.log(`🤖 ${this.role.toUpperCase()} Agent: Full OpenAI response for user display:`);
-      console.log(`🤖 ${this.role.toUpperCase()} Agent: ${result.openaiResponse}`);
 
       claims.push(...result.claims);
       openaiResponse = result.openaiResponse || '';
@@ -88,7 +89,15 @@ export abstract class BaseAgent {
       console.error(`OpenAI failed for ${this.role} agent, no fallback to mock data`);
     }
 
-    return { claims, errors, openaiResponse, textPart, jsonPart };
+    return { 
+      claims, 
+      errors, 
+      openaiResponse, 
+      textPart, 
+      jsonPart,
+      systemPrompt: systemPrompt || '',
+      userPrompt: userPrompt || ''
+    };
   }
 
 

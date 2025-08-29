@@ -1,6 +1,6 @@
-import { ConsensusService } from '../services/consensus.js';
-import { TechnicalAnalysisService } from '../services/technical-analysis.service.js';
-import { NewsAnalysisService } from '../services/news-analysis.service.js';
+import { ConsensusService } from '../services/trading/consensus.js';
+import { TechnicalAnalysisService } from '../services/analysis/technical-analysis.service.js';
+import { NewsAnalysisService } from '../services/analysis/news-analysis.service.js';
 
 /**
  * Простой CI/CD тест
@@ -98,8 +98,8 @@ async function testBasicImports() {
 
         // Test services imports
         const { AgentsService } = await import('../services/agents.js');
-        const { ConsensusService } = await import('../services/consensus.js');
-        const { VerifierService } = await import('../services/verifier.js');
+        const { ConsensusService } = await import('../services/trading/consensus.js');
+        const { VerifierService } = await import('../services/trading/verifier.js');
 
         console.log('✅ All service imports successful');
 

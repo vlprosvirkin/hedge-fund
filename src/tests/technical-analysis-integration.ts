@@ -53,7 +53,7 @@ async function technicalAnalysisIntegrationTest() {
 
       try {
         // Use TechnicalAnalysisService to get metadata
-        const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
+        const technicalAnalysis = new (await import('../services/analysis/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
         const btcData = await technicalAnalysis.getTechnicalDataForAsset('BTC', '1d');
         btcMetadata = btcData.metadata;
         console.log('✅ BTC metadata received successfully');
@@ -80,7 +80,7 @@ async function technicalAnalysisIntegrationTest() {
       console.log(`   Close Price: ${ethTechnicalData.close}`);
 
       // Use TechnicalAnalysisService to get metadata
-      const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
+      const technicalAnalysis = new (await import('../services/analysis/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
       const ethData = await technicalAnalysis.getTechnicalDataForAsset('ETH', '1d');
       ethMetadata = ethData.metadata;
       console.log('✅ ETH metadata received successfully');
@@ -112,7 +112,7 @@ async function technicalAnalysisIntegrationTest() {
           console.log(`\n🔄 Trying ${token} as fallback...`);
           technicalData = await adapter.getTechnicalIndicators(token, '1d');
           // Use TechnicalAnalysisService to get metadata
-          const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
+          const technicalAnalysis = new (await import('../services/analysis/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
           const tokenData = await technicalAnalysis.getTechnicalDataForAsset(token, '1d');
           metadata = tokenData.metadata;
           testAsset = token;
@@ -134,7 +134,7 @@ async function technicalAnalysisIntegrationTest() {
             console.log(`\n🔄 Trying ${cleanToken} (API supports ${fullToken}) as fallback...`);
             technicalData = await adapter.getTechnicalIndicators(cleanToken, '1d');
             // Use TechnicalAnalysisService to get metadata
-            const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
+            const technicalAnalysis = new (await import('../services/analysis/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
             const tokenData = await technicalAnalysis.getTechnicalDataForAsset(cleanToken, '1d');
             metadata = tokenData.metadata;
             testAsset = cleanToken;
@@ -173,7 +173,7 @@ async function technicalAnalysisIntegrationTest() {
     if (!metadata) {
       console.log(`\n💰 Step 4: Getting asset metadata for ${testAsset}...`);
       // Use TechnicalAnalysisService to get metadata
-      const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
+      const technicalAnalysis = new (await import('../services/analysis/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
       const assetData = await technicalAnalysis.getTechnicalDataForAsset(testAsset, '1D');
       const assetMetadata: AssetMetadata = assetData.metadata;
 
@@ -202,7 +202,7 @@ async function technicalAnalysisIntegrationTest() {
     console.log(`\n📈 Step 5: Getting signal strength analysis for ${testAsset}...`);
     // Get technical indicators and calculate signal strength
     const technicalDataForSignal = await adapter.getTechnicalIndicators(testAsset, '1D');
-    const technicalAnalysis = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService();
+    const technicalAnalysis = new (await import('../services/analysis/technical-analysis.service.js')).TechnicalAnalysisService();
     const signalStrength: SignalStrength = technicalAnalysis.calculateSignalStrength(technicalDataForSignal);
 
     if (signalStrength.strength < -1 || signalStrength.strength > 1) {
@@ -240,7 +240,7 @@ async function technicalAnalysisIntegrationTest() {
     ]);
 
     // Use TechnicalAnalysisService to get metadata
-    const technicalAnalysisService = new (await import('../services/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
+    const technicalAnalysisService = new (await import('../services/analysis/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
     const assetData = await technicalAnalysisService.getTechnicalDataForAsset(testAsset, '1D');
     const metadataForAnalysis = assetData.metadata;
 

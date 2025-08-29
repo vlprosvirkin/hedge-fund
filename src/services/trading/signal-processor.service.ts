@@ -1,4 +1,4 @@
-import type { Claim, MarketStats, SignalStrength } from '../types/index.js';
+import type { Claim, MarketStats, SignalStrength } from '../../types/index.js';
 
 export interface SignalAnalysis {
   ticker: string;

@@ -1,6 +1,6 @@
-import type { FactStore } from '../interfaces/adapters.js';
-import type { Claim, RiskViolation } from '../types/index.js';
-import { EvidenceSchema } from '../types/index.js';
+import type { FactStore } from '../../interfaces/adapters.js';
+import type { Claim, RiskViolation } from '../../types/index.js';
+import { EvidenceSchema } from '../../types/index.js';
 
 export class VerifierService {
   constructor(private factStore: FactStore) { }

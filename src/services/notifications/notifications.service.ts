@@ -6,11 +6,12 @@ import type {
     PipelineArtifact,
     Evidence,
     NewsItem
-} from '../types/index.js';
-import { TelegramAdapter } from '../adapters/telegram-adapter.js';
-import type { TelegramMessage } from '../adapters/telegram-adapter.js';
-import { formatEvidenceForDisplay, createEvidenceMap, createNewsMap } from '../utils/evidence-utils.js';
+} from '../../types/index.js';
+import { TelegramAdapter } from '../../adapters/telegram-adapter.js';
+import type { TelegramMessage } from '../../adapters/telegram-adapter.js';
+import { formatEvidenceForDisplay, createEvidenceMap, createNewsMap } from '../../utils/evidence-utils.js';
 import { NotificationFormats } from './notification-formats.js';
+import { DevelopmentLoggerService } from '../development-logger.service.js';
 
 export interface DecisionSummary {
     roundId: string;
@@ -27,7 +28,11 @@ export interface DecisionSummary {
 }
 
 export class NotificationsService {
-    constructor(private telegramAdapter: TelegramAdapter) { }
+    private devLogger: DevelopmentLoggerService;
+
+    constructor(private telegramAdapter: TelegramAdapter) {
+        this.devLogger = new DevelopmentLoggerService();
+    }
 
     /**
      * Send message with basic formatting
@@ -38,6 +43,10 @@ export class NotificationsService {
             parse_mode: 'HTML',
             disable_web_page_preview: disablePreview
         };
+        
+        // Capture message for development logging
+        this.devLogger.captureMessage(text);
+        
         await this.telegramAdapter.sendMessage(message);
     }
 

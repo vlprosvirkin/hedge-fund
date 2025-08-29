@@ -4,10 +4,10 @@ import type {
   TechnicalNewsResult,
   SignalStrength,
   ComprehensiveAnalysis
-} from '../types/index.js';
-import { INDICATOR_THRESHOLDS, SIGNAL_WEIGHTS } from '../types/index.js';
+} from '../../types/index.js';
+import { INDICATOR_THRESHOLDS, SIGNAL_WEIGHTS } from '../../types/index.js';
 
-import { Signals } from '../adapters/signals-adapter.js';
+import { Signals } from '../../adapters/signals-adapter.js';
 
 export class TechnicalAnalysisService {
   private signals: Signals;
@@ -77,7 +77,9 @@ export class TechnicalAnalysisService {
 
     const key = mapping[indicatorName.toLowerCase()];
     if (key && data[key] !== undefined) {
-      return data[key] as number;
+      const value = data[key] as number;
+      // Only validate for invalid values, don't normalize
+      return isFinite(value) && !isNaN(value) ? value : 0;
     }
 
     // Fallback to 0 if indicator not found

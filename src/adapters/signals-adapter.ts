@@ -16,7 +16,7 @@ import type {
   AvailableIndicatorsResponse
 } from '../types/index.js';
 import { INDICATOR_THRESHOLDS, SIGNAL_WEIGHTS } from '../types/index.js';
-import { API_CONFIG } from '../config.js';
+import { API_CONFIG } from '../core/config.js';
 import { addUSDSuffixForAPI } from '../utils.js';
 import axios from 'axios';
 

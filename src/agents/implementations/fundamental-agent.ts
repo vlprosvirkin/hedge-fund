@@ -1,7 +1,7 @@
-import { BaseAgent, type AgentContext } from './base-agent.js';
-import { FundamentalAnalysisService } from '../services/fundamental-analysis.service.js';
-import { BinanceAdapter } from '../adapters/binance-adapter.js';
-import { CMCAdapter } from '../adapters/cmc-adapter.js';
+import { BaseAgent, type AgentContext } from '../base/base-agent.js';
+import { FundamentalAnalysisService } from '../../services/analysis/fundamental-analysis.service.js';
+import { BinanceAdapter } from '../../adapters/binance-adapter.js';
+import { CMCAdapter } from '../../adapters/cmc-adapter.js';
 
 export class FundamentalAgent extends BaseAgent {
   private fundamentalAnalysis: FundamentalAnalysisService;
@@ -112,11 +112,14 @@ ANALYSIS CRITERIA:
 - NETWORK SECURITY: Hash rate, difficulty, transaction rate
 
 CONFIDENCE SCORING:
-- 0.8-1.0: Strong fundamentals (high liquidity, strong on-chain activity, low risk)
-- 0.6-0.7: Good fundamentals (adequate liquidity, moderate on-chain activity)
-- 0.4-0.5: Mixed fundamentals (moderate liquidity, weak on-chain activity)
-- 0.2-0.3: Weak fundamentals (low liquidity, poor on-chain activity, high risk)
-- 0.1-0.2: Poor fundamentals (very low liquidity, minimal on-chain activity)
+- Base confidence = fundamental_score (0.3 to 1.0)
+- Liquidity bonus: If liquidity_score > 0.7, increase confidence by 10%
+- On-chain bonus: If on_chain_health > 0.6, increase confidence by 10%
+- Social bonus: If social_sentiment > 0.7, increase confidence by 10%
+- Market cap bonus: If market_cap_health > 0.8, increase confidence by 10%
+- Risk penalty: If risk_adjustment < 0.5, reduce confidence by 15%
+- Final confidence must be between 0.4 and 1.0 (minimum 40% for any valid data)
+- If insufficient data, return HOLD with confidence 0.2
 
 Risk profile: ${riskProfile} - ${this.getRiskProfileContext(riskProfile)}
 
