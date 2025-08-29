@@ -10,7 +10,8 @@ import type {
   SymbolMapping,
   UniverseFilter,
   Claim,
-  ConsensusRec
+  ConsensusRec,
+  SignalResult
 } from '../types/index.js';
 
 // ===== Market Data Adapter Interface =====
@@ -81,6 +82,9 @@ export interface FactStore {
 
   // Store consensus
   storeConsensus(consensus: ConsensusRec[], roundId: string): Promise<void>;
+
+  // Store results with target levels
+  storeResults(results: SignalResult[]): Promise<void>;
 
   // Store orders
   storeOrders(orders: Order[], roundId: string): Promise<void>;

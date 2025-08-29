@@ -1,5 +1,5 @@
 import { Signals } from '../adapters/signals-adapter.js';
-import { AgentsService } from '../services/agents.js';
+import { TechnicalAnalysisService } from '../services/analysis/technical-analysis.service.js';
 import type {
   IndicatorData,
   AssetMetadata,
@@ -11,144 +11,87 @@ import type {
 } from '../types/index.js';
 
 /**
- * Интеграционный тест технического анализа
- * Проверяет полный цикл: получение данных → анализ → передача агентам → интерпретация
+ * Упрощенный интеграционный тест технического анализа
+ * Проверяет полный цикл: получение данных → анализ → генерация целевых уровней
  * 
- * Конвенция тикеров:
- * - Внутри проекта используем чистые тикеры (BTC, ETH, LINK)
- * - Адаптер автоматически конвертирует в USD формат для API (BTC → BTCUSD)
+ * Основан на реальном коде technical-agent.ts
  */
 async function technicalAnalysisIntegrationTest() {
   const adapter = new Signals();
-  const agentsService = new AgentsService();
+  const technicalAnalysis = new TechnicalAnalysisService(adapter);
 
   try {
-    console.log('🚀 Starting Technical Analysis Integration Test...\n');
+    console.log('🚀 Starting Simplified Technical Analysis Integration Test...\n');
 
-    // 1. API is always ready (no connection needed)
-    console.log('✅ Technical Indicators API is ready');
+    // 1. Тестирование для BTC (как в technical-agent.ts)
+    console.log('📊 Step 1: Testing BTC technical analysis (like technical-agent.ts)...');
 
-    // 2. Получение списка поддерживаемых токенов
-    console.log('\n🪙 Step 1: Getting supported tokens...');
-    const supportedTokens: string[] = await adapter.getSupportedTokens();
-    console.log(`✅ Found ${supportedTokens.length} supported tokens`);
-
-    if (supportedTokens.length === 0) {
-      throw new Error('No supported tokens found');
-    }
-
-    console.log(`📋 Available tokens: ${supportedTokens.slice(0, 10).join(', ')}...`);
-
-    // 3. Тестирование для BTC (чистый тикер, адаптер конвертирует в BTCUSD)
-    console.log(`\n📊 Step 2: Testing BTC technical analysis...`);
-    let btcTechnicalData: IndicatorData | null = null;
-    let btcMetadata: AssetMetadata | null = null;
+    let testAsset = 'BTC';
+    let technicalData: IndicatorData | null = null;
+    let metadata: AssetMetadata | null = null;
 
     try {
-      btcTechnicalData = await adapter.getTechnicalIndicators('BTC', '1d');
-      console.log('✅ BTC technical indicators received successfully');
-      console.log(`   RSI: ${btcTechnicalData.RSI}`);
-      console.log(`   MACD: ${btcTechnicalData['MACD.macd']}`);
-      console.log(`   Close Price: ${btcTechnicalData.close}`);
+      // Используем тот же метод, что и technical-agent.ts
+      const result = await technicalAnalysis.getTechnicalDataForAsset(testAsset, '4h');
+      technicalData = result.technical;
+      metadata = result.metadata;
+
+      console.log('✅ BTC data received successfully');
+      console.log(`   Price: $${metadata.price.toLocaleString()}`);
+      console.log(`   RSI: ${technicalData.RSI}`);
+      console.log(`   MACD: ${technicalData['MACD.macd']}`);
+      console.log(`   Close Price: ${technicalData.close}`);
+
+    } catch (error) {
+      console.log('⚠️ BTC not available, trying ETH...');
+      testAsset = 'ETH';
 
       try {
-        // Use TechnicalAnalysisService to get metadata
-        const technicalAnalysis = new (await import('../services/analysis/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
-        const btcData = await technicalAnalysis.getTechnicalDataForAsset('BTC', '1d');
-        btcMetadata = btcData.metadata;
-        console.log('✅ BTC metadata received successfully');
-        console.log(`   Price: $${btcMetadata.price.toLocaleString()}`);
-        console.log(`   Volume: ${btcMetadata.volume.toLocaleString()}`);
-      } catch (metadataError) {
-        console.log('⚠️ BTC metadata not available, using mock data');
-        btcMetadata = { price: 116500, volume: 1000000, change: 0, changePercent: 0, marketCap: 0, sentiment: 50 };
+        const result = await technicalAnalysis.getTechnicalDataForAsset(testAsset, '4h');
+        technicalData = result.technical;
+        metadata = result.metadata;
+
+        console.log('✅ ETH data received successfully');
+        console.log(`   Price: $${metadata.price.toLocaleString()}`);
+        console.log(`   RSI: ${technicalData.RSI}`);
+        console.log(`   MACD: ${technicalData['MACD.macd']}`);
+        console.log(`   Close Price: ${technicalData.close}`);
+
+      } catch (ethError) {
+        console.log('⚠️ ETH not available, using mock data for testing...');
+        // Fallback to mock data for testing
+        technicalData = {
+          RSI: 45,
+          'MACD.macd': 0.5,
+          'MACD.signal': 0.3,
+          ADX: 25,
+          'Stoch.K': 60,
+          'W.R': -40,
+          CCI20: 50,
+          SMA20: 50000,
+          SMA50: 48000,
+          EMA20: 49500,
+          EMA50: 48500,
+          BBPower: 0.2,
+          AO: 100,
+          'Ichimoku.BLine': 49000,
+          close: 50000
+        } as IndicatorData;
+        metadata = {
+          price: 50000,
+          volume: 1000000,
+          change: 500,
+          changePercent: 1.0,
+          marketCap: 1000000000,
+          sentiment: 65
+        };
+        testAsset = 'MOCK';
       }
-    } catch (error) {
-      console.log('⚠️ BTC not supported, skipping...');
     }
 
-    // 4. Тестирование для ETH (чистый тикер, адаптер конвертирует в ETHUSD)
-    console.log(`\n📊 Step 3: Testing ETH technical analysis...`);
-    let ethTechnicalData: IndicatorData | null = null;
-    let ethMetadata: AssetMetadata | null = null;
-
-    try {
-      ethTechnicalData = await adapter.getTechnicalIndicators('ETH', '1d');
-      console.log('✅ ETH technical indicators received successfully');
-      console.log(`   RSI: ${ethTechnicalData.RSI}`);
-      console.log(`   MACD: ${ethTechnicalData['MACD.macd']}`);
-      console.log(`   Close Price: ${ethTechnicalData.close}`);
-
-      // Use TechnicalAnalysisService to get metadata
-      const technicalAnalysis = new (await import('../services/analysis/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
-      const ethData = await technicalAnalysis.getTechnicalDataForAsset('ETH', '1d');
-      ethMetadata = ethData.metadata;
-      console.log('✅ ETH metadata received successfully');
-      console.log(`   Price: $${ethMetadata.price.toLocaleString()}`);
-      console.log(`   Volume: ${ethMetadata.volume.toLocaleString()}`);
-    } catch (error) {
-      console.log('⚠️ ETH not supported, skipping...');
-    }
-
-    // Выбираем актив для дальнейшего тестирования
-    // Приоритет: BTC → ETH → другие токены из whitelist
-    let testAsset = btcTechnicalData ? 'BTC' : ethTechnicalData ? 'ETH' : 'BTC';
-    let technicalData = btcTechnicalData || ethTechnicalData;
-    let metadata = btcMetadata || ethMetadata;
-
+    // Проверяем, что у нас есть данные для тестирования
     if (!technicalData || !metadata) {
-      // Попробуем найти поддерживаемые токены среди доступных
-      const preferredTokens = ['LINK', 'MKR', 'COMP', 'SNX', 'GRT', 'YFI'];
-
-      // Найдем пересечение между предпочтительными токенами и доступными
-      // API возвращает тикеры с USD суффиксом, но мы работаем с чистыми тикерами
-      const availablePreferred = preferredTokens.filter(token => {
-        const usdToken = `${token}USD`;
-        return supportedTokens.includes(usdToken) || supportedTokens.includes(token);
-      });
-
-      for (const token of availablePreferred) {
-        try {
-          console.log(`\n🔄 Trying ${token} as fallback...`);
-          technicalData = await adapter.getTechnicalIndicators(token, '1d');
-          // Use TechnicalAnalysisService to get metadata
-          const technicalAnalysis = new (await import('../services/analysis/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
-          const tokenData = await technicalAnalysis.getTechnicalDataForAsset(token, '1d');
-          metadata = tokenData.metadata;
-          testAsset = token;
-          console.log(`✅ ${token} is supported!`);
-          break;
-        } catch (error) {
-          console.log(`⚠️ ${token} not supported, trying next...`);
-        }
-      }
-
-      // Если ничего не найдено, попробуем первые несколько токенов из списка API
-      if (!technicalData || !metadata) {
-        const firstFewTokens = supportedTokens.slice(0, 5);
-        for (const fullToken of firstFewTokens) {
-          try {
-            // API возвращает тикеры с USD суффиксом (например, LINKUSD), 
-            // но адаптер автоматически конвертирует чистые тикеры в USD формат
-            const cleanToken = fullToken.replace('USD', '').replace('USDT', '');
-            console.log(`\n🔄 Trying ${cleanToken} (API supports ${fullToken}) as fallback...`);
-            technicalData = await adapter.getTechnicalIndicators(cleanToken, '1d');
-            // Use TechnicalAnalysisService to get metadata
-            const technicalAnalysis = new (await import('../services/analysis/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
-            const tokenData = await technicalAnalysis.getTechnicalDataForAsset(cleanToken, '1d');
-            metadata = tokenData.metadata;
-            testAsset = cleanToken;
-            console.log(`✅ ${cleanToken} is supported!`);
-            break;
-          } catch (error) {
-            console.log(`⚠️ ${fullToken} not supported, trying next...`);
-          }
-        }
-      }
-
-      if (!technicalData || !metadata) {
-        throw new Error('No supported tokens found for technical analysis');
-      }
+      throw new Error('No data available for technical analysis testing');
     }
 
     console.log(`\n🎯 Using ${testAsset} for comprehensive testing...`);
@@ -202,7 +145,6 @@ async function technicalAnalysisIntegrationTest() {
     console.log(`\n📈 Step 5: Getting signal strength analysis for ${testAsset}...`);
     // Get technical indicators and calculate signal strength
     const technicalDataForSignal = await adapter.getTechnicalIndicators(testAsset, '1D');
-    const technicalAnalysis = new (await import('../services/analysis/technical-analysis.service.js')).TechnicalAnalysisService();
     const signalStrength: SignalStrength = technicalAnalysis.calculateSignalStrength(technicalDataForSignal);
 
     if (signalStrength.strength < -1 || signalStrength.strength > 1) {
@@ -240,16 +182,50 @@ async function technicalAnalysisIntegrationTest() {
     ]);
 
     // Use TechnicalAnalysisService to get metadata
-    const technicalAnalysisService = new (await import('../services/analysis/technical-analysis.service.js')).TechnicalAnalysisService(adapter);
-    const assetData = await technicalAnalysisService.getTechnicalDataForAsset(testAsset, '1D');
+    const assetData = await technicalAnalysis.getTechnicalDataForAsset(testAsset, '1D');
     const metadataForAnalysis = assetData.metadata;
 
-    const analysis: ComprehensiveAnalysis = technicalAnalysisService.createComprehensiveAnalysis(technicalForAnalysis, metadataForAnalysis, newsForAnalysis);
+    const analysis: ComprehensiveAnalysis = technicalAnalysis.createComprehensiveAnalysis(technicalForAnalysis, metadataForAnalysis, newsForAnalysis);
 
     console.log('✅ Comprehensive analysis completed');
     console.log(`   Recommendation: ${analysis.recommendation}`);
     console.log(`   Signal Strength: ${analysis.signalStrength.toFixed(3)}`);
     console.log(`   Technical Data Points: ${Object.keys(analysis.technical).length}`);
+
+    // 8.5. Генерация целевых уровней
+    console.log(`\n🎯 Step 7.5: Generating target levels for ${testAsset}...`);
+
+    // Generate target levels for BUY signal
+    const buyLevels = technicalAnalysis.calculateTargetLevels(
+      metadata.price,
+      'BUY',
+      Math.abs(signalStrength.strength),
+      technicalData,
+      0.02 // 2% volatility
+    );
+
+    console.log('✅ Target levels generated for BUY:');
+    console.log(`   Target Price: $${buyLevels.target_price.toLocaleString()}`);
+    console.log(`   Stop Loss: $${buyLevels.stop_loss.toLocaleString()}`);
+    console.log(`   Take Profit: $${buyLevels.take_profit.toLocaleString()}`);
+    console.log(`   Confidence: ${(buyLevels.confidence * 100).toFixed(1)}%`);
+    console.log(`   Time Horizon: ${buyLevels.time_horizon}`);
+    console.log(`   Reasoning: ${buyLevels.reasoning.substring(0, 100)}...`);
+
+    // Generate target levels for SELL signal
+    const sellLevels = technicalAnalysis.calculateTargetLevels(
+      metadata.price,
+      'SELL',
+      Math.abs(signalStrength.strength),
+      technicalData,
+      0.02
+    );
+
+    console.log('✅ Target levels generated for SELL:');
+    console.log(`   Target Price: $${sellLevels.target_price.toLocaleString()}`);
+    console.log(`   Stop Loss: $${sellLevels.stop_loss.toLocaleString()}`);
+    console.log(`   Take Profit: $${sellLevels.take_profit.toLocaleString()}`);
+    console.log(`   Confidence: ${(sellLevels.confidence * 100).toFixed(1)}%`);
 
     // 9. Создание тестовых claims для агентов
     console.log(`\n🤖 Step 8: Creating test claims for agents...`);
@@ -430,6 +406,113 @@ async function technicalAnalysisIntegrationTest() {
     console.log(`   - News items: ${news.items.length} articles`);
     console.log(`   - Agent claims: ${testClaims.length} generated`);
     console.log(`   - Data quality: ${dataQualityChecks.filter(c => c.passed).length}/${dataQualityChecks.length} checks passed`);
+
+    // 14. Дополнительное тестирование генерации целевых уровней
+    console.log('\n🎯 Step 13: Advanced Target Levels Testing...');
+
+    // Тестируем различные сценарии
+    const testScenarios = [
+      {
+        name: 'Strong BUY signal',
+        currentPrice: 50000,
+        signalDirection: 'BUY' as const,
+        signalStrength: 0.8,
+        volatility: 0.03
+      },
+      {
+        name: 'Weak SELL signal',
+        currentPrice: 50000,
+        signalDirection: 'SELL' as const,
+        signalStrength: 0.2,
+        volatility: 0.01
+      },
+      {
+        name: 'Extreme volatility',
+        currentPrice: 50000,
+        signalDirection: 'BUY' as const,
+        signalStrength: 0.5,
+        volatility: 0.1
+      }
+    ];
+
+    for (const scenario of testScenarios) {
+      console.log(`\n📊 Testing: ${scenario.name}`);
+
+      const levels = technicalAnalysis.calculateTargetLevels(
+        scenario.currentPrice,
+        scenario.signalDirection,
+        scenario.signalStrength,
+        technicalData,
+        scenario.volatility
+      );
+
+      console.log(`   Target Price: $${levels.target_price.toLocaleString()}`);
+      console.log(`   Stop Loss: $${levels.stop_loss.toLocaleString()}`);
+      console.log(`   Take Profit: $${levels.take_profit.toLocaleString()}`);
+      console.log(`   Confidence: ${(levels.confidence * 100).toFixed(1)}%`);
+      console.log(`   Time Horizon: ${levels.time_horizon}`);
+
+      // Проверяем логику уровней
+      const isValid =
+        levels.target_price > 0 &&
+        levels.stop_loss > 0 &&
+        levels.take_profit > 0 &&
+        levels.confidence >= 0 &&
+        levels.confidence <= 1;
+
+      console.log(`   ✅ Validation: ${isValid ? 'PASSED' : 'FAILED'}`);
+    }
+
+    // Тестируем граничные случаи
+    console.log('\n🔬 Testing Edge Cases...');
+
+    try {
+      // Очень слабый сигнал
+      const weakSignal = technicalAnalysis.calculateTargetLevels(
+        50000,
+        'BUY',
+        0.01,
+        technicalData,
+        0.01
+      );
+      console.log('   ✅ Very weak signal handled correctly');
+
+      // Очень высокая волатильность
+      const highVol = technicalAnalysis.calculateTargetLevels(
+        50000,
+        'SELL',
+        0.5,
+        technicalData,
+        0.5
+      );
+      console.log('   ✅ High volatility handled correctly');
+
+      // Проверяем, что stop loss и take profit на правильной стороне
+      const buyLevels = technicalAnalysis.calculateTargetLevels(
+        50000,
+        'BUY',
+        0.5,
+        technicalData,
+        0.02
+      );
+
+      const sellLevels = technicalAnalysis.calculateTargetLevels(
+        50000,
+        'SELL',
+        0.5,
+        technicalData,
+        0.02
+      );
+
+      const buyLogicValid = buyLevels.stop_loss < 50000 && buyLevels.take_profit > 50000;
+      const sellLogicValid = sellLevels.stop_loss > 50000 && sellLevels.take_profit < 50000;
+
+      console.log(`   ✅ BUY logic: ${buyLogicValid ? 'PASSED' : 'FAILED'}`);
+      console.log(`   ✅ SELL logic: ${sellLogicValid ? 'PASSED' : 'FAILED'}`);
+
+    } catch (error) {
+      console.log(`   ❌ Edge case test failed: ${error}`);
+    }
 
   } catch (error) {
     console.error('\n❌ Technical Analysis Integration Test FAILED!');

@@ -99,6 +99,32 @@ export const DEFAULT_CONFIG: SystemConfig = {
   // - 12: Aggressive (more positions, more diversified)
   maxPositions: 8,
 
+  // Decision thresholds for trading signals
+  // These thresholds determine when to generate BUY/SELL/HOLD decisions
+  decisionThresholds: {
+    // Conservative thresholds (higher confidence required)
+    averse: {
+      buy: 0.15,    // BUY signal requires 15% positive score
+      sell: -0.15,  // SELL signal requires 15% negative score
+      minConfidence: 0.7,  // Minimum 70% confidence required
+      maxRisk: 0.3   // Maximum 30% risk score allowed
+    },
+    // Balanced thresholds (recommended)
+    neutral: {
+      buy: 0.1,     // BUY signal requires 10% positive score
+      sell: -0.1,   // SELL signal requires 10% negative score
+      minConfidence: 0.6,  // Minimum 60% confidence required
+      maxRisk: 0.5   // Maximum 50% risk score allowed
+    },
+    // Aggressive thresholds (lower confidence required)
+    bold: {
+      buy: 0.05,    // BUY signal requires 5% positive score
+      sell: -0.05,  // SELL signal requires 5% negative score
+      minConfidence: 0.5,  // Minimum 50% confidence required
+      maxRisk: 0.7   // Maximum 70% risk score allowed
+    }
+  },
+
   killSwitchEnabled: true
 };
 
@@ -254,6 +280,9 @@ export const SYSTEM_CONFIG = {
   // Max positions is now set in DEFAULT_CONFIG with detailed comments
   maxPositions: DEFAULT_CONFIG.maxPositions,
 
+  // Decision thresholds are now set in DEFAULT_CONFIG
+  decisionThresholds: DEFAULT_CONFIG.decisionThresholds,
+
   killSwitchEnabled: process.env.KILL_SWITCH_ENABLED !== 'false',
   logLevel: process.env.LOG_LEVEL || 'info',
   environment: process.env.NODE_ENV || 'development',
@@ -284,6 +313,7 @@ export function loadConfig(): SystemConfig {
     debateInterval: SYSTEM_CONFIG.debateInterval,
     rebalanceInterval: SYSTEM_CONFIG.rebalanceInterval,
     maxPositions: SYSTEM_CONFIG.maxPositions,
+    decisionThresholds: SYSTEM_CONFIG.decisionThresholds,
     killSwitchEnabled: SYSTEM_CONFIG.killSwitchEnabled
   };
 }

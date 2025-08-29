@@ -179,7 +179,43 @@ TELEGRAM_NOTIFICATION_LEVEL=all
 - Assesses drawdown risk
 - Reports violations and warnings
 
-### Phase 5: Order Execution
+### Phase 5: Target Levels Generation
+```
+🎯 TARGET LEVELS GENERATION
+🆔 Round ID: round-1234567890
+📊 Generated targets for 3 signals
+
+TARGET LEVELS:
+1. 🟢 BTCUSDT (BUY)
+   🎯 Target: $52,500 (+5.0%)
+   🛑 Stop Loss: $48,500 (-3.0%)
+   💰 Take Profit: $58,750 (+17.5%)
+   ⏱️ Time Horizon: short (1-7 days)
+   💪 Confidence: 85%
+
+2. 🔴 ETHUSDT (SELL)
+   🎯 Target: $2,850 (-9.5%)
+   🛑 Stop Loss: $3,200 (+6.4%)
+   💰 Take Profit: $2,375 (-25.0%)
+   ⏱️ Time Horizon: medium (1-4 weeks)
+   💪 Confidence: 78%
+
+3. ⏸️ SOLUSDT (HOLD)
+   🎯 Target: $95.00 (0.0%)
+   🛑 Stop Loss: $90.25 (-5.0%)
+   💰 Take Profit: $99.75 (+5.0%)
+   ⏱️ Time Horizon: long (1-3 months)
+   💪 Confidence: 50%
+```
+
+**What happens:**
+- Calculates target prices based on technical analysis
+- Generates stop-loss levels for risk management
+- Sets take-profit levels for profit taking
+- Determines time horizons based on signal strength
+- Stores results in database for tracking
+
+### Phase 6: Order Execution
 ```
 📈 ORDER EXECUTION
 🆔 Round: round-1234567890
@@ -188,26 +224,34 @@ TELEGRAM_NOTIFICATION_LEVEL=all
 EXECUTED ORDERS:
 1. 🟢 BUY 0.01 BTCUSDT
    💰 MARKET @ MARKET
+   🎯 Target: $52,500
+   🛑 Stop Loss: $48,500
    📊 Status: filled
 
 2. 🔴 SELL 0.5 ETHUSDT
    💰 MARKET @ MARKET
+   🎯 Target: $2,850
+   🛑 Stop Loss: $3,200
    📊 Status: filled
 
 CURRENT POSITIONS:
 • BTCUSDT: 0.15
   💰 Avg Price: $44,500
   📈 PnL: $750
+  🎯 Target: $52,500
 
 • ETHUSDT: 2.0
   💰 Avg Price: $3,150
   📉 PnL: $300
+  🎯 Target: $2,850
 ```
 
 **What happens:**
 - Places market orders through AspisAdapter
+- Sets stop-loss orders based on target levels
+- Configures take-profit orders
 - Tracks order execution status
-- Updates position tracking
+- Updates position tracking with targets
 - Calculates unrealized PnL
 - Reports portfolio changes
 
@@ -968,9 +1012,9 @@ const consensusScore = claims.reduce((score, claim) => {
 #### **Decision Thresholds:**
 ```typescript
 const thresholds = {
-  averse: { buy: 0.4, sell: -0.4, minConfidence: 0.7, maxRisk: 0.3 },
-  neutral: { buy: 0.3, sell: -0.3, minConfidence: 0.6, maxRisk: 0.5 },
-  bold: { buy: 0.2, sell: -0.2, minConfidence: 0.5, maxRisk: 0.7 }
+  averse: { buy: 0.15, sell: -0.15, minConfidence: 0.7, maxRisk: 0.3 },
+  neutral: { buy: 0.1, sell: -0.1, minConfidence: 0.6, maxRisk: 0.5 },
+  bold: { buy: 0.05, sell: -0.05, minConfidence: 0.5, maxRisk: 0.7 }
 };
 ```
 

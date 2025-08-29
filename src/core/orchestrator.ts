@@ -18,12 +18,14 @@ import type {
   RiskViolation,
   SignalAnalysis,
   NewsItem,
-  Evidence
+  Evidence,
+  SignalResult
 } from '../types/index.js';
 import { AgentsService } from '../services/agents.js';
 import { VerifierService } from '../services/trading/verifier.js';
 import { ConsensusService } from '../services/trading/consensus.js';
 import { SignalProcessorService } from '../services/trading/signal-processor.service.js';
+import { TechnicalAnalysisService } from '../services/analysis/technical-analysis.service.js';
 import { TelegramAdapter } from '../adapters/telegram-adapter.js';
 import { NotificationsService } from '../services/notifications/notifications.service.js';
 import { Signals } from '../adapters/signals-adapter.js';
@@ -42,6 +44,7 @@ export class HedgeFundOrchestrator {
   private telegram: TelegramAdapter;
   private notifications: NotificationsService;
   private vaultController: VaultController;
+  private technicalAnalysis: TechnicalAnalysisService;
 
   // Development logging
   private devLogger: DevelopmentLoggerService;
@@ -72,6 +75,7 @@ export class HedgeFundOrchestrator {
     this.telegram = telegram || new TelegramAdapter();
     this.notifications = new NotificationsService(this.telegram);
     this.vaultController = new VaultController(this.trading, this.marketData);
+    this.technicalAnalysis = new TechnicalAnalysisService(this.technicalIndicators);
     this.devLogger = new DevelopmentLoggerService();
 
     // Debug logging for configuration
@@ -653,8 +657,14 @@ export class HedgeFundOrchestrator {
         }
       });
 
+      // Step 8.3: Generate and store results with target levels
+      this.logger.info('Step 8.3: Generating results with target levels');
+      const results = await this.generateResultsWithTargetLevels(consensus, verifiedClaims, evidence, marketStats);
+      await this.factStore.storeResults(results);
+      this.logger.info(`✅ Generated and stored ${results.length} results with target levels`);
+
       // End round in database
-      this.logger.info('Step 8.2: Ending round in database');
+      this.logger.info('Step 8.4: Ending round in database');
       await this.factStore.endRound(this.roundId, 'completed', verifiedClaims.length, orders.length, portfolioMetrics?.unrealizedPnL || 0);
       this.logger.info('✅ Round ended successfully in database');
 
@@ -933,7 +943,10 @@ export class HedgeFundOrchestrator {
     const ticker = consensus.ticker;
     const score = consensus.finalScore;
     const confidence = consensus.avgConfidence;
-    const decision = score > 0.1 ? 'BUY' : score < -0.1 ? 'SELL' : 'HOLD';
+
+    // Use configurable thresholds based on risk profile
+    const thresholds = this.config.decisionThresholds[this.config.riskProfile];
+    const decision = score > thresholds.buy ? 'BUY' : score < thresholds.sell ? 'SELL' : 'HOLD';
 
     // Get claims for this ticker
     const tickerClaims = allClaims.filter(c => c.ticker === ticker);
@@ -974,6 +987,113 @@ export class HedgeFundOrchestrator {
     const gptSummary = await this.generateGPTSummary(analysisContext);
 
     return gptSummary;
+  }
+
+  private async generateResultsWithTargetLevels(
+    consensus: ConsensusRec[],
+    claims: Claim[],
+    evidence: Evidence[],
+    marketStats: MarketStats[]
+  ): Promise<SignalResult[]> {
+    const results: SignalResult[] = [];
+
+    for (const consensusItem of consensus) {
+      try {
+        // Get technical data for this ticker
+        const technicalData = await this.technicalIndicators.getTechnicalIndicators(consensusItem.ticker, '4h');
+
+        // Get market data for this ticker
+        const marketData = marketStats.find(stat => stat.symbol === consensusItem.ticker);
+        const currentPrice = marketData?.price || 0;
+        const volatility = Math.abs(marketData?.priceChange24h || 0) / 100;
+
+        // Get claims for this ticker
+        const tickerClaims = claims.filter(c => c.ticker === consensusItem.ticker);
+        const claimIds = tickerClaims.map(c => c.id);
+
+        // Get evidence for this ticker
+        const tickerEvidence = evidence.filter(e => e.ticker === consensusItem.ticker);
+        const evidenceIds = tickerEvidence.map(e => e.id);
+
+        // Calculate target levels
+        const thresholds = this.config.decisionThresholds[this.config.riskProfile];
+        const targetLevels = this.technicalAnalysis.calculateTargetLevels(
+          currentPrice,
+          consensusItem.finalScore > thresholds.buy ? 'BUY' : consensusItem.finalScore < thresholds.sell ? 'SELL' : 'HOLD',
+          Math.abs(consensusItem.finalScore),
+          technicalData,
+          volatility
+        );
+
+        // Build agent contributions
+        const fundamentalClaim = tickerClaims.find(c => c.agentRole === 'fundamental');
+        const sentimentClaim = tickerClaims.find(c => c.agentRole === 'sentiment');
+        const technicalClaim = tickerClaims.find(c => c.agentRole === 'technical');
+
+        const agentContributions = {
+          fundamental: {
+            signal: fundamentalClaim ? (fundamentalClaim.claim === 'BUY' ? 1 : fundamentalClaim.claim === 'SELL' ? -1 : 0) : 0,
+            confidence: fundamentalClaim?.confidence || 0,
+            reasoning: fundamentalClaim?.rationale || 'No fundamental analysis available'
+          },
+          sentiment: {
+            signal: sentimentClaim ? (sentimentClaim.claim === 'BUY' ? 1 : sentimentClaim.claim === 'SELL' ? -1 : 0) : 0,
+            confidence: sentimentClaim?.confidence || 0,
+            reasoning: sentimentClaim?.rationale || 'No sentiment analysis available'
+          },
+          technical: {
+            signal: technicalClaim ? (technicalClaim.claim === 'BUY' ? 1 : technicalClaim.claim === 'SELL' ? -1 : 0) : 0,
+            confidence: technicalClaim?.confidence || 0,
+            reasoning: technicalClaim?.rationale || 'No technical analysis available'
+          }
+        };
+
+        // Build market context
+        const marketContext = {
+          price_at_signal: currentPrice,
+          volume_24h: marketData?.volume24h || 0,
+          volatility: volatility,
+          market_sentiment: 0.5 // Default neutral sentiment
+        };
+
+        // Create result
+        const result: SignalResult = {
+          id: `result-${this.roundId}-${consensusItem.ticker}-${Date.now()}`,
+          round_id: this.roundId,
+          ticker: consensusItem.ticker,
+          signal_strength: Math.abs(consensusItem.finalScore),
+          signal_direction: consensusItem.finalScore > thresholds.buy ? 'BUY' : consensusItem.finalScore < thresholds.sell ? 'SELL' : 'HOLD',
+          confidence: consensusItem.avgConfidence,
+          reasoning: targetLevels.reasoning,
+          target_price: targetLevels.target_price,
+          stop_loss: targetLevels.stop_loss,
+          take_profit: targetLevels.take_profit,
+          time_horizon: targetLevels.time_horizon,
+          risk_score: 1 - consensusItem.liquidity, // Convert liquidity to risk score
+          claim_ids: claimIds,
+          evidence_ids: evidenceIds,
+          agent_contributions: agentContributions,
+          market_context: marketContext,
+          created_at: new Date(),
+          updated_at: new Date()
+        };
+
+        results.push(result);
+
+        this.logger.info(`Generated result for ${consensusItem.ticker}:`, {
+          signal: result.signal_direction,
+          target: targetLevels.target_price,
+          stopLoss: targetLevels.stop_loss,
+          takeProfit: targetLevels.take_profit,
+          confidence: targetLevels.confidence
+        });
+
+      } catch (error) {
+        this.logger.error(`Failed to generate result for ${consensusItem.ticker}:`, error);
+      }
+    }
+
+    return results;
   }
 
   private async generateGPTSummary(context: any): Promise<string> {

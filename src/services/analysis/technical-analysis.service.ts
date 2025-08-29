@@ -3,7 +3,8 @@ import type {
   AssetMetadata,
   TechnicalNewsResult,
   SignalStrength,
-  ComprehensiveAnalysis
+  ComprehensiveAnalysis,
+  TargetLevels
 } from '../../types/index.js';
 import { INDICATOR_THRESHOLDS, SIGNAL_WEIGHTS } from '../../types/index.js';
 
@@ -386,6 +387,259 @@ export class TechnicalAnalysisService {
       trendStatus,
       volatilityStatus,
       overallSignal
+    };
+  }
+
+  /**
+   * Calculate target levels based on technical analysis and signal
+   */
+  calculateTargetLevels(
+    currentPrice: number,
+    signalDirection: 'BUY' | 'SELL' | 'HOLD',
+    signalStrength: number,
+    technicalData: IndicatorData,
+    volatility: number = 0.02
+  ): TargetLevels {
+    // Validate inputs
+    if (!currentPrice || currentPrice <= 0) {
+      throw new Error('Invalid current price: must be positive number');
+    }
+
+    if (signalStrength < 0 || signalStrength > 1) {
+      throw new Error('Invalid signal strength: must be between 0 and 1');
+    }
+
+    if (volatility < 0 || volatility > 1) {
+      throw new Error('Invalid volatility: must be between 0 and 1');
+    }
+    // Base volatility calculation
+    const atr = this.extractIndicatorValue(technicalData, 'atr') || (volatility * currentPrice);
+    const rsi = this.extractIndicatorValue(technicalData, 'rsi') || 50;
+    const macd = this.extractIndicatorValue(technicalData, 'macd') || 0;
+
+    // Support and resistance levels
+    const sma20 = this.extractIndicatorValue(technicalData, 'sma_20') || currentPrice;
+    const sma50 = this.extractIndicatorValue(technicalData, 'sma_50') || currentPrice;
+
+    // Bollinger Bands - use BBPower to estimate upper/lower bands
+    const bbPower = technicalData.BBPower || 0;
+    const bbUpper = currentPrice * (1 + Math.abs(bbPower) * 0.05); // Estimate upper band
+    const bbLower = currentPrice * (1 - Math.abs(bbPower) * 0.05); // Estimate lower band
+
+    let target_price: number;
+    let stop_loss: number;
+    let take_profit: number;
+    let time_horizon: 'short' | 'medium' | 'long';
+    let confidence: number;
+    let reasoning: string = '';
+
+    // Determine time horizon based on signal strength
+    if (signalStrength > 0.7) {
+      time_horizon = 'short';
+    } else if (signalStrength > 0.4) {
+      time_horizon = 'medium';
+    } else {
+      time_horizon = 'long';
+    }
+
+    // Base confidence on signal strength and technical confirmation
+    confidence = Math.min(0.95, Math.max(0.3, signalStrength * 1.2));
+
+    if (signalDirection === 'BUY') {
+      // BUY signal logic
+      const bullishFactors = [];
+
+      // RSI oversold condition
+      if (rsi < 30) {
+        bullishFactors.push('RSI oversold');
+        target_price = currentPrice * 1.05; // 5% target
+        stop_loss = Math.min(currentPrice * 0.97, bbLower); // 3% stop or BB lower
+      } else if (rsi < 50) {
+        bullishFactors.push('RSI neutral-bullish');
+        target_price = currentPrice * 1.03; // 3% target
+        stop_loss = currentPrice * 0.98; // 2% stop
+      } else {
+        bullishFactors.push('RSI neutral');
+        target_price = currentPrice * 1.02; // 2% target
+        stop_loss = currentPrice * 0.99; // 1% stop
+      }
+
+      // MACD confirmation
+      if (macd > 0) {
+        bullishFactors.push('MACD bullish');
+        target_price *= 1.02; // Increase target by 2%
+        confidence *= 1.1; // Increase confidence
+      }
+
+      // Moving average support
+      if (currentPrice > sma20 && sma20 > sma50) {
+        bullishFactors.push('Uptrend confirmed');
+        target_price *= 1.01; // Increase target by 1%
+        stop_loss = Math.max(stop_loss, sma20 * 0.98); // Use SMA20 as support
+      }
+
+      // ATR-based adjustments (only if ATR is available) а касти
+      if (atr > 0) {
+        const atrMultiplier = Math.min(3, Math.max(1, signalStrength * 4)); // 1-3x ATR
+        target_price = currentPrice + (atr * atrMultiplier);
+        stop_loss = currentPrice - (atr * 1.5);
+        take_profit = currentPrice + (atr * 4); // 4x ATR for take profit
+      } else {
+        // Volatility adjustment (fallback when ATR is not available)
+        const volatilityMultiplier = 1 + (volatility * 5); // Reduced scaling
+        target_price *= volatilityMultiplier;
+        stop_loss = currentPrice - (currentPrice * volatility * 2); // Volatility-based stop
+        take_profit = target_price * 1.5; // 50% above target
+      }
+
+      reasoning = `BUY signal based on: ${bullishFactors.join(', ')}. Target: ${((target_price / currentPrice - 1) * 100).toFixed(1)}% gain.`;
+
+    } else if (signalDirection === 'SELL') {
+      // SELL signal logic
+      const bearishFactors = [];
+
+      // RSI overbought condition
+      if (rsi > 70) {
+        bearishFactors.push('RSI overbought');
+        target_price = currentPrice * 0.95; // 5% target
+        stop_loss = Math.max(currentPrice * 1.03, bbUpper); // 3% stop or BB upper
+      } else if (rsi > 50) {
+        bearishFactors.push('RSI neutral-bearish');
+        target_price = currentPrice * 0.97; // 3% target
+        stop_loss = currentPrice * 1.02; // 2% stop
+      } else {
+        bearishFactors.push('RSI neutral');
+        target_price = currentPrice * 0.98; // 2% target
+        stop_loss = currentPrice * 1.01; // 1% stop
+      }
+
+      // MACD confirmation
+      if (macd < 0) {
+        bearishFactors.push('MACD bearish');
+        target_price *= 0.98; // Decrease target by 2%
+        confidence *= 1.1; // Increase confidence
+      }
+
+      // Moving average resistance
+      if (currentPrice < sma20 && sma20 < sma50) {
+        bearishFactors.push('Downtrend confirmed');
+        target_price *= 0.99; // Decrease target by 1%
+        stop_loss = Math.min(stop_loss, sma20 * 1.02); // Use SMA20 as resistance
+      }
+
+      // ATR-based adjustments (only if ATR is available)
+      if (atr > 0) {
+        const atrMultiplier = Math.min(3, Math.max(1, signalStrength * 4));
+        target_price = currentPrice - (atr * atrMultiplier);
+        stop_loss = currentPrice + (atr * 1.5);
+        take_profit = currentPrice - (atr * 4); // 4x ATR for take profit
+      } else {
+        // Volatility adjustment (fallback when ATR is not available)
+        const volatilityMultiplier = 1 + (volatility * 5);
+        target_price *= (2 - volatilityMultiplier); // Decrease target for high volatility
+        stop_loss = currentPrice + (currentPrice * volatility * 2); // Volatility-based stop
+        take_profit = target_price * 0.5; // 50% below target
+      }
+
+      reasoning = `SELL signal based on: ${bearishFactors.join(', ')}. Target: ${((1 - target_price / currentPrice) * 100).toFixed(1)}% decline.`;
+
+    } else {
+      // HOLD signal logic
+      target_price = currentPrice;
+      stop_loss = currentPrice * 0.95; // 5% stop loss
+      take_profit = currentPrice * 1.05; // 5% take profit
+      confidence = 0.5; // Lower confidence for HOLD
+      reasoning = 'HOLD signal - insufficient directional conviction. Monitor for breakout opportunities.';
+    }
+
+    // Risk management adjustments
+    if (signalStrength < 0.3) {
+      // Weak signal - more conservative levels
+      target_price = signalDirection === 'BUY'
+        ? currentPrice + (currentPrice * 0.01) // 1% target
+        : currentPrice - (currentPrice * 0.01); // 1% target
+      stop_loss = signalDirection === 'BUY'
+        ? currentPrice * 0.99 // 1% stop
+        : currentPrice * 1.01; // 1% stop
+      confidence *= 0.8; // Reduce confidence
+      reasoning += ' Conservative levels due to weak signal.';
+    }
+
+    // Ensure reasonable levels with better validation
+    const minPrice = currentPrice * 0.1; // Min 10% of current price
+    const maxPrice = currentPrice * 5.0; // Max 500% of current price
+
+    target_price = Math.max(minPrice, Math.min(maxPrice, target_price));
+    stop_loss = Math.max(minPrice, Math.min(maxPrice, stop_loss));
+    take_profit = Math.max(minPrice, Math.min(maxPrice, take_profit));
+
+    // Ensure stop loss is on the correct side of current price
+    if (signalDirection === 'BUY') {
+      stop_loss = Math.min(stop_loss, currentPrice * 0.99); // Stop loss below current price
+      take_profit = Math.max(take_profit, target_price); // Take profit above target
+    } else if (signalDirection === 'SELL') {
+      stop_loss = Math.max(stop_loss, currentPrice * 1.01); // Stop loss above current price
+      take_profit = Math.min(take_profit, target_price); // Take profit below target
+    }
+
+    return {
+      target_price: Math.round(target_price * 1000000) / 1000000, // Round to 6 decimal places
+      stop_loss: Math.round(stop_loss * 1000000) / 1000000,
+      take_profit: Math.round(take_profit * 1000000) / 1000000,
+      time_horizon,
+      confidence: Math.min(0.95, Math.max(0.3, confidence)),
+      reasoning
+    };
+  }
+
+  /**
+   * Calculate target levels with conflict resolution
+   */
+  calculateTargetLevelsWithConflicts(
+    consensus: any,
+    technicalData: IndicatorData,
+    marketData: any
+  ): TargetLevels & { conflicts: string[] } {
+    const conflicts: string[] = [];
+
+    // Get technical signal direction
+    const technicalSignal = this.calculateSignalStrength(technicalData);
+    const technicalDirection = technicalSignal.strength > 0.1 ? 'BUY' :
+      technicalSignal.strength < -0.1 ? 'SELL' : 'HOLD';
+
+    // Check for conflicts
+    if (technicalDirection !== consensus.signal_direction) {
+      conflicts.push(`Technical analysis (${technicalDirection}) contradicts consensus (${consensus.signal_direction})`);
+    }
+
+    // Calculate base levels
+    const baseLevels = this.calculateTargetLevels(
+      marketData.price || 0,
+      consensus.signal_direction,
+      consensus.signal_strength,
+      technicalData,
+      marketData.volatility || 0.02
+    );
+
+    // Adjust levels based on conflicts
+    if (conflicts.length > 0) {
+      // Reduce confidence
+      baseLevels.confidence *= 0.7;
+
+      // Widen stop loss
+      if (consensus.signal_direction === 'BUY') {
+        baseLevels.stop_loss *= 0.95; // 5% wider stop
+      } else if (consensus.signal_direction === 'SELL') {
+        baseLevels.stop_loss *= 1.05; // 5% wider stop
+      }
+
+      // Add conflict warning to reasoning
+      baseLevels.reasoning += ` Warning: ${conflicts.join(', ')}.`;
+    }
+
+    return {
+      ...baseLevels,
+      conflicts
     };
   }
 }

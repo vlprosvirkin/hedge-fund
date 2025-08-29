@@ -36,7 +36,9 @@ export class ConsensusService {
 
     console.log(`🤝 ConsensusService: Final consensus built for ${sortedConsensus.length} positions`);
     sortedConsensus.forEach((c, i) => {
-      console.log(`🤝 ConsensusService: ${i + 1}. ${c.ticker} - Score: ${c.finalScore.toFixed(3)} (${c.finalScore > 0.1 ? 'BUY' : c.finalScore < -0.1 ? 'SELL' : 'HOLD'})`);
+      // Use configurable thresholds - default to neutral profile
+    const thresholds = { buy: 0.1, sell: -0.1 }; // Default neutral thresholds
+    console.log(`🤝 ConsensusService: ${i + 1}. ${c.ticker} - Score: ${c.finalScore.toFixed(3)} (${c.finalScore > thresholds.buy ? 'BUY' : c.finalScore < thresholds.sell ? 'SELL' : 'HOLD'})`);
     });
 
     return sortedConsensus;

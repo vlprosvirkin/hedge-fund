@@ -15,6 +15,9 @@ export * from './binance.js';
 // Re-export telegram types
 export * from './telegram.js';
 
+// Re-export results types
+export * from './results.js';
+
 // ===== Market Data Types =====
 export const CandleSchema = z.object({
   symbol: z.string(),
@@ -302,12 +305,27 @@ export const UniverseFilterSchema = z.object({
 export type SymbolMapping = z.infer<typeof SymbolMappingSchema>;
 export type UniverseFilter = z.infer<typeof UniverseFilterSchema>;
 
+// ===== Decision Thresholds Types =====
+export const DecisionThresholdsSchema = z.object({
+  buy: z.number(),
+  sell: z.number(),
+  minConfidence: z.number(),
+  maxRisk: z.number(),
+});
+
+export const RiskProfileDecisionThresholdsSchema = z.object({
+  averse: DecisionThresholdsSchema,
+  neutral: DecisionThresholdsSchema,
+  bold: DecisionThresholdsSchema,
+});
+
 // ===== System Types =====
 export const SystemConfigSchema = z.object({
   riskProfile: RiskProfileSchema,
   debateInterval: z.number(), // seconds
   rebalanceInterval: z.number(), // seconds
   maxPositions: z.number(),
+  decisionThresholds: RiskProfileDecisionThresholdsSchema,
   killSwitchEnabled: z.boolean(),
 });
 

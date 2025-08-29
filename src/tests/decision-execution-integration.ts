@@ -31,6 +31,11 @@ async function decisionExecutionIntegrationTest() {
             maxPositions: 5,
             riskProfile: 'neutral',
             rebalanceInterval: 3600,
+            decisionThresholds: {
+                averse: { buy: 0.15, sell: -0.15, minConfidence: 0.7, maxRisk: 0.3 },
+                neutral: { buy: 0.1, sell: -0.1, minConfidence: 0.6, maxRisk: 0.5 },
+                bold: { buy: 0.05, sell: -0.05, minConfidence: 0.5, maxRisk: 0.7 }
+            },
             killSwitchEnabled: true
         };
 
