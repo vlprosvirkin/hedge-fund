@@ -43,10 +43,10 @@ export class NotificationsService {
             parse_mode: 'HTML',
             disable_web_page_preview: disablePreview
         };
-        
+
         // Capture message for development logging
         this.devLogger.captureMessage(text);
-        
+
         await this.telegramAdapter.sendMessage(message);
     }
 
@@ -353,8 +353,8 @@ export class NotificationsService {
         text += `🤝 <b>CONSENSUS SUMMARY</b>\n`;
         consensus.forEach((item, index) => {
             // Use configurable thresholds - default to neutral profile
-        const thresholds = { buy: 0.1, sell: -0.1 }; // Default neutral thresholds
-        const decision = item.finalScore > thresholds.buy ? 'BUY' : item.finalScore < thresholds.sell ? 'SELL' : 'HOLD';
+            const thresholds = { buy: 0.1, sell: -0.1 }; // Default neutral thresholds
+            const decision = item.finalScore > thresholds.buy ? 'BUY' : item.finalScore < thresholds.sell ? 'SELL' : 'HOLD';
             const confidence = Math.abs(item.finalScore) * 100;
 
             text += `${index + 1}. ${decision === 'BUY' ? '🚀' : decision === 'SELL' ? '📉' : '⏸️'} <b>${item.ticker}</b>\n`;
@@ -387,6 +387,18 @@ export class NotificationsService {
         summary: DecisionSummary
     ): Promise<void> {
         const text = NotificationFormats.roundCompletion(roundId, summary);
+        await this.sendFormattedMessage(text, true);
+    }
+
+    /**
+     * Enhanced round completion with detailed signal results and price targets
+     */
+    async postRoundCompletionWithResults(
+        roundId: string,
+        summary: DecisionSummary,
+        results: any[] = []
+    ): Promise<void> {
+        const text = NotificationFormats.roundCompletionWithResults(roundId, summary, results);
         await this.sendFormattedMessage(text, true);
     }
 

@@ -125,6 +125,42 @@ export const DEFAULT_CONFIG: SystemConfig = {
     }
   },
 
+  // Technical indicator thresholds (industry standard)
+  technicalThresholds: {
+    rsi: { overbought: 70, oversold: 30 },
+    stochastic: { overbought: 80, oversold: 20 },
+    williamsR: { overbought: -20, oversold: -80 },
+    adx: { strongTrend: 25 },
+    bollingerBands: {
+      overbought: 1,
+      oversold: 0,
+      nearUpper: 0.2,
+      nearLower: 0.2
+    }
+  },
+
+  // Market regime weights (adaptive based on ADX)
+  marketRegimeWeights: {
+    trend: {
+      rsi: 0.1,        // Lower weight in trending markets
+      macd: 0.25,      // Higher weight for trend following
+      stochastic: 0.1, // Lower weight in trending markets
+      williamsR: 0.1,  // Lower weight in trending markets
+      adx: 0.15,       // Trend strength indicator
+      bollingerBands: 0.15,
+      movingAverages: 0.15
+    },
+    range: {
+      rsi: 0.2,        // Higher weight in ranging markets
+      macd: 0.15,      // Lower weight for mean reversion
+      stochastic: 0.2, // Higher weight in ranging markets
+      williamsR: 0.2,  // Higher weight in ranging markets
+      adx: 0.05,       // Lower weight in ranging markets
+      bollingerBands: 0.15,
+      movingAverages: 0.05
+    }
+  },
+
   killSwitchEnabled: true
 };
 
@@ -283,6 +319,12 @@ export const SYSTEM_CONFIG = {
   // Decision thresholds are now set in DEFAULT_CONFIG
   decisionThresholds: DEFAULT_CONFIG.decisionThresholds,
 
+  // Technical thresholds are now set in DEFAULT_CONFIG
+  technicalThresholds: DEFAULT_CONFIG.technicalThresholds,
+
+  // Market regime weights are now set in DEFAULT_CONFIG
+  marketRegimeWeights: DEFAULT_CONFIG.marketRegimeWeights,
+
   killSwitchEnabled: process.env.KILL_SWITCH_ENABLED !== 'false',
   logLevel: process.env.LOG_LEVEL || 'info',
   environment: process.env.NODE_ENV || 'development',
@@ -314,6 +356,8 @@ export function loadConfig(): SystemConfig {
     rebalanceInterval: SYSTEM_CONFIG.rebalanceInterval,
     maxPositions: SYSTEM_CONFIG.maxPositions,
     decisionThresholds: SYSTEM_CONFIG.decisionThresholds,
+    technicalThresholds: SYSTEM_CONFIG.technicalThresholds,
+    marketRegimeWeights: SYSTEM_CONFIG.marketRegimeWeights,
     killSwitchEnabled: SYSTEM_CONFIG.killSwitchEnabled
   };
 }

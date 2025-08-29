@@ -69,7 +69,7 @@ export const ConsensusReportSchema = z.object({
   recommendations: z.array(z.object({
     ticker: z.string(),
     confidence: z.number(),
-    recommendation: z.enum(['BUY', 'SELL', 'HOLD']),
+    recommendation: z.enum(['buy', 'sell', 'hold']),
     reasoning: z.string(),
   })),
   conflicts: z.array(z.object({

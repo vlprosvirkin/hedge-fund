@@ -661,7 +661,7 @@ export class NotificationFormats {
     }
 
     /**
-     * Comprehensive round completion summary
+     * Comprehensive round completion summary with signal interpretation
      */
     static roundCompletion(
         roundId: string,
@@ -689,14 +689,139 @@ export class NotificationFormats {
         text += `• ⚡ Orders: ${summary.orders.length} executed\n`;
         text += `• 💰 Portfolio: $${totalValue.toFixed(2)} (PnL: $${unrealizedPnL.toFixed(2)})\n\n`;
 
-        // Show consensus decisions
+        // Show consensus decisions with signal interpretation
         if (summary.consensus.length > 0) {
             text += `🎯 <b>FINAL DECISIONS:</b>\n`;
             summary.consensus.forEach((rec, i) => {
-                const actionEmoji = rec.finalScore > 0.3 ? '🚀' : rec.finalScore < -0.3 ? '📉' : '⏸️';
+                const signalInterpretation = this.interpretSignal(rec.finalScore, rec.avgConfidence);
+                const actionEmoji = signalInterpretation.action === 'BUY' ? '🚀' :
+                    signalInterpretation.action === 'SELL' ? '📉' : '⏸️';
                 const confidenceEmoji = rec.avgConfidence > 0.7 ? '🟢' : rec.avgConfidence > 0.4 ? '🟡' : '🔴';
+
                 text += `${i + 1}. ${actionEmoji} <b>${rec.ticker}</b>: ${(rec.finalScore * 100).toFixed(1)}% score\n`;
                 text += `   ${confidenceEmoji} ${(rec.avgConfidence * 100).toFixed(1)}% confidence\n`;
+                text += `   📊 ${signalInterpretation.description}\n`;
+                text += `   💡 ${signalInterpretation.reasoning}\n`;
+            });
+            text += '\n';
+        }
+
+        // Show execution results
+        if (summary.orders.length > 0) {
+            text += `⚡ <b>EXECUTION RESULTS:</b>\n`;
+            summary.orders.forEach((order, i) => {
+                const side = order.side === 'buy' ? '🟢 BUY' : '🔴 SELL';
+                text += `${i + 1}. ${side} ${order.quantity} ${order.symbol} @ ${order.price || 'MARKET'}\n`;
+            });
+            text += '\n';
+        }
+
+        text += `<i>Multi-agent consensus system completed successfully!</i>`;
+
+        return text;
+    }
+
+    /**
+     * Enhanced round completion with detailed signal results and price targets
+     */
+    static roundCompletionWithResults(
+        roundId: string,
+        summary: {
+            claims: Claim[];
+            consensus: ConsensusRec[];
+            orders: Order[];
+            positions: Position[];
+            performance: { totalValue: number; unrealizedPnL: number; realizedPnL: number };
+            timestamp: number;
+        },
+        results: any[] = []
+    ): string {
+        const duration = Math.round((Date.now() - summary.timestamp) / 1000);
+        const { totalValue, unrealizedPnL, realizedPnL } = summary.performance;
+
+        let text = `🎉 <b>ROUND COMPLETED</b>\n`;
+        text += `🆔 Round: <code>${roundId}</code>\n`;
+        text += `⏱️ Duration: ${duration}s\n`;
+        text += `🕐 Completed: ${new Date().toLocaleString()}\n\n`;
+
+        // Show key metrics
+        text += `📊 <b>PERFORMANCE SUMMARY:</b>\n`;
+        text += `• 🤖 Agents: 3 (${summary.claims.length} claims generated)\n`;
+        text += `• 🎯 Consensus: ${summary.consensus.length} decisions\n`;
+        text += `• ⚡ Orders: ${summary.orders.length} executed\n`;
+        text += `• 💰 Portfolio: $${totalValue.toFixed(2)} (PnL: $${unrealizedPnL.toFixed(2)})\n\n`;
+
+        // Show detailed signal results with price targets
+        if (results.length > 0) {
+            text += `🎯 <b>DETAILED SIGNAL ANALYSIS:</b>\n`;
+            results.forEach((result, i) => {
+                const signalInterpretation = this.interpretSignal(result.signal_strength, result.confidence);
+                const actionEmoji = result.signal_direction === 'buy' ? '🚀' :
+                    result.signal_direction === 'sell' ? '📉' : '⏸️';
+                const confidenceEmoji = result.confidence > 0.7 ? '🟢' : result.confidence > 0.4 ? '🟡' : '🔴';
+
+                text += `${i + 1}. ${actionEmoji} <b>${result.ticker}</b>\n`;
+                text += `   📊 Signal: ${(result.signal_strength * 100).toFixed(1)}% (${signalInterpretation.description})\n`;
+                text += `   ${confidenceEmoji} Confidence: ${(result.confidence * 100).toFixed(1)}%\n`;
+                text += `   ⚠️ Risk Score: ${(result.risk_score * 100).toFixed(1)}%\n`;
+
+                // Show price targets if available
+                if (result.target_price || result.stop_loss || result.take_profit) {
+                    text += `   💰 <b>Price Targets:</b>\n`;
+                    if (result.target_price) {
+                        text += `      🎯 Target: $${result.target_price.toFixed(2)}\n`;
+                    }
+                    if (result.stop_loss) {
+                        text += `      🛑 Stop Loss: $${result.stop_loss.toFixed(2)}\n`;
+                    }
+                    if (result.take_profit) {
+                        text += `      💎 Take Profit: $${result.take_profit.toFixed(2)}\n`;
+                    }
+                    text += `      ⏰ Time Horizon: ${result.time_horizon.toUpperCase()}\n`;
+                }
+
+                // Show current market context
+                if (result.market_context) {
+                    const ctx = result.market_context;
+                    text += `   📈 <b>Market Context:</b>\n`;
+                    text += `      💵 Price: $${ctx.price_at_signal?.toFixed(2) || 'N/A'}\n`;
+                    text += `      📊 Volume 24h: $${(ctx.volume_24h / 1000000).toFixed(1)}M\n`;
+                    text += `      📈 Volatility: ${(ctx.volatility * 100).toFixed(1)}%\n`;
+                    text += `      😊 Sentiment: ${(ctx.market_sentiment * 100).toFixed(1)}%\n`;
+                }
+
+                // Show agent contributions
+                if (result.agent_contributions) {
+                    text += `   🤖 <b>Agent Contributions:</b>\n`;
+                    const agents = result.agent_contributions;
+                    if (agents.fundamental) {
+                        const fundEmoji = agents.fundamental.signal > 0 ? '📈' : agents.fundamental.signal < 0 ? '📉' : '➡️';
+                        text += `      📊 Fundamental: ${fundEmoji} ${(agents.fundamental.signal * 100).toFixed(1)}% (${(agents.fundamental.confidence * 100).toFixed(1)}% conf)\n`;
+                    }
+                    if (agents.sentiment) {
+                        const sentEmoji = agents.sentiment.signal > 0 ? '📈' : agents.sentiment.signal < 0 ? '📉' : '➡️';
+                        text += `      📰 Sentiment: ${sentEmoji} ${(agents.sentiment.signal * 100).toFixed(1)}% (${(agents.sentiment.confidence * 100).toFixed(1)}% conf)\n`;
+                    }
+                    if (agents.technical) {
+                        const techEmoji = agents.technical.signal > 0 ? '📈' : agents.technical.signal < 0 ? '📉' : '➡️';
+                        text += `      📈 Technical: ${techEmoji} ${(agents.technical.signal * 100).toFixed(1)}% (${(agents.technical.confidence * 100).toFixed(1)}% conf)\n`;
+                    }
+                }
+
+                text += '\n';
+            });
+        } else if (summary.consensus.length > 0) {
+            // Fallback to consensus data if no results available
+            text += `🎯 <b>FINAL DECISIONS:</b>\n`;
+            summary.consensus.forEach((rec, i) => {
+                const signalInterpretation = this.interpretSignal(rec.finalScore, rec.avgConfidence);
+                const actionEmoji = signalInterpretation.action === 'BUY' ? '🚀' :
+                    signalInterpretation.action === 'SELL' ? '📉' : '⏸️';
+                const confidenceEmoji = rec.avgConfidence > 0.7 ? '🟢' : rec.avgConfidence > 0.4 ? '🟡' : '🔴';
+
+                text += `${i + 1}. ${actionEmoji} <b>${rec.ticker}</b>: ${(rec.finalScore * 100).toFixed(1)}% score\n`;
+                text += `   ${confidenceEmoji} ${(rec.avgConfidence * 100).toFixed(1)}% confidence\n`;
+                text += `   📊 ${signalInterpretation.description}\n`;
             });
             text += '\n';
         }
@@ -858,5 +983,118 @@ export class NotificationFormats {
             default:
                 return `Analyzed ${claims.length} assets. ${buyCount} BUY, ${sellCount} SELL, ${holdCount} HOLD recommendations with ${(avgConfidence * 100).toFixed(1)}% avg confidence.`;
         }
+    }
+
+    /**
+     * Interpret trading signal with detailed analysis
+     */
+    static interpretSignal(signalStrength: number, confidence: number): {
+        action: 'BUY' | 'SELL' | 'HOLD';
+        description: string;
+        reasoning: string;
+        strength: 'very_weak' | 'weak' | 'moderate' | 'strong' | 'very_strong';
+        recommendation: string;
+    } {
+        const absSignal = Math.abs(signalStrength);
+        const signalPercent = Math.abs(signalStrength * 100);
+
+        // Determine signal strength
+        let strength: 'very_weak' | 'weak' | 'moderate' | 'strong' | 'very_strong';
+        if (absSignal < 0.05) strength = 'very_weak';
+        else if (absSignal < 0.1) strength = 'weak';
+        else if (absSignal < 0.2) strength = 'moderate';
+        else if (absSignal < 0.4) strength = 'strong';
+        else strength = 'very_strong';
+
+        // Determine action based on signal direction and strength
+        let action: 'BUY' | 'SELL' | 'HOLD';
+        let description: string;
+        let reasoning: string;
+        let recommendation: string;
+
+        if (signalStrength > 0.1) {
+            action = 'BUY';
+            description = this.getSignalDescription(signalPercent, 'bullish', strength);
+            reasoning = this.getSignalReasoning(signalPercent, confidence, 'bullish');
+            recommendation = this.getSignalRecommendation(signalPercent, confidence, 'bullish');
+        } else if (signalStrength < -0.1) {
+            action = 'SELL';
+            description = this.getSignalDescription(signalPercent, 'bearish', strength);
+            reasoning = this.getSignalReasoning(signalPercent, confidence, 'bearish');
+            recommendation = this.getSignalRecommendation(signalPercent, confidence, 'bearish');
+        } else {
+            action = 'HOLD';
+            description = this.getSignalDescription(signalPercent, 'neutral', strength);
+            reasoning = this.getSignalReasoning(signalPercent, confidence, 'neutral');
+            recommendation = this.getSignalRecommendation(signalPercent, confidence, 'neutral');
+        }
+
+        return {
+            action,
+            description,
+            reasoning,
+            strength,
+            recommendation
+        };
+    }
+
+    /**
+     * Get signal description based on strength and direction
+     */
+    private static getSignalDescription(signalPercent: number, direction: 'bullish' | 'bearish' | 'neutral', strength: string): string {
+        const strengthEmoji = {
+            'very_weak': '💤',
+            'weak': '⚡',
+            'moderate': '🔥',
+            'strong': '🚀',
+            'very_strong': '💥'
+        }[strength];
+
+        const directionEmoji = {
+            'bullish': '📈',
+            'bearish': '📉',
+            'neutral': '➡️'
+        }[direction];
+
+        const strengthText = {
+            'very_weak': 'Very Weak',
+            'weak': 'Weak',
+            'moderate': 'Moderate',
+            'strong': 'Strong',
+            'very_strong': 'Very Strong'
+        }[strength];
+
+        return `${strengthEmoji} ${strengthText} ${directionEmoji} Signal (${signalPercent.toFixed(1)}%)`;
+    }
+
+    /**
+     * Get signal reasoning based on strength and confidence
+     */
+    private static getSignalReasoning(signalPercent: number, confidence: number, direction: 'bullish' | 'bearish' | 'neutral'): string {
+        const confidenceText = confidence > 0.8 ? 'High' : confidence > 0.6 ? 'Moderate' : 'Low';
+
+        if (direction === 'neutral') {
+            return `Market is in equilibrium with ${confidenceText.toLowerCase()} confidence. Mixed signals from agents suggest waiting for clearer direction.`;
+        }
+
+        const directionText = direction === 'bullish' ? 'upside potential' : 'downside risk';
+        const strengthText = signalPercent > 30 ? 'strong' : signalPercent > 15 ? 'moderate' : 'weak';
+
+        return `${confidenceText} confidence in ${strengthText} ${directionText}. Multiple indicators align in ${direction} direction.`;
+    }
+
+    /**
+     * Get signal recommendation based on strength and confidence
+     */
+    private static getSignalRecommendation(signalPercent: number, confidence: number, direction: 'bullish' | 'bearish' | 'neutral'): string {
+        if (direction === 'neutral') {
+            return 'Wait for stronger signals or clearer market direction';
+        }
+
+        const confidenceText = confidence > 0.8 ? 'High confidence' : confidence > 0.6 ? 'Moderate confidence' : 'Low confidence';
+        const actionText = direction === 'bullish' ? 'consider buying' : 'consider selling';
+        const strengthText = signalPercent > 30 ? 'strong signal' : signalPercent > 15 ? 'moderate signal' : 'weak signal';
+
+        return `${confidenceText} ${strengthText} - ${actionText} with proper risk management`;
     }
 }

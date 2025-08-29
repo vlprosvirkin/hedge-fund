@@ -33,7 +33,7 @@ export interface SignalResult {
     round_id: string;
     ticker: string;
     signal_strength: number;
-    signal_direction: 'BUY' | 'SELL' | 'HOLD';
+    signal_direction: 'buy' | 'sell' | 'hold';
     confidence: number;
     reasoning: string;
     target_price?: number;

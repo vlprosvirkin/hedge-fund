@@ -36,6 +36,23 @@ async function decisionExecutionIntegrationTest() {
                 neutral: { buy: 0.1, sell: -0.1, minConfidence: 0.6, maxRisk: 0.5 },
                 bold: { buy: 0.05, sell: -0.05, minConfidence: 0.5, maxRisk: 0.7 }
             },
+            technicalThresholds: {
+                rsi: { overbought: 70, oversold: 30 },
+                stochastic: { overbought: 80, oversold: 20 },
+                williamsR: { overbought: -20, oversold: -80 },
+                adx: { strongTrend: 25 },
+                bollingerBands: { overbought: 1, oversold: 0, nearUpper: 0.2, nearLower: 0.2 }
+            },
+            marketRegimeWeights: {
+                trend: {
+                    rsi: 0.1, macd: 0.25, stochastic: 0.1, williamsR: 0.1,
+                    adx: 0.15, bollingerBands: 0.15, movingAverages: 0.15
+                },
+                range: {
+                    rsi: 0.2, macd: 0.15, stochastic: 0.2, williamsR: 0.2,
+                    adx: 0.05, bollingerBands: 0.15, movingAverages: 0.05
+                }
+            },
             killSwitchEnabled: true
         };
 

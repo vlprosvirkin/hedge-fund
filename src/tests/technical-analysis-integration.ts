@@ -198,7 +198,7 @@ async function technicalAnalysisIntegrationTest() {
     // Generate target levels for BUY signal
     const buyLevels = technicalAnalysis.calculateTargetLevels(
       metadata.price,
-      'BUY',
+      'buy',
       Math.abs(signalStrength.strength),
       technicalData,
       0.02 // 2% volatility
@@ -215,7 +215,7 @@ async function technicalAnalysisIntegrationTest() {
     // Generate target levels for SELL signal
     const sellLevels = technicalAnalysis.calculateTargetLevels(
       metadata.price,
-      'SELL',
+      'sell',
       Math.abs(signalStrength.strength),
       technicalData,
       0.02
@@ -415,21 +415,21 @@ async function technicalAnalysisIntegrationTest() {
       {
         name: 'Strong BUY signal',
         currentPrice: 50000,
-        signalDirection: 'BUY' as const,
+        signalDirection: 'buy' as const,
         signalStrength: 0.8,
         volatility: 0.03
       },
       {
         name: 'Weak SELL signal',
         currentPrice: 50000,
-        signalDirection: 'SELL' as const,
+        signalDirection: 'sell' as const,
         signalStrength: 0.2,
         volatility: 0.01
       },
       {
         name: 'Extreme volatility',
         currentPrice: 50000,
-        signalDirection: 'BUY' as const,
+        signalDirection: 'buy' as const,
         signalStrength: 0.5,
         volatility: 0.1
       }
@@ -463,6 +463,92 @@ async function technicalAnalysisIntegrationTest() {
       console.log(`   ✅ Validation: ${isValid ? 'PASSED' : 'FAILED'}`);
     }
 
+    // 15. Тестирование калибровки уверенностей
+    console.log('\n🎯 Step 14: Confidence Calibration Testing...');
+
+    // Получаем метаданные для анализа
+    const signalStrengthWithMetadata = technicalAnalysis.calculateSignalStrength(technicalData);
+
+    if (signalStrengthWithMetadata.metadata) {
+      const metadata = signalStrengthWithMetadata.metadata;
+      console.log('✅ Technical metadata calculated:');
+      console.log(`   Raw Strength: ${metadata.strength_raw.toFixed(3)}`);
+      console.log(`   Market Regime: ${metadata.regime}`);
+      console.log(`   Alignment Count: ${metadata.alignment_count}/6`);
+      console.log(`   Quality Score: ${(metadata.quality_score * 100).toFixed(1)}%`);
+      console.log(`   Volatility Estimate: ${metadata.volatility_estimate.toFixed(3)}`);
+      console.log(`   Signal Consistency: ${(metadata.signal_consistency * 100).toFixed(1)}%`);
+      console.log(`   Data Freshness: ${(metadata.data_freshness * 100).toFixed(1)}%`);
+
+      // Рассчитываем калиброванную уверенность
+      const calibratedConfidence = technicalAnalysis.calculateCalibratedConfidence(metadata);
+      console.log(`\n🎯 Calibrated Confidence: ${(calibratedConfidence * 100).toFixed(1)}%`);
+
+      // Сравниваем с обычной уверенностью
+      const oldConfidence = Math.min(0.95, Math.max(0.3, signalStrengthWithMetadata.strength * 1.2));
+      console.log(`📊 Comparison:`);
+      console.log(`   Old Method: ${(oldConfidence * 100).toFixed(1)}%`);
+      console.log(`   New Method: ${(calibratedConfidence * 100).toFixed(1)}%`);
+      console.log(`   Difference: ${((calibratedConfidence - oldConfidence) * 100).toFixed(1)}%`);
+
+      // Тестируем различные сценарии калибровки
+      console.log('\n🔬 Testing Calibration Scenarios...');
+
+      const calibrationScenarios = [
+        {
+          name: 'High Quality Data',
+          metadata: {
+            ...metadata,
+            quality_score: 1.0,
+            signal_consistency: 1.0,
+            alignment_count: 6
+          }
+        },
+        {
+          name: 'Low Quality Data',
+          metadata: {
+            ...metadata,
+            quality_score: 0.3,
+            signal_consistency: 0.3,
+            alignment_count: 2
+          }
+        },
+        {
+          name: 'High Volatility',
+          metadata: {
+            ...metadata,
+            volatility_estimate: 0.8
+          }
+        },
+        {
+          name: 'Trending Market',
+          metadata: {
+            ...metadata,
+            regime: 'trend' as const
+          }
+        },
+        {
+          name: 'Ranging Market',
+          metadata: {
+            ...metadata,
+            regime: 'range' as const
+          }
+        }
+      ];
+
+      for (const scenario of calibrationScenarios) {
+        const scenarioConfidence = technicalAnalysis.calculateCalibratedConfidence(scenario.metadata);
+        console.log(`   ${scenario.name}: ${(scenarioConfidence * 100).toFixed(1)}%`);
+      }
+
+      // Проверяем валидность калиброванной уверенности
+      const isValidConfidence = calibratedConfidence >= 0.3 && calibratedConfidence <= 0.95;
+      console.log(`\n✅ Calibration Validation: ${isValidConfidence ? 'PASSED' : 'FAILED'}`);
+
+    } else {
+      console.log('⚠️ No metadata available for confidence calibration testing');
+    }
+
     // Тестируем граничные случаи
     console.log('\n🔬 Testing Edge Cases...');
 
@@ -470,7 +556,7 @@ async function technicalAnalysisIntegrationTest() {
       // Очень слабый сигнал
       const weakSignal = technicalAnalysis.calculateTargetLevels(
         50000,
-        'BUY',
+        'buy',
         0.01,
         technicalData,
         0.01
@@ -480,7 +566,7 @@ async function technicalAnalysisIntegrationTest() {
       // Очень высокая волатильность
       const highVol = technicalAnalysis.calculateTargetLevels(
         50000,
-        'SELL',
+        'sell',
         0.5,
         technicalData,
         0.5
@@ -490,7 +576,7 @@ async function technicalAnalysisIntegrationTest() {
       // Проверяем, что stop loss и take profit на правильной стороне
       const buyLevels = technicalAnalysis.calculateTargetLevels(
         50000,
-        'BUY',
+        'buy',
         0.5,
         technicalData,
         0.02
@@ -498,7 +584,7 @@ async function technicalAnalysisIntegrationTest() {
 
       const sellLevels = technicalAnalysis.calculateTargetLevels(
         50000,
-        'SELL',
+        'sell',
         0.5,
         technicalData,
         0.02

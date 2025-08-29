@@ -7,6 +7,7 @@ import type {
   TargetLevels
 } from '../../types/index.js';
 import { INDICATOR_THRESHOLDS, SIGNAL_WEIGHTS } from '../../types/index.js';
+import { loadConfig } from '../../core/config.js';
 
 import { Signals } from '../../adapters/signals-adapter.js';
 
@@ -62,6 +63,7 @@ export class TechnicalAnalysisService {
       'rsi': 'RSI',
       'macd': 'MACD.macd',
       'macd_signal': 'MACD.signal',
+      'macd_hist': 'MACD.hist',
       'adx': 'ADX',
       'stochastic': 'Stoch.K',
       'williams_r': 'W.R',
@@ -71,6 +73,9 @@ export class TechnicalAnalysisService {
       'ema_20': 'EMA20',
       'ema_50': 'EMA50',
       'bollinger_bands': 'BBPower',
+      'bb_upper': 'BB.upper',
+      'bb_lower': 'BB.lower',
+      'bb_middle': 'BB.middle',
       'moving_average': 'SMA20', // Default to SMA20
       'atr': 'AO', // Using AO as approximation
       'ichimoku': 'Ichimoku.BLine'
@@ -88,7 +93,312 @@ export class TechnicalAnalysisService {
   }
 
   /**
-   * Calculate signal strength based on multiple indicators
+   * Enhanced MACD analysis with signal cross and histogram slope
+   */
+  analyzeMACD(macd: number, signal: number, histogram: number): 'bullish' | 'bearish' | 'neutral' {
+    // Primary signal: MACD line vs Signal line cross
+    const macdCross = macd > signal ? 'bullish' : 'bearish';
+
+    // Secondary signal: histogram slope (momentum)
+    const histogramSlope = histogram > 0 ? 'bullish' : 'bearish';
+
+    // Zero-line context: stronger signal when MACD is above/below zero
+    const zeroLineContext = macd > 0 ? 'bullish' : 'bearish';
+
+    // Combine signals with priority:
+    // 1. Signal cross is primary (most reliable)
+    // 2. Histogram slope confirms momentum
+    // 3. Zero-line context provides additional confirmation
+
+    // If signal cross and histogram agree, strong signal
+    if (macdCross === histogramSlope) {
+      return macdCross;
+    }
+
+    // If signal cross and zero-line context agree, use that
+    if (macdCross === zeroLineContext) {
+      return macdCross;
+    }
+
+    // If histogram and zero-line context agree, use that
+    if (histogramSlope === zeroLineContext) {
+      return histogramSlope;
+    }
+
+    // If all disagree, use signal cross as primary (most reliable)
+    return macdCross;
+  }
+
+  /**
+   * Determine market regime based on ADX value
+   */
+  determineMarketRegime(adx: number): 'trend' | 'range' {
+    if (adx > 25) return 'trend';
+    if (adx < 20) return 'range';
+    return 'range'; // Default to range for moderate ADX
+  }
+
+  /**
+   * Get dynamic weights based on market regime
+   */
+  getDynamicWeights(regime: 'trend' | 'range'): Record<string, number> {
+    const config = loadConfig();
+    return config.marketRegimeWeights[regime];
+  }
+
+  /**
+   * Get technical data for multiple timeframes
+   */
+  async getMultiTimeframeData(symbol: string): Promise<{
+    h1: IndicatorData;
+    h4: IndicatorData;
+    d1: IndicatorData;
+  }> {
+    try {
+      // Get data for different timeframes
+      const [h1Data, h4Data, d1Data] = await Promise.all([
+        this.signals.getTechnicalIndicators(symbol, '1h'),
+        this.signals.getTechnicalIndicators(symbol, '4h'),
+        this.signals.getTechnicalIndicators(symbol, '1d')
+      ]);
+
+      return {
+        h1: h1Data,
+        h4: h4Data,
+        d1: d1Data
+      };
+    } catch (error) {
+      console.warn(`⚠️ Failed to get multi-timeframe data for ${symbol}:`, error);
+      // Fallback to single timeframe
+      const h1Data = await this.signals.getTechnicalIndicators(symbol, '1h');
+      return {
+        h1: h1Data,
+        h4: h1Data, // Use H1 as fallback
+        d1: h1Data  // Use H1 as fallback
+      };
+    }
+  }
+
+  /**
+   * Calculate technical metadata for confidence calibration
+   */
+  calculateTechnicalMetadata(indicatorData: IndicatorData, signals: Array<{
+    indicator: string;
+    value: number;
+    signal: 'bullish' | 'bearish' | 'neutral';
+    weight: number;
+  }>): {
+    strength_raw: number;
+    regime: 'trend' | 'range';
+    alignment_count: number;
+    quality_score: number;
+    volatility_estimate: number;
+    signal_consistency: number;
+    data_freshness: number;
+  } {
+    // Raw strength (before any adjustments)
+    const strength_raw = this.calculateRawSignalStrength(signals);
+
+    // Market regime
+    const adx = indicatorData.ADX || 0;
+    const regime = this.determineMarketRegime(adx);
+
+    // Alignment count (how many indicators agree)
+    const directions = signals.map(s => s.signal);
+    const bullishCount = directions.filter(d => d === 'bullish').length;
+    const bearishCount = directions.filter(d => d === 'bearish').length;
+    const alignment_count = Math.max(bullishCount, bearishCount);
+
+    // Quality score based on data completeness
+    const totalIndicators = 6; // RSI, MACD, Stochastic, Williams %R, ADX, BB
+    const availableIndicators = signals.length;
+    const quality_score = availableIndicators / totalIndicators;
+
+    // Volatility estimate
+    const volatility_estimate = this.calculateVolatilityEstimate(indicatorData);
+
+    // Signal consistency (how consistent the signals are)
+    const signal_consistency = alignment_count / signals.length;
+
+    // Data freshness (assume fresh for now, could be enhanced with timestamps)
+    const data_freshness = 1.0;
+
+    return {
+      strength_raw,
+      regime,
+      alignment_count,
+      quality_score,
+      volatility_estimate,
+      signal_consistency,
+      data_freshness
+    };
+  }
+
+  /**
+   * Calculate raw signal strength without any adjustments
+   */
+  calculateRawSignalStrength(signals: Array<{
+    indicator: string;
+    value: number;
+    signal: 'bullish' | 'bearish' | 'neutral';
+    weight: number;
+  }>): number {
+    let totalWeight = 0;
+    let weightedSum = 0;
+
+    for (const signal of signals) {
+      const signalValue = signal.signal === 'bullish' ? 1 : signal.signal === 'bearish' ? -1 : 0;
+      weightedSum += signalValue * signal.weight;
+      totalWeight += signal.weight;
+    }
+
+    return totalWeight > 0 ? weightedSum / totalWeight : 0;
+  }
+
+  /**
+   * Calculate calibrated confidence based on metadata
+   */
+  calculateCalibratedConfidence(metadata: {
+    strength_raw: number;
+    regime: 'trend' | 'range';
+    alignment_count: number;
+    quality_score: number;
+    volatility_estimate: number;
+    signal_consistency: number;
+    data_freshness: number;
+  }): number {
+    let confidence = 0.5; // Base confidence
+
+    // Signal strength bonus
+    const strengthBonus = Math.abs(metadata.strength_raw) * 0.3;
+    confidence += strengthBonus;
+
+    // Alignment bonus (more agreeing indicators = higher confidence)
+    const alignmentBonus = (metadata.alignment_count / 6) * 0.2;
+    confidence += alignmentBonus;
+
+    // Quality bonus (better data = higher confidence)
+    const qualityBonus = metadata.quality_score * 0.15;
+    confidence += qualityBonus;
+
+    // Consistency bonus (more consistent signals = higher confidence)
+    const consistencyBonus = metadata.signal_consistency * 0.1;
+    confidence += consistencyBonus;
+
+    // Freshness bonus (fresher data = higher confidence)
+    const freshnessBonus = metadata.data_freshness * 0.05;
+    confidence += freshnessBonus;
+
+    // Regime adjustment (trending markets can be more confident)
+    if (metadata.regime === 'trend') {
+      confidence *= 1.1;
+    }
+
+    // Volatility penalty (higher volatility = lower confidence)
+    const volatilityPenalty = metadata.volatility_estimate * 0.1;
+    confidence -= volatilityPenalty;
+
+    // Ensure confidence is within bounds
+    return Math.min(0.95, Math.max(0.3, confidence));
+  }
+
+  /**
+   * Calculate multi-timeframe signal strength
+   */
+  calculateMultiTimeframeStrength(timeframeData: {
+    h1: IndicatorData;
+    h4: IndicatorData;
+    d1: IndicatorData;
+  }): {
+    strength: number;
+    alignment: number; // 0-1, how many timeframes agree
+    timeframes: {
+      h1: { strength: number; regime: string };
+      h4: { strength: number; regime: string };
+      d1: { strength: number; regime: string };
+    };
+  } {
+    // Calculate strength for each timeframe
+    const h1Result = this.calculateSignalStrength(timeframeData.h1);
+    const h4Result = this.calculateSignalStrength(timeframeData.h4);
+    const d1Result = this.calculateSignalStrength(timeframeData.d1);
+
+    // Get regimes for each timeframe
+    const h1Regime = this.determineMarketRegime(timeframeData.h1.ADX || 0);
+    const h4Regime = this.determineMarketRegime(timeframeData.h4.ADX || 0);
+    const d1Regime = this.determineMarketRegime(timeframeData.d1.ADX || 0);
+
+    // Multi-timeframe weights (H1: 0.2, H4: 0.5, D1: 0.3)
+    const weights = { h1: 0.2, h4: 0.5, d1: 0.3 };
+
+    // Calculate weighted strength
+    const weightedStrength =
+      h1Result.strength * weights.h1 +
+      h4Result.strength * weights.h4 +
+      d1Result.strength * weights.d1;
+
+    // Calculate alignment (how many timeframes agree on direction)
+    const directions = [
+      Math.sign(h1Result.strength),
+      Math.sign(h4Result.strength),
+      Math.sign(d1Result.strength)
+    ];
+
+    const positiveCount = directions.filter(d => d > 0).length;
+    const negativeCount = directions.filter(d => d < 0).length;
+    const alignment = Math.max(positiveCount, negativeCount) / 3;
+
+    return {
+      strength: weightedStrength,
+      alignment,
+      timeframes: {
+        h1: { strength: h1Result.strength, regime: h1Regime },
+        h4: { strength: h4Result.strength, regime: h4Regime },
+        d1: { strength: d1Result.strength, regime: d1Regime }
+      }
+    };
+  }
+
+  /**
+   * Enhanced Bollinger Bands analysis with strict %B calculation
+   */
+  analyzeBollingerBands(bbPower: number, bbUpper?: number, bbLower?: number, bbMiddle?: number, close?: number): 'bullish' | 'bearish' | 'neutral' {
+    // If we have all BB components, calculate strict %B
+    if (bbUpper !== undefined && bbLower !== undefined && close !== undefined) {
+      const bandWidth = bbUpper - bbLower;
+      if (bandWidth > 0) {
+        // Strict %B calculation: (price - lower) / (upper - lower)
+        const percentB = (close - bbLower) / bandWidth;
+
+        // %B interpretation:
+        // %B > 1: Price above upper band (overbought)
+        // %B < 0: Price below lower band (oversold)
+        // 0 <= %B <= 1: Price within bands (normal)
+        if (percentB > 1) return 'bearish';
+        if (percentB < 0) return 'bullish';
+
+        // Within bands: check position relative to middle
+        if (bbMiddle !== undefined) {
+          const middlePercentB = (bbMiddle - bbLower) / bandWidth;
+          if (percentB > middlePercentB + 0.2) return 'bearish'; // Near upper
+          if (percentB < middlePercentB - 0.2) return 'bullish'; // Near lower
+        }
+
+        return 'neutral';
+      }
+    }
+
+    // Fallback to BBPower if strict calculation not possible
+    // BBPower > 1: Price above upper band (overbought)
+    // BBPower < 0: Price below lower band (oversold)
+    if (bbPower > 1) return 'bearish';
+    if (bbPower < 0) return 'bullish';
+
+    return 'neutral';
+  }
+
+  /**
+   * Calculate signal strength based on multiple indicators with dynamic weights
    */
   calculateSignalStrength(indicatorData: IndicatorData): SignalStrength {
     const signals: Array<{
@@ -101,39 +411,56 @@ export class TechnicalAnalysisService {
     let totalWeight = 0;
     let weightedSum = 0;
 
+    // Determine market regime based on ADX
+    const adx = indicatorData.ADX || 0;
+    const regime = this.determineMarketRegime(adx);
+    const dynamicWeights = this.getDynamicWeights(regime);
+
+    // Log regime for debugging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📊 Market Regime: ${regime} (ADX: ${adx.toFixed(2)})`);
+      console.log(`⚖️ Dynamic Weights:`, dynamicWeights);
+    }
+
     // RSI Analysis
     if (indicatorData.RSI !== undefined) {
       let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
       if (this.isOverbought(indicatorData.RSI, 'rsi')) signal = 'bearish';
       else if (this.isOversold(indicatorData.RSI, 'rsi')) signal = 'bullish';
 
+      const rsiWeight = dynamicWeights.rsi || SIGNAL_WEIGHTS.RSI;
       signals.push({
         indicator: 'rsi',
         value: indicatorData.RSI,
         signal,
-        weight: SIGNAL_WEIGHTS.RSI
+        weight: rsiWeight
       });
 
       const signalValue = signal === 'bullish' ? 1 : signal === 'bearish' ? -1 : 0;
-      weightedSum += signalValue * SIGNAL_WEIGHTS.RSI;
-      totalWeight += SIGNAL_WEIGHTS.RSI;
+      weightedSum += signalValue * rsiWeight;
+      totalWeight += rsiWeight;
     }
 
     // MACD Analysis
     if (indicatorData['MACD.macd'] !== undefined) {
       const macdValue = indicatorData['MACD.macd'];
-      const signal: 'bullish' | 'bearish' | 'neutral' = macdValue > 0 ? 'bullish' : 'bearish';
+      const macdSignal = indicatorData['MACD.signal'] || 0;
+      const macdHist = indicatorData['MACD.hist'] || (macdValue - macdSignal);
 
+      // Enhanced MACD analysis with signal cross and histogram slope
+      const signal = this.analyzeMACD(macdValue, macdSignal, macdHist);
+
+      const macdWeight = dynamicWeights.macd || SIGNAL_WEIGHTS.MACD;
       signals.push({
         indicator: 'macd',
         value: macdValue,
         signal,
-        weight: SIGNAL_WEIGHTS.MACD
+        weight: macdWeight
       });
 
       const signalValue = signal === 'bullish' ? 1 : signal === 'bearish' ? -1 : 0;
-      weightedSum += signalValue * SIGNAL_WEIGHTS.MACD;
-      totalWeight += SIGNAL_WEIGHTS.MACD;
+      weightedSum += signalValue * macdWeight;
+      totalWeight += macdWeight;
     }
 
     // Stochastic Analysis
@@ -142,16 +469,17 @@ export class TechnicalAnalysisService {
       if (this.isOverbought(indicatorData['Stoch.K'], 'stochastic')) signal = 'bearish';
       else if (this.isOversold(indicatorData['Stoch.K'], 'stochastic')) signal = 'bullish';
 
+      const stochasticWeight = dynamicWeights.stochastic || SIGNAL_WEIGHTS.STOCHASTIC;
       signals.push({
         indicator: 'stochastic',
         value: indicatorData['Stoch.K'],
         signal,
-        weight: SIGNAL_WEIGHTS.STOCHASTIC
+        weight: stochasticWeight
       });
 
       const signalValue = signal === 'bullish' ? 1 : signal === 'bearish' ? -1 : 0;
-      weightedSum += signalValue * SIGNAL_WEIGHTS.STOCHASTIC;
-      totalWeight += SIGNAL_WEIGHTS.STOCHASTIC;
+      weightedSum += signalValue * stochasticWeight;
+      totalWeight += stochasticWeight;
     }
 
     // Williams %R Analysis
@@ -160,16 +488,17 @@ export class TechnicalAnalysisService {
       if (this.isOverbought(indicatorData['W.R'], 'williams_r')) signal = 'bearish';
       else if (this.isOversold(indicatorData['W.R'], 'williams_r')) signal = 'bullish';
 
+      const williamsRWeight = dynamicWeights.williamsR || SIGNAL_WEIGHTS.WILLIAMS_R;
       signals.push({
         indicator: 'williams_r',
         value: indicatorData['W.R'],
         signal,
-        weight: SIGNAL_WEIGHTS.WILLIAMS_R
+        weight: williamsRWeight
       });
 
       const signalValue = signal === 'bullish' ? 1 : signal === 'bearish' ? -1 : 0;
-      weightedSum += signalValue * SIGNAL_WEIGHTS.WILLIAMS_R;
-      totalWeight += SIGNAL_WEIGHTS.WILLIAMS_R;
+      weightedSum += signalValue * williamsRWeight;
+      totalWeight += williamsRWeight;
     }
 
     // ADX Analysis (Trend Strength)
@@ -185,43 +514,53 @@ export class TechnicalAnalysisService {
         signal = diPlus > diMinus ? 'bullish' : 'bearish';
       }
 
+      const adxWeight = dynamicWeights.adx || 0.15;
       signals.push({
         indicator: 'adx',
         value: adxValue,
         signal,
-        weight: 0.15 // Lower weight for trend strength
+        weight: adxWeight
       });
 
       const signalValue = signal === 'bullish' ? 1 : signal === 'bearish' ? -1 : 0;
-      weightedSum += signalValue * 0.15;
-      totalWeight += 0.15;
+      weightedSum += signalValue * adxWeight;
+      totalWeight += adxWeight;
     }
 
     // Bollinger Bands Analysis
     if (indicatorData.BBPower !== undefined) {
       const bbValue = indicatorData.BBPower;
-      let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+      const bbUpper = indicatorData['BB.upper'];
+      const bbLower = indicatorData['BB.lower'];
+      const bbMiddle = indicatorData['BB.middle'];
+      const close = indicatorData.close || 0;
 
-      // BBPower > 1 indicates price above upper band (overbought)
-      // BBPower < 0 indicates price below lower band (oversold)
-      if (bbValue > 1) signal = 'bearish';
-      else if (bbValue < 0) signal = 'bullish';
+      // Enhanced Bollinger Bands analysis with strict %B calculation
+      const signal = this.analyzeBollingerBands(bbValue, bbUpper, bbLower, bbMiddle, close);
 
+      const bbWeight = dynamicWeights.bollingerBands || 0.15;
       signals.push({
         indicator: 'bollinger_bands',
         value: bbValue,
         signal,
-        weight: 0.15
+        weight: bbWeight
       });
 
       const signalValue = signal === 'bullish' ? 1 : signal === 'bearish' ? -1 : 0;
-      weightedSum += signalValue * 0.15;
-      totalWeight += 0.15;
+      weightedSum += signalValue * bbWeight;
+      totalWeight += bbWeight;
     }
 
     const strength = totalWeight > 0 ? weightedSum / totalWeight : 0;
 
-    return { strength, signals };
+    // Calculate technical metadata for confidence calibration
+    const metadata = this.calculateTechnicalMetadata(indicatorData, signals);
+
+    return {
+      strength,
+      signals,
+      metadata
+    };
   }
 
   /**
@@ -265,17 +604,17 @@ export class TechnicalAnalysisService {
   /**
    * Generate trading recommendation based on signal strength and sentiment
    */
-  generateRecommendation(signalStrength: number, sentiment: number): 'BUY' | 'HOLD' | 'SELL' {
+  generateRecommendation(signalStrength: number, sentiment: number): 'buy' | 'hold' | 'sell' {
     const sentimentScore = sentiment / 100; // Normalize to 0-1
     const combinedScore = (signalStrength + sentimentScore) / 2;
 
     if (combinedScore > 0.3) {
-      return 'BUY';
+      return 'buy';
     } else if (combinedScore < -0.3) {
-      return 'SELL';
+      return 'sell';
     }
 
-    return 'HOLD';
+    return 'hold';
   }
 
   /**
@@ -395,7 +734,7 @@ export class TechnicalAnalysisService {
    */
   calculateTargetLevels(
     currentPrice: number,
-    signalDirection: 'BUY' | 'SELL' | 'HOLD',
+    signalDirection: 'buy' | 'sell' | 'hold',
     signalStrength: number,
     technicalData: IndicatorData,
     volatility: number = 0.02
@@ -442,10 +781,18 @@ export class TechnicalAnalysisService {
       time_horizon = 'long';
     }
 
-    // Base confidence on signal strength and technical confirmation
-    confidence = Math.min(0.95, Math.max(0.3, signalStrength * 1.2));
+    // Calculate calibrated confidence using metadata
+    const signalStrengthResult = this.calculateSignalStrength(technicalData);
+    const metadata = signalStrengthResult.metadata;
 
-    if (signalDirection === 'BUY') {
+    if (metadata) {
+      confidence = this.calculateCalibratedConfidence(metadata);
+    } else {
+      // Fallback to old method
+      confidence = Math.min(0.95, Math.max(0.3, signalStrength * 1.2));
+    }
+
+    if (signalDirection === 'buy') {
       // BUY signal logic
       const bullishFactors = [];
 
@@ -494,7 +841,7 @@ export class TechnicalAnalysisService {
 
       reasoning = `BUY signal based on: ${bullishFactors.join(', ')}. Target: ${((target_price / currentPrice - 1) * 100).toFixed(1)}% gain.`;
 
-    } else if (signalDirection === 'SELL') {
+    } else if (signalDirection === 'sell') {
       // SELL signal logic
       const bearishFactors = [];
 
@@ -555,10 +902,10 @@ export class TechnicalAnalysisService {
     // Risk management adjustments
     if (signalStrength < 0.3) {
       // Weak signal - more conservative levels
-      target_price = signalDirection === 'BUY'
+      target_price = signalDirection === 'buy'
         ? currentPrice + (currentPrice * 0.01) // 1% target
         : currentPrice - (currentPrice * 0.01); // 1% target
-      stop_loss = signalDirection === 'BUY'
+      stop_loss = signalDirection === 'buy'
         ? currentPrice * 0.99 // 1% stop
         : currentPrice * 1.01; // 1% stop
       confidence *= 0.8; // Reduce confidence
@@ -574,10 +921,10 @@ export class TechnicalAnalysisService {
     take_profit = Math.max(minPrice, Math.min(maxPrice, take_profit));
 
     // Ensure stop loss is on the correct side of current price
-    if (signalDirection === 'BUY') {
+    if (signalDirection === 'buy') {
       stop_loss = Math.min(stop_loss, currentPrice * 0.99); // Stop loss below current price
       take_profit = Math.max(take_profit, target_price); // Take profit above target
-    } else if (signalDirection === 'SELL') {
+    } else if (signalDirection === 'sell') {
       stop_loss = Math.max(stop_loss, currentPrice * 1.01); // Stop loss above current price
       take_profit = Math.min(take_profit, target_price); // Take profit below target
     }
@@ -604,8 +951,8 @@ export class TechnicalAnalysisService {
 
     // Get technical signal direction
     const technicalSignal = this.calculateSignalStrength(technicalData);
-    const technicalDirection = technicalSignal.strength > 0.1 ? 'BUY' :
-      technicalSignal.strength < -0.1 ? 'SELL' : 'HOLD';
+    const technicalDirection = technicalSignal.strength > 0.1 ? 'buy' :
+      technicalSignal.strength < -0.1 ? 'sell' : 'hold';
 
     // Check for conflicts
     if (technicalDirection !== consensus.signal_direction) {
@@ -627,9 +974,9 @@ export class TechnicalAnalysisService {
       baseLevels.confidence *= 0.7;
 
       // Widen stop loss
-      if (consensus.signal_direction === 'BUY') {
+      if (consensus.signal_direction === 'buy') {
         baseLevels.stop_loss *= 0.95; // 5% wider stop
-      } else if (consensus.signal_direction === 'SELL') {
+      } else if (consensus.signal_direction === 'sell') {
         baseLevels.stop_loss *= 1.05; // 5% wider stop
       }
 

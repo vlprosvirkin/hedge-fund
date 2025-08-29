@@ -319,6 +319,53 @@ export const RiskProfileDecisionThresholdsSchema = z.object({
   bold: DecisionThresholdsSchema,
 });
 
+// ===== Technical Analysis Types =====
+export const TechnicalThresholdsSchema = z.object({
+  rsi: z.object({
+    overbought: z.number(),
+    oversold: z.number()
+  }),
+  stochastic: z.object({
+    overbought: z.number(),
+    oversold: z.number()
+  }),
+  williamsR: z.object({
+    overbought: z.number(),
+    oversold: z.number()
+  }),
+  adx: z.object({
+    strongTrend: z.number()
+  }),
+  bollingerBands: z.object({
+    overbought: z.number(),
+    oversold: z.number(),
+    nearUpper: z.number(),
+    nearLower: z.number()
+  })
+});
+
+// Market regime weights
+export const MarketRegimeWeightsSchema = z.object({
+  trend: z.object({
+    rsi: z.number(),
+    macd: z.number(),
+    stochastic: z.number(),
+    williamsR: z.number(),
+    adx: z.number(),
+    bollingerBands: z.number(),
+    movingAverages: z.number()
+  }),
+  range: z.object({
+    rsi: z.number(),
+    macd: z.number(),
+    stochastic: z.number(),
+    williamsR: z.number(),
+    adx: z.number(),
+    bollingerBands: z.number(),
+    movingAverages: z.number()
+  })
+});
+
 // ===== System Types =====
 export const SystemConfigSchema = z.object({
   riskProfile: RiskProfileSchema,
@@ -326,6 +373,8 @@ export const SystemConfigSchema = z.object({
   rebalanceInterval: z.number(), // seconds
   maxPositions: z.number(),
   decisionThresholds: RiskProfileDecisionThresholdsSchema,
+  technicalThresholds: TechnicalThresholdsSchema,
+  marketRegimeWeights: MarketRegimeWeightsSchema,
   killSwitchEnabled: z.boolean(),
 });
 
@@ -372,6 +421,21 @@ export type SignalMetrics = z.infer<typeof SignalMetricsSchema>;
 
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
 export type PipelineArtifact = z.infer<typeof PipelineArtifactSchema>;
+export type TechnicalThresholds = z.infer<typeof TechnicalThresholdsSchema>;
+export type MarketRegimeWeights = z.infer<typeof MarketRegimeWeightsSchema>;
+
+// Technical analysis metadata types
+export const TechnicalMetadataSchema = z.object({
+  strength_raw: z.number(), // Raw signal strength before adjustments
+  regime: z.enum(['trend', 'range']), // Market regime
+  alignment_count: z.number(), // Number of agreeing indicators
+  quality_score: z.number(), // Data quality score (0-1)
+  volatility_estimate: z.number(), // Volatility estimate
+  signal_consistency: z.number(), // How consistent signals are
+  data_freshness: z.number(), // How fresh the data is (0-1)
+});
+
+export type TechnicalMetadata = z.infer<typeof TechnicalMetadataSchema>;
 
 export type NewsItem = z.infer<typeof NewsItemSchema>;
 export type Evidence = z.infer<typeof EvidenceSchema>;

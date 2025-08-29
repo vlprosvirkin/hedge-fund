@@ -642,8 +642,14 @@ export class HedgeFundOrchestrator {
       const finalPositions = await this.trading.getPositions();
       const portfolioMetrics = await this.getPortfolioMetrics();
 
-      // 📱 Send enhanced round summary
-      await this.notifications.postRoundCompletion(this.roundId, {
+      // Step 8.3: Generate and store results with target levels
+      this.logger.info('Step 8.3: Generating results with target levels');
+      const results = await this.generateResultsWithTargetLevels(consensus, verifiedClaims, evidence, marketStats);
+      await this.factStore.storeResults(results);
+      this.logger.info(`✅ Generated and stored ${results.length} results with target levels`);
+
+      // 📱 Send enhanced round summary with detailed results
+      await this.notifications.postRoundCompletionWithResults(this.roundId, {
         roundId: this.roundId,
         timestamp: startTime,
         claims: verifiedClaims,
@@ -655,13 +661,7 @@ export class HedgeFundOrchestrator {
           unrealizedPnL: portfolioMetrics?.unrealizedPnL || 0,
           realizedPnL: portfolioMetrics?.realizedPnL || 0
         }
-      });
-
-      // Step 8.3: Generate and store results with target levels
-      this.logger.info('Step 8.3: Generating results with target levels');
-      const results = await this.generateResultsWithTargetLevels(consensus, verifiedClaims, evidence, marketStats);
-      await this.factStore.storeResults(results);
-      this.logger.info(`✅ Generated and stored ${results.length} results with target levels`);
+      }, results);
 
       // End round in database
       this.logger.info('Step 8.4: Ending round in database');
@@ -1019,7 +1019,7 @@ export class HedgeFundOrchestrator {
         const thresholds = this.config.decisionThresholds[this.config.riskProfile];
         const targetLevels = this.technicalAnalysis.calculateTargetLevels(
           currentPrice,
-          consensusItem.finalScore > thresholds.buy ? 'BUY' : consensusItem.finalScore < thresholds.sell ? 'SELL' : 'HOLD',
+          consensusItem.finalScore > thresholds.buy ? 'buy' : consensusItem.finalScore < thresholds.sell ? 'sell' : 'hold',
           Math.abs(consensusItem.finalScore),
           technicalData,
           volatility
@@ -1062,7 +1062,7 @@ export class HedgeFundOrchestrator {
           round_id: this.roundId,
           ticker: consensusItem.ticker,
           signal_strength: Math.abs(consensusItem.finalScore),
-          signal_direction: consensusItem.finalScore > thresholds.buy ? 'BUY' : consensusItem.finalScore < thresholds.sell ? 'SELL' : 'HOLD',
+          signal_direction: consensusItem.finalScore > thresholds.buy ? 'buy' : consensusItem.finalScore < thresholds.sell ? 'sell' : 'hold',
           confidence: consensusItem.avgConfidence,
           reasoning: targetLevels.reasoning,
           target_price: targetLevels.target_price,

@@ -20,6 +20,9 @@ export const StatsResponseSchema = z.object({
 
         // Bollinger Bands
         BBPower: z.number(),
+        "BB.upper": z.number(), // Upper Bollinger Band
+        "BB.lower": z.number(), // Lower Bollinger Band
+        "BB.middle": z.number(), // Middle Bollinger Band (SMA20)
 
         // CCI (Commodity Channel Index)
         "CCI20[1]": z.number(),
@@ -42,6 +45,7 @@ export const StatsResponseSchema = z.object({
         // MACD
         "MACD.macd": z.number(),
         "MACD.signal": z.number(),
+        "MACD.hist": z.number(), // MACD histogram (MACD - Signal)
 
         // Momentum
         "Mom[1]": z.number(),
@@ -578,6 +582,15 @@ export const SignalSchema = z.object({
 export const SignalStrengthSchema = z.object({
     strength: z.number(), // -1 to 1 (bearish to bullish)
     signals: z.array(SignalSchema),
+    metadata: z.object({
+        strength_raw: z.number(),
+        regime: z.enum(['trend', 'range']),
+        alignment_count: z.number(),
+        quality_score: z.number(),
+        volatility_estimate: z.number(),
+        signal_consistency: z.number(),
+        data_freshness: z.number(),
+    }).optional(),
 });
 
 // ===== Asset Metadata Types =====
@@ -591,7 +604,7 @@ export const AssetMetadataSchema = z.object({
     sentiment: z.number(),
 });
 
-export const RecommendationSchema = z.enum(['BUY', 'HOLD', 'SELL']);
+export const RecommendationSchema = z.enum(['buy', 'hold', 'sell']);
 
 export const ComprehensiveAnalysisSchema = z.object({
     technical: z.any(), // Using the data from StatsResponseSchema

@@ -110,7 +110,7 @@ async function servicesIntegrationTest() {
                 metadata: assetMetadata,
                 news: { items: [] },
                 signalStrength: 0.234,
-                recommendation: 'HOLD'
+                recommendation: 'hold'
             };
         }
 

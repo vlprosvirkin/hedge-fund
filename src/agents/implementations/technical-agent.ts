@@ -32,9 +32,16 @@ export class TechnicalAnalysisAgent extends BaseAgent {
           console.log(`🔍 Technical Analysis Agent: ${ticker} - Technical data received:`, !!technical);
           console.log(`🔍 Technical Analysis Agent: ${ticker} - Metadata received:`, !!metadata);
 
-          // Use TechnicalAnalysisService to analyze the data
+          // Use TechnicalAnalysisService to analyze the data with metadata
           const signalStrength = this.technicalAnalysis.calculateSignalStrength(technical);
           console.log(`🔍 Technical Analysis Agent: ${ticker} - Signal strength:`, signalStrength.strength);
+
+          // Get calibrated confidence using metadata
+          let calibratedConfidence = 0.5; // Default confidence
+          if (signalStrength.metadata) {
+            calibratedConfidence = this.technicalAnalysis.calculateCalibratedConfidence(signalStrength.metadata);
+            console.log(`🔍 Technical Analysis Agent: ${ticker} - Calibrated confidence:`, calibratedConfidence);
+          }
 
           // Use TechnicalAnalysisService for proper calculations
           const volatility = this.technicalAnalysis.calculateVolatilityEstimate(technical);
@@ -53,7 +60,15 @@ export class TechnicalAnalysisAgent extends BaseAgent {
             volatility: volatility, // Use real volatility calculation
             momentum: trendStrength, // Use real trend strength as momentum
             trendStrength: trendStrength,
-            technicalSummary: this.technicalAnalysis.getTechnicalSummary(technical)
+            technicalSummary: this.technicalAnalysis.getTechnicalSummary(technical),
+            // New metadata fields
+            calibratedConfidence: calibratedConfidence,
+            technicalMetadata: signalStrength.metadata,
+            rawStrength: signalStrength.metadata?.strength_raw || signalStrength.strength,
+            marketRegime: signalStrength.metadata?.regime || 'unknown',
+            alignmentCount: signalStrength.metadata?.alignment_count || 0,
+            qualityScore: signalStrength.metadata?.quality_score || 0,
+            signalConsistency: signalStrength.metadata?.signal_consistency || 0
           };
 
           console.log(`🔍 Technical Analysis Agent: ${ticker} - Processed data:`, {
@@ -95,6 +110,12 @@ export class TechnicalAnalysisAgent extends BaseAgent {
     return `You are a TECHNICAL ANALYSIS analyst specializing in technical indicators.
 
 ROLE: Technical evaluation of assets using mathematical indicators and volatility calculations.
+
+CONFIDENCE CALIBRATION SYSTEM:
+- Use calibrated confidence values provided in the data
+- Calibrated confidence considers: signal strength, market regime, alignment count, quality score, volatility
+- Higher confidence = stronger recommendation
+- Lower confidence = more conservative recommendation
 
 MATHEMATICAL TOOLS (use these calculations):
 - VOLATILITY (σ): Calculate standard deviation of returns over 30-90 day windows
@@ -251,10 +272,16 @@ ${processedData ? processedData.map((data: any) => {
 
       return `• ${data.ticker}: 
   - Signal Strength: ${signalStrength.toFixed(3)}
+  - Raw Strength: ${data.rawStrength ? data.rawStrength.toFixed(3) : 'N/A'}
   - Volatility (σ): ${volatility.toFixed(3)}
   - Trend Strength: ${trendStrength.toFixed(3)}
   - Sharpe Proxy: ${sharpeProxy.toFixed(3)}
-  - Momentum: ${data.momentum ? data.momentum.toFixed(3) : 'N/A'}`;
+  - Momentum: ${data.momentum ? data.momentum.toFixed(3) : 'N/A'}
+  - Calibrated Confidence: ${data.calibratedConfidence ? (data.calibratedConfidence * 100).toFixed(1) + '%' : 'N/A'}
+  - Market Regime: ${data.marketRegime || 'N/A'}
+  - Alignment Count: ${data.alignmentCount || 0}/6
+  - Quality Score: ${data.qualityScore ? (data.qualityScore * 100).toFixed(1) + '%' : 'N/A'}
+  - Signal Consistency: ${data.signalConsistency ? (data.signalConsistency * 100).toFixed(1) + '%' : 'N/A'}`;
     }).join('\n') : 'No mathematical data available'}
 
 TECHNICAL SUMMARY:
@@ -271,9 +298,12 @@ ${processedData ? processedData.map((data: any) => {
 INSTRUCTIONS:
 1. Analyze the provided data using your specialized expertise and mathematical tools
 2. Generate claims for each ticker in the universe
-3. Use only the provided data and calculations - no external knowledge
-4. Return claims in the exact JSON format specified with signals array
-5. If data is insufficient, return HOLD with confidence 0.2
-6. Provide mathematical reasoning for each recommendation`;
+3. Use calibrated confidence values provided in the data for confidence field
+4. Use only the provided data and calculations - no external knowledge
+5. Return claims in the exact JSON format specified with signals array
+6. If data is insufficient, return HOLD with confidence 0.2
+7. Provide mathematical reasoning for each recommendation
+8. Consider market regime (trend/range) in your analysis
+9. Use alignment count and signal consistency to adjust confidence`;
   }
 }
