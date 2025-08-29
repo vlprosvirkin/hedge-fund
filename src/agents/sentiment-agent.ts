@@ -148,7 +148,7 @@ Return ONLY a valid JSON object with this exact structure:
         {"name": "social_engagement", "value": 0.73}
       ],
       "evidence": [
-        {"kind": "news", "source": "coindesk", "url": "https://...", "publishedAt": "2024-01-01T00:00:00Z", "snippet": "..."},
+        {"kind": "news", "source": "coindesk", "url": "https://example.com", "publishedAt": "2024-01-01T00:00:00Z", "snippet": "Sample news snippet"},
         {"kind": "index", "name": "fear_greed", "value": 72, "observedAt": "2024-01-01T00:00:00Z"},
         {"kind": "social", "source": "signals", "metric": "galaxyscore", "value": 67.4, "observedAt": "2024-01-01T00:00:00Z"}
       ],

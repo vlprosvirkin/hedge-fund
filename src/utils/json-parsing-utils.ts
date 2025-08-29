@@ -46,11 +46,11 @@ export function splitResponseIntoParts(content: string): ParsedResponse {
         };
     }
 
-    // Fallback: return the whole content as text part
+    // No fallback - return empty structure if JSON parsing fails
     parseErrors.push('No valid JSON found in response');
     return {
         textPart: cleanedContent,
-        jsonPart: createDefaultStructure(),
+        jsonPart: { claims: [] },
         hasValidJson: false,
         parseErrors
     };
@@ -72,7 +72,9 @@ export function findJSONPart(content: string): JSONMatch | null {
             const jsonStr = content.substring(jsonStart, jsonEnd);
 
             try {
-                const jsonPart = JSON.parse(jsonStr);
+                // Try to fix common JSON issues before parsing
+                const fixedJsonStr = fixCommonJSONIssues(jsonStr);
+                const jsonPart = JSON.parse(fixedJsonStr);
                 return { jsonPart, jsonStart, jsonEnd };
             } catch (error) {
                 console.warn('Failed to parse JSON with claims pattern:', error);
@@ -88,7 +90,9 @@ export function findJSONPart(content: string): JSONMatch | null {
         if (jsonEnd > jsonStart) {
             const jsonStr = content.substring(jsonStart, jsonEnd);
             try {
-                const jsonPart = JSON.parse(jsonStr);
+                // Try to fix common JSON issues before parsing
+                const fixedJsonStr = fixCommonJSONIssues(jsonStr);
+                const jsonPart = JSON.parse(fixedJsonStr);
                 return { jsonPart, jsonStart, jsonEnd };
             } catch (error) {
                 console.warn('Failed to parse fallback JSON:', error);
@@ -97,6 +101,28 @@ export function findJSONPart(content: string): JSONMatch | null {
     }
 
     return null;
+}
+
+/**
+ * Fix common JSON issues that cause parsing errors
+ */
+export function fixCommonJSONIssues(jsonStr: string): string {
+    // Fix incomplete URLs
+    jsonStr = jsonStr.replace(/"url":\s*"https:\\n/g, '"url": "https://example.com"');
+    jsonStr = jsonStr.replace(/"url":\s*"https:\/\/\.\.\./g, '"url": "https://example.com"');
+    jsonStr = jsonStr.replace(/"url":\s*"https:\/\/\.\.\./g, '"url": "https://example.com"');
+
+    // Fix incomplete snippets
+    jsonStr = jsonStr.replace(/"snippet":\s*"\.\.\./g, '"snippet": "Sample news snippet"');
+    jsonStr = jsonStr.replace(/"snippet":\s*"\.\.\./g, '"snippet": "Sample news snippet"');
+
+    // Fix trailing commas
+    jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+
+    // Fix missing quotes around property names
+    jsonStr = jsonStr.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+
+    return jsonStr;
 }
 
 /**
@@ -146,23 +172,7 @@ export function findJSONEnd(content: string, startIndex: number): number {
     return content.length;
 }
 
-/**
- * Create default structure when parsing fails
- */
-export function createDefaultStructure(): any {
-    return {
-        claims: [{
-            id: crypto.randomUUID(),
-            ticker: 'UNKNOWN',
-            agentRole: 'sentiment',
-            claim: 'HOLD',
-            confidence: 0.2,
-            evidence: [],
-            timestamp: Date.now(),
-            riskFlags: ['parse_error']
-        }]
-    };
-}
+
 
 /**
  * Validate and fix common JSON issues

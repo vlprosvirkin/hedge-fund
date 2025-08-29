@@ -1,6 +1,6 @@
 🧪 TELEGRAM MESSAGES SUMMARY
 ================================================================================
-Test Date: 8/28/2025, 4:40:40 PM
+Test Date: 8/29/2025, 12:45:36 PM
 Total Messages: 8
 Note: Using REAL NotificationsService formatting functions
 ================================================================================
@@ -8,19 +8,19 @@ Note: Using REAL NotificationsService formatting functions
 1. 🚀 TRADING ROUND STARTED
 
 2. 📊 FUNDAMENTAL ANALYST
-   Confidence: 20.0%
+   Confidence: 78.5%
 
 3. 📰 SENTIMENT ANALYST
-   Confidence: 0.0%
+   Confidence: 55.0%
 
 4. 📈 TECHNICAL ANALYST
-   Confidence: 60.0%
+   Confidence: 50.0%
 
 5. 🎯 SIGNAL ANALYST
-   Confidence: 59.5%
+   Confidence: 62.8%
 
 6. 🎭 AGENT DEBATES & CONSENSUS
-   Confidence: 59.5%
+   Confidence: 62.8%
 
 7. 💼 PORTFOLIO SUMMARY
 
