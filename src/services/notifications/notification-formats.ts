@@ -423,12 +423,47 @@ export class NotificationFormats {
             text += `📊 <b>SIGNAL ANALYSIS:</b>\n`;
             signalAnalyses.forEach((signal: any, i: number) => {
                 const action = signal.recommendation === 'BUY' ? '🚀' : signal.recommendation === 'SELL' ? '📉' : '⏸️';
+                const signalPercent = signal.overallSignal * 100;
+                
+                // Signal strength classification
+                let strengthEmoji = '💤';
+                let strengthText = 'Very Weak';
+                if (Math.abs(signalPercent) >= 40) {
+                    strengthEmoji = '💥';
+                    strengthText = 'Very Strong';
+                } else if (Math.abs(signalPercent) >= 20) {
+                    strengthEmoji = '🚀';
+                    strengthText = 'Strong';
+                } else if (Math.abs(signalPercent) >= 10) {
+                    strengthEmoji = '🔥';
+                    strengthText = 'Moderate';
+                } else if (Math.abs(signalPercent) >= 5) {
+                    strengthEmoji = '⚡';
+                    strengthText = 'Weak';
+                }
+                
+                // Signal direction
+                const direction = signalPercent > 0 ? '📈 Bullish' : signalPercent < 0 ? '📉 Bearish' : '➡️ Neutral';
+                
                 text += `${i + 1}. ${action} <b>${signal.ticker}</b>\n`;
-                text += `   📊 Signal: ${(signal.overallSignal * 100).toFixed(1)}%\n`;
+                text += `   📊 Signal: ${signalPercent.toFixed(1)}% (${strengthEmoji} ${strengthText} ${direction})\n`;
                 text += `   💪 Confidence: ${(signal.confidence * 100).toFixed(1)}%\n`;
                 text += `   ⚠️ Risk: ${(signal.riskScore * 100).toFixed(1)}%\n`;
                 if (signal.positionSize) {
                     text += `   💰 Position Size: ${(signal.positionSize * 100).toFixed(1)}%\n`;
+                }
+                
+                // Add signal interpretation
+                if (Math.abs(signalPercent) < 5) {
+                    text += `   💭 <i>Very weak signal - market is neutral, no clear direction</i>\n`;
+                } else if (Math.abs(signalPercent) < 10) {
+                    text += `   💭 <i>Weak signal - slight bias but insufficient for trading</i>\n`;
+                } else if (Math.abs(signalPercent) < 20) {
+                    text += `   💭 <i>Moderate signal - clear direction but consider market conditions</i>\n`;
+                } else if (Math.abs(signalPercent) < 40) {
+                    text += `   💭 <i>Strong signal - confident direction, good trading opportunity</i>\n`;
+                } else {
+                    text += `   💭 <i>Very strong signal - exceptional opportunity, high conviction</i>\n`;
                 }
                 text += '\n';
             });
@@ -447,7 +482,25 @@ export class NotificationFormats {
 
             text += `📈 <b>PORTFOLIO SUMMARY:</b>\n`;
             text += `🚀 Buy: ${buyCount} | 📉 Sell: ${sellCount} | ⏸️ Hold: ${holdCount}\n`;
-            text += `💪 Avg Confidence: ${(avgConfidence * 100).toFixed(1)}%\n`;
+            text += `💪 Avg Confidence: ${(avgConfidence * 100).toFixed(1)}%\n\n`;
+            
+            // Add trading explanation
+            if (buyCount === 0 && sellCount === 0) {
+                text += `💡 <b>TRADING EXPLANATION:</b>\n`;
+                text += `• All signals are HOLD due to weak market conditions\n`;
+                text += `• Signals below trading thresholds (5-10% for neutral risk)\n`;
+                text += `• System is waiting for stronger directional signals\n`;
+                text += `• Consider market volatility and news events\n`;
+            } else {
+                text += `💡 <b>TRADING OPPORTUNITIES:</b>\n`;
+                if (buyCount > 0) {
+                    text += `• ${buyCount} asset(s) showing buy signals\n`;
+                }
+                if (sellCount > 0) {
+                    text += `• ${sellCount} asset(s) showing sell signals\n`;
+                }
+                text += `• Monitor position sizes and risk management\n`;
+            }
         }
 
         return text;
@@ -712,6 +765,30 @@ export class NotificationFormats {
         text += `• 🎯 Consensus: ${summary.consensus.length} decisions\n`;
         text += `• ⚡ Orders: ${summary.orders.length} executed\n`;
         text += `• 💰 Portfolio: $${totalValue.toFixed(2)} (PnL: $${unrealizedPnL.toFixed(2)})\n\n`;
+        
+        // Add human-readable performance interpretation
+        text += `💡 <b>PERFORMANCE INTERPRETATION:</b>\n`;
+        if (summary.orders.length === 0) {
+            text += `• 🚫 No trades executed - signals below trading thresholds\n`;
+            text += `• ⏸️ System is waiting for stronger market signals\n`;
+            text += `• 📊 Market conditions are neutral/uncertain\n`;
+        } else {
+            text += `• ✅ ${summary.orders.length} trade(s) executed successfully\n`;
+            if (unrealizedPnL > 0) {
+                text += `• 📈 Portfolio showing positive performance\n`;
+            } else if (unrealizedPnL < 0) {
+                text += `• 📉 Portfolio showing negative performance\n`;
+            } else {
+                text += `• ➡️ Portfolio performance is neutral\n`;
+            }
+        }
+        
+        // Add market context
+        const avgConfidence = summary.consensus.length > 0 
+            ? summary.consensus.reduce((sum, c) => sum + c.avgConfidence, 0) / summary.consensus.length 
+            : 0;
+        text += `• 🎯 Average confidence: ${(avgConfidence * 100).toFixed(1)}%\n`;
+        text += `• ⏱️ Round completed in ${duration} seconds\n\n`;
 
         // Show consensus decisions with signal interpretation
         if (summary.consensus.length > 0) {

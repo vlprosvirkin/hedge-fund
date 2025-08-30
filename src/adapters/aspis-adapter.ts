@@ -494,7 +494,7 @@ export class AspisAdapter implements TradingAdapter {
       });
 
       if (response.data?.data?.[wrappedSymbol]?.USD) {
-        console.log(`Found price for ${symbol} (${wrappedSymbol}): ${response.data.data[wrappedSymbol].USD}`);
+        //console.log(`Found price for ${symbol} (${wrappedSymbol}): ${response.data.data[wrappedSymbol].USD}`);
         return response.data.data[wrappedSymbol].USD;
       }
 
@@ -502,7 +502,7 @@ export class AspisAdapter implements TradingAdapter {
       const variations = this.getSymbolVariations(wrappedSymbol);
       for (const variation of variations) {
         if (response.data?.data?.[variation]?.USD) {
-          console.log(`Found price for ${symbol} (${wrappedSymbol}) using variation: ${variation}`);
+          // console.log(`Found price for ${symbol} (${wrappedSymbol}) using variation: ${variation}`);
           return response.data.data[variation].USD;
         }
       }
@@ -533,7 +533,7 @@ export class AspisAdapter implements TradingAdapter {
           // Try exact match first with wrapped symbol
           if (response.data.data[wrappedSymbol]?.USD) {
             prices[symbol] = response.data.data[wrappedSymbol].USD;
-            console.log(`Found price for ${symbol} (${wrappedSymbol}): ${prices[symbol]}`);
+            //console.log(`Found price for ${symbol} (${wrappedSymbol}): ${prices[symbol]}`);
             continue;
           }
 
@@ -541,7 +541,7 @@ export class AspisAdapter implements TradingAdapter {
           const variations = this.getSymbolVariations(wrappedSymbol);
           for (const variation of variations) {
             if (response.data.data[variation]?.USD) {
-              console.log(`Found price for ${symbol} (${wrappedSymbol}) using variation: ${variation}`);
+              //console.log(`Found price for ${symbol} (${wrappedSymbol}) using variation: ${variation}`);
               prices[symbol] = response.data.data[variation].USD;
               break;
             }
