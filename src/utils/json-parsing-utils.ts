@@ -51,31 +51,61 @@ export function splitResponseIntoParts(content: string): ParsedResponse {
  * Find and parse JSON part in the content
  */
 function findJSONPart(content: string): { jsonPart: any; jsonStart: number } | null {
+    console.log('🔍 Searching for JSON in content length:', content.length);
+
     // Look for JSON object with "claims" field
     const claimsPattern = /\{\s*"claims"\s*:/;
     const match = content.match(claimsPattern);
 
     if (match) {
         const jsonStart = match.index!;
+        console.log('🔍 Found claims pattern at position:', jsonStart);
+
         const jsonEnd = findJSONEnd(content, jsonStart);
+        console.log('🔍 JSON end position:', jsonEnd);
 
         if (jsonEnd > jsonStart) {
             const jsonStr = content.substring(jsonStart, jsonEnd);
+            console.log('🔍 Extracted JSON string length:', jsonStr.length);
 
             try {
                 const jsonPart = JSON.parse(jsonStr);
+                console.log('✅ Successfully parsed JSON');
                 return { jsonPart, jsonStart };
             } catch (error) {
+                console.warn('❌ Initial JSON parsing failed:', error instanceof Error ? error.message : String(error));
+
                 // Try to fix common issues
                 const fixedJson = fixIncompleteJSON(jsonStr);
                 try {
                     const jsonPart = JSON.parse(fixedJson);
+                    console.log('✅ Successfully parsed JSON after fixing');
                     return { jsonPart, jsonStart };
                 } catch (error2) {
-                    console.warn('Failed to parse JSON even after fixing:', error2);
+                    console.error('❌ Failed to parse JSON even after fixing:', error2 instanceof Error ? error2.message : String(error2));
+                    console.error('🔍 Problematic JSON snippet:', jsonStr.substring(0, 500));
+
+                    // Try to extract just the claims array as a last resort
+                    const claimsArrayMatch = jsonStr.match(/"claims"\s*:\s*\[([\s\S]*?)\]/);
+                    if (claimsArrayMatch && claimsArrayMatch[1]) {
+                        try {
+                            const claimsArray = JSON.parse('[' + claimsArrayMatch[1] + ']');
+                            console.log('✅ Successfully parsed claims array as fallback');
+                            return {
+                                jsonPart: { claims: claimsArray },
+                                jsonStart
+                            };
+                        } catch (error3) {
+                            console.error('❌ Failed to parse claims array as fallback:', error3 instanceof Error ? error3.message : String(error3));
+                        }
+                    }
                 }
             }
+        } else {
+            console.warn('❌ Invalid JSON end position:', jsonEnd);
         }
+    } else {
+        console.log('🔍 No claims pattern found in content');
     }
 
     return null;

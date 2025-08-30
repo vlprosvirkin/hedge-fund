@@ -81,7 +81,7 @@ export class VaultController {
             const maxOrderSize = this.getMaximumOrderSize(symbol, marketStats);
             const constrainedQuantity = Math.min(finalQuantity, maxOrderSize);
 
-            this.logger.info('📊 Enhanced position size calculation', {
+            this.logger.debug('📊 Enhanced position size calculation', {
                 symbol,
                 targetWeight,
                 availableUsdt,
@@ -128,7 +128,7 @@ export class VaultController {
                 usdtAmount
             };
 
-            this.logger.info('🔄 Order conversion', {
+            this.logger.debug('🔄 Order conversion', {
                 symbol: order.symbol,
                 side: order.side,
                 originalQuantity: order.quantity,
@@ -169,7 +169,7 @@ export class VaultController {
                 ...(vaultOrder.price !== undefined && { price: vaultOrder.price })
             });
 
-            this.logger.info('✅ Order placed successfully', {
+            this.logger.debug('✅ Order placed successfully', {
                 orderId,
                 symbol: vaultOrder.symbol,
                 side: vaultOrder.side,
@@ -210,7 +210,7 @@ export class VaultController {
                 })
             );
 
-            this.logger.info('📈 Portfolio positions', {
+            this.logger.debug('📈 Portfolio positions', {
                 totalPositions: vaultPositions.length,
                 totalValue,
                 positions: vaultPositions.map(p => ({
@@ -245,7 +245,7 @@ export class VaultController {
             const currentPositions = await this.getPortfolioPositions();
             const orders: VaultOrder[] = [];
 
-            this.logger.info('📊 Current portfolio state', {
+            this.logger.debug('📊 Current portfolio state', {
                 totalPositions: currentPositions.length,
                 totalValue: currentPositions.reduce((sum, p) => sum + p.currentValue, 0),
                 positions: currentPositions.map(p => ({
@@ -261,7 +261,7 @@ export class VaultController {
                 const currentWeight = currentPosition?.weight || 0;
                 const weightDiff = target.weight - currentWeight;
 
-                this.logger.info('📊 Rebalancing analysis', {
+                this.logger.debug('📊 Rebalancing analysis', {
                     symbol: target.symbol,
                     currentWeight: (currentWeight * 100).toFixed(2) + '%',
                     targetWeight: (target.weight * 100).toFixed(2) + '%',
@@ -277,7 +277,7 @@ export class VaultController {
                 if (Math.abs(weightDiff) > 0.05) {
                     const side = weightDiff > 0 ? 'buy' : 'sell';
 
-                    this.logger.info('🔄 Rebalancing needed', {
+                    this.logger.debug('🔄 Rebalancing needed', {
                         symbol: target.symbol,
                         side,
                         weightDiff: (weightDiff * 100).toFixed(2) + '%',
@@ -299,7 +299,7 @@ export class VaultController {
 
                     orders.push(vaultOrder);
 
-                    this.logger.info('✅ Rebalancing order calculated', {
+                    this.logger.debug('✅ Rebalancing order calculated', {
                         symbol: target.symbol,
                         side,
                         weightDiff: (weightDiff * 100).toFixed(2) + '%',
@@ -308,7 +308,7 @@ export class VaultController {
                         orderType: vaultOrder.type
                     });
                 } else {
-                    this.logger.info('⏸️ No rebalancing needed', {
+                    this.logger.debug('⏸️ No rebalancing needed', {
                         symbol: target.symbol,
                         weightDiff: (weightDiff * 100).toFixed(2) + '%',
                         reason: 'Within 5% threshold'
@@ -316,7 +316,7 @@ export class VaultController {
                 }
             }
 
-            this.logger.info('🎯 Rebalancing calculation completed', {
+            this.logger.debug('🎯 Rebalancing calculation completed', {
                 totalOrders: orders.length,
                 orders: orders.map(o => ({
                     symbol: o.symbol,
@@ -372,7 +372,7 @@ export class VaultController {
             // Try to get price from Aspis API first (most reliable)
             const price = await (this.trading as any).getTokenPrice(symbol);
             if (price > 0) {
-                this.logger.info(`Got price for ${symbol} from Aspis API: $${price}`);
+                this.logger.debug(`Got price for ${symbol} from Aspis API: $${price}`);
                 return price;
             }
         } catch (error) {
@@ -383,7 +383,7 @@ export class VaultController {
             // Fallback to technical indicators API
             const price = await this.technicalIndicators.getPrice(symbol);
             if (price > 0) {
-                this.logger.info(`Got price for ${symbol} from Technical Indicators API: $${price}`);
+                this.logger.debug(`Got price for ${symbol} from Technical Indicators API: $${price}`);
                 return price;
             }
         } catch (error) {

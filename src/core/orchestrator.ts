@@ -240,7 +240,7 @@ export class HedgeFundOrchestrator {
       const marketStats = await Promise.all(
         universe.map(symbol => this.marketData.getMarketStats(symbol))
       );
-      this.logger.info('Market stats retrieved', { 
+      this.logger.info('Market stats retrieved', {
         marketStatsCount: marketStats.length,
         sampleMarketStats: marketStats.slice(0, 2).map(stat => ({
           symbol: stat.symbol,
@@ -305,10 +305,28 @@ export class HedgeFundOrchestrator {
         this.logger.info(`Step 3.${agentRoles.indexOf(role) + 1}: Running ${role} agent`);
         const agentStartTime = Date.now();
 
+        // Filter data based on agent role
+        let filteredEvidence = evidence;
+        let filteredMarketStats = marketStats;
+
+        if (role === 'sentiment') {
+          // Sentiment agent should only get news and social evidence
+          filteredEvidence = evidence.filter(e => e.kind === 'news' || e.kind === 'social' || e.kind === 'index');
+          // Don't pass market stats to sentiment agent
+          filteredMarketStats = [];
+
+          this.logger.info(`🔍 Filtered data for sentiment agent:`, {
+            originalEvidenceCount: evidence.length,
+            filteredEvidenceCount: filteredEvidence.length,
+            evidenceKinds: filteredEvidence.map(e => e.kind),
+            marketStatsCount: filteredMarketStats.length
+          });
+        }
+
         const context = {
           universe,
-          facts: evidence,
-          marketStats,
+          facts: filteredEvidence,
+          marketStats: filteredMarketStats,
           riskProfile: this.config.riskProfile,
           timestamp
         };
@@ -332,7 +350,7 @@ export class HedgeFundOrchestrator {
         });
 
         // Log detailed agent results
-        this.logger.info(`${role} agent detailed results`, {
+        this.logger.debug(`${role} agent detailed results`, {
           claimsCount: result.claims.length,
           openaiResponseLength: result.openaiResponse?.length || 0,
           analysisLength: result.analysis?.length || 0,
@@ -345,9 +363,9 @@ export class HedgeFundOrchestrator {
         });
 
         // Log evidence and news data for debugging
-        console.log(`🔍 Orchestrator: ${role} agent - Evidence count: ${evidence?.length || 0}, News count: ${news?.length || 0}`);
-        if (evidence && evidence.length > 0) {
-          console.log(`🔍 Orchestrator: ${role} agent - Sample evidence:`, evidence.slice(0, 2));
+        console.log(`🔍 Orchestrator: ${role} agent - Evidence count: ${filteredEvidence?.length || 0}, News count: ${news?.length || 0}`);
+        if (filteredEvidence && filteredEvidence.length > 0) {
+          console.log(`🔍 Orchestrator: ${role} agent - Sample evidence:`, filteredEvidence.slice(0, 2));
         }
         if (news && news.length > 0) {
           console.log(`🔍 Orchestrator: ${role} agent - Sample news:`, news.slice(0, 2).map(n => ({ id: n.id, title: n.title?.substring(0, 50) })));
@@ -360,12 +378,6 @@ export class HedgeFundOrchestrator {
 
         // 📱 Complete agent analysis in one message
         let analysisText = (result as any).textPart || result.analysis || '';
-
-        // Validate analysis content for sentiment agent
-        if (role === 'sentiment' && analysisText.toLowerCase().includes('fundamental analysis')) {
-          console.warn(`⚠️ Sentiment agent returned fundamental analysis, using fallback`);
-          analysisText = 'Sentiment analysis completed based on news coverage and emotional indicators.';
-        }
 
         // Log claims structure for debugging
         console.log(`🔍 Orchestrator: ${role} agent - Claims structure:`, result.claims.map(c => ({
@@ -381,11 +393,11 @@ export class HedgeFundOrchestrator {
           role,
           result.claims,
           analysisText,
-          evidence,
+          filteredEvidence,
           {
             universe,
-            marketStats,
-            facts: evidence,
+            marketStats: filteredMarketStats,
+            facts: filteredEvidence,
             news,
             riskProfile: this.config.riskProfile,
             timestamp

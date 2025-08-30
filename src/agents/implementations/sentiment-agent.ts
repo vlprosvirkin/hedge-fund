@@ -50,16 +50,17 @@ export class SentimentAgent extends BaseAgent {
           console.log(`📰 SentimentAgent: Got ${news.length} news articles for ${ticker}`);
 
           // Use SentimentAnalysisService for comprehensive analysis
+          // Service will extract only social data from signalsData
           const analysis = this.sentimentAnalysis.createComprehensiveSentimentAnalysis(
             news,
-            signalsData,
+            signalsData, // Pass full signals data - service will filter it
             fearGreedIndex || 50 // Default to neutral if not available
           );
 
           const result = {
             ticker,
             news: news.slice(0, 10), // Top 10 news articles
-            signalsData,
+            signalsData, // Keep full data for reference
             analysis,
             finalSentimentScore: analysis.finalSentimentScore,
             fearGreedIndex: fearGreedIndex || null
@@ -120,13 +121,37 @@ STRICT RULES:
 1. Use ONLY provided data and tools - no external knowledge
 2. Claims must be timestamp-locked to provided data
 3. Confidence must be between 0.3 and 1.0 based on coverage × consistency × credibility with bonuses
-4. Return ONLY valid JSON - no explanations, no markdown, no additional text
-5. If insufficient data (no news + no social), return HOLD with confidence 0.2
-6. Follow the SUMMARIZE → REFLECT → REVISE → AGGREGATE process
-7. DO NOT include any text before or after the JSON object
+4. If insufficient data (no news + no social), return HOLD with confidence 0.2
+5. Follow the SUMMARIZE → REFLECT → REVISE → AGGREGATE process
+6. MUST generate claims for EACH ticker in the universe
+7. Each claim must be based on sentiment analysis of news and social data
+8. NEVER analyze technical or fundamental data - ONLY sentiment
+9. REQUIRED: Each claim MUST include at least 1 sentiment evidence (news, social, index)
+10. OPTIONAL: Include additional evidence for additional support
+
+CRITICAL: You MUST provide a detailed sentiment analysis BEFORE the JSON claims.
+CRITICAL: For evidence field, use ONLY real evidence IDs from the provided context, NOT placeholder IDs.
+CRITICAL: Each claim MUST reference specific sentiment metrics (news coverage, social engagement, fear & greed) from the provided data.
 
 OUTPUT FORMAT:
-Return ONLY a valid JSON object with this exact structure:
+You MUST follow this exact format:
+
+SENTIMENT ANALYSIS:
+Provide a comprehensive analysis of each asset's sentiment including:
+- News sentiment assessment and coverage analysis
+- Social media engagement and community sentiment
+- Fear & Greed Index interpretation and market mood
+- Overall sentiment health and emotional market indicators
+- Risk assessment based on sentiment consistency and credibility
+
+For example:
+"SENTIMENT ANALYSIS:
+BTC shows positive news sentiment with good coverage and high credibility sources, indicating strong market confidence. Social media engagement is moderate with healthy community sentiment. The Fear & Greed Index suggests balanced market mood, while sentiment consistency is strong across multiple sources. Overall, the asset demonstrates positive sentiment across all dimensions.
+
+ETH demonstrates mixed news sentiment with moderate coverage, suggesting cautious market sentiment. Social media engagement is strong with positive community sentiment. The Fear & Greed Index indicates slight greed, while sentiment consistency shows some variation. The sentiment is generally positive but with room for improvement in news coverage."
+
+Then provide the claims in JSON format:
+
 {
   "claims": [
     {
@@ -149,17 +174,11 @@ Return ONLY a valid JSON object with this exact structure:
         {"name": "galaxyscore", "value": 67.4},
         {"name": "social_engagement", "value": 0.73}
       ],
-      "evidence": [
-        {"kind": "news", "source": "coindesk", "url": "https://example.com", "publishedAt": "2024-01-01T00:00:00Z", "snippet": "Sample news snippet"},
-        {"kind": "index", "name": "fear_greed", "value": 72, "observedAt": "2024-01-01T00:00:00Z"},
-        {"kind": "social", "source": "signals", "metric": "galaxyscore", "value": 67.4, "observedAt": "2024-01-01T00:00:00Z"}
-      ],
+      "evidence": ["REAL_EVIDENCE_ID_1", "REAL_EVIDENCE_ID_2"],
       "riskFlags": ["low_coverage", "old_news", "inconsistent_sentiment"]
     }
   ]
-}
-
-CRITICAL: Return ONLY the JSON object, no additional text, markdown, or explanations.`;
+}`;
   }
 
   buildUserPrompt(context: AgentContext, processedData?: any[]): string {

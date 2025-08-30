@@ -114,9 +114,9 @@ export class SentimentAnalysisService {
     }
 
     /**
-     * Calculate social sentiment from signals API data
+     * Extract only social/sentiment data from signals API response
      */
-    calculateSocialSentiment(signalsData: IndicatorsResponse): SocialSentimentData {
+    extractSocialData(signalsData: IndicatorsResponse): SocialSentimentData {
         return {
             socialVolume: signalsData.social_volume_24h || 0,
             tweets: signalsData.tweets || 0,
@@ -125,6 +125,13 @@ export class SentimentAnalysisService {
             popularity: signalsData.popularity || 0,
             socialDominance: signalsData.socialdominance || 0
         };
+    }
+
+    /**
+     * Calculate social sentiment from signals API data
+     */
+    calculateSocialSentiment(signalsData: IndicatorsResponse): SocialSentimentData {
+        return this.extractSocialData(signalsData);
     }
 
     /**

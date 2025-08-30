@@ -91,8 +91,6 @@ export class AspisAdapter implements TradingAdapter {
       const accountInfo = await this.getAccountInfo();
       const positions: Position[] = [];
 
-      console.log('Raw account info balances:', accountInfo.balances);
-
       for (const balance of accountInfo.balances) {
         if (balance.free > 0 || balance.locked > 0) {
           // Get current price for PnL calculation
@@ -127,12 +125,12 @@ export class AspisAdapter implements TradingAdapter {
             timestamp: Date.now()
           };
 
-          console.log(`Creating position for ${balance.asset}:`, position);
+          // console.log(`Creating position for ${balance.asset}:`, position);
           positions.push(position);
         }
       }
 
-      console.log('Final positions:', positions);
+      // console.log('Final positions:', positions);
       return positions;
     } catch (error) {
       console.warn('Failed to get positions:', error);
@@ -265,13 +263,13 @@ export class AspisAdapter implements TradingAdapter {
       });
 
       // Convert Aspis balance format to our format
-              console.log('✅ Aspis API response received');
+      console.log('✅ Aspis API response received');
 
       const balances = Object.entries(response.data).map(([asset, balance]) => {
         const scaledBalance = parseFloat(balance.scaled || '0');
         const nonScaledBalance = parseFloat(balance.non_scaled || '0');
 
-        console.log(`Balance for ${asset}: scaled=${scaledBalance}, non_scaled=${nonScaledBalance}`);
+        // console.log(`Balance for ${asset}: scaled=${scaledBalance}, non_scaled=${nonScaledBalance}`);
 
         return {
           asset,
@@ -282,7 +280,6 @@ export class AspisAdapter implements TradingAdapter {
 
       const totalValue = balances.reduce((sum, balance) => sum + balance.free, 0);
       console.log('Total portfolio value:', totalValue);
-      console.log('Processed balances:', balances);
 
       return {
         balances,
