@@ -80,8 +80,7 @@ export class HedgeFundOrchestrator {
 
     // Debug logging for configuration
     this.logger.info('🔧 Orchestrator configuration loaded:', {
-      debateInterval: this.config.debateInterval,
-      rebalanceInterval: this.config.rebalanceInterval,
+      roundInterval: this.config.roundInterval,
       riskProfile: this.config.riskProfile,
       maxPositions: this.config.maxPositions
     });
@@ -185,8 +184,8 @@ export class HedgeFundOrchestrator {
         });
 
         // Wait for next round
-        this.logger.info(`⏸️ Waiting ${this.config.debateInterval} seconds before next round...`);
-        await this.sleep(this.config.debateInterval * 1000);
+        this.logger.info(`⏸️ Waiting ${this.config.roundInterval} seconds before next round...`);
+        await this.sleep(this.config.roundInterval * 1000);
         this.logger.info(`✅ Wait completed, starting next round...`);
 
       } catch (error) {
@@ -211,7 +210,7 @@ export class HedgeFundOrchestrator {
     this.logger.info('Starting trading pipeline execution', {
       roundId: this.roundId,
       config: {
-        debateInterval: this.config.debateInterval,
+        roundInterval: this.config.roundInterval,
         riskProfile: this.config.riskProfile,
         maxPositions: this.config.maxPositions
       }
@@ -241,7 +240,15 @@ export class HedgeFundOrchestrator {
       const marketStats = await Promise.all(
         universe.map(symbol => this.marketData.getMarketStats(symbol))
       );
-      this.logger.info('Market stats retrieved', { marketStatsCount: marketStats.length });
+      this.logger.info('Market stats retrieved', { 
+        marketStatsCount: marketStats.length,
+        sampleMarketStats: marketStats.slice(0, 2).map(stat => ({
+          symbol: stat.symbol,
+          price: stat.price,
+          volume24h: stat.volume24h,
+          priceChange24h: stat.priceChange24h
+        }))
+      });
 
       // Step 2: Get news and evidence
       this.logger.info('Step 2: Getting news and evidence');
@@ -386,7 +393,7 @@ export class HedgeFundOrchestrator {
         );
       }
 
-      this.logger.info('All agents completed', {
+      this.logger.debug('All agents completed', {
         totalClaims: allClaims.length,
         claimsByAgent: {
           fundamental: allClaims.filter(c => c.agentRole === 'fundamental').length,
@@ -1007,6 +1014,15 @@ export class HedgeFundOrchestrator {
         const currentPrice = marketData?.price || 0;
         const volatility = Math.abs(marketData?.priceChange24h || 0) / 100;
 
+        // Debug logging for market data
+        this.logger.info(`Market data for ${consensusItem.ticker}:`, {
+          found: !!marketData,
+          price: marketData?.price,
+          volume24h: marketData?.volume24h,
+          priceChange24h: marketData?.priceChange24h,
+          symbol: marketData?.symbol
+        });
+
         // Get claims for this ticker
         const tickerClaims = claims.filter(c => c.ticker === consensusItem.ticker);
         const claimIds = tickerClaims.map(c => c.id);
@@ -1032,17 +1048,17 @@ export class HedgeFundOrchestrator {
 
         const agentContributions = {
           fundamental: {
-            signal: fundamentalClaim ? (fundamentalClaim.claim === 'BUY' ? 1 : fundamentalClaim.claim === 'SELL' ? -1 : 0) : 0,
+            signal: fundamentalClaim?.magnitude || 0,
             confidence: fundamentalClaim?.confidence || 0,
             reasoning: fundamentalClaim?.rationale || 'No fundamental analysis available'
           },
           sentiment: {
-            signal: sentimentClaim ? (sentimentClaim.claim === 'BUY' ? 1 : sentimentClaim.claim === 'SELL' ? -1 : 0) : 0,
+            signal: sentimentClaim?.magnitude || 0,
             confidence: sentimentClaim?.confidence || 0,
             reasoning: sentimentClaim?.rationale || 'No sentiment analysis available'
           },
           technical: {
-            signal: technicalClaim ? (technicalClaim.claim === 'BUY' ? 1 : technicalClaim.claim === 'SELL' ? -1 : 0) : 0,
+            signal: technicalClaim?.magnitude || 0,
             confidence: technicalClaim?.confidence || 0,
             reasoning: technicalClaim?.rationale || 'No technical analysis available'
           }
@@ -1053,7 +1069,7 @@ export class HedgeFundOrchestrator {
           price_at_signal: currentPrice,
           volume_24h: marketData?.volume24h || 0,
           volatility: volatility,
-          market_sentiment: 0.5 // Default neutral sentiment
+          market_sentiment: sentimentClaim?.magnitude ? (sentimentClaim.magnitude + 1) / 2 : 0.5 // Convert -1 to 1 range to 0 to 1
         };
 
         // Create result

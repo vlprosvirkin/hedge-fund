@@ -1,0 +1,443 @@
+{
+  "roundId": "1b82f7fc-16f9-4469-9675-fbca46a38ea4",
+  "date": "8/30/2025, 11:02:10 AM",
+  "totalResponses": 3,
+  "responses": [
+    {
+      "timestamp": "2025-08-30T07:01:10.669Z",
+      "role": "fundamental",
+      "context": {
+        "universe": [
+          "BTC",
+          "ETH"
+        ],
+        "marketStats": 2,
+        "facts": 11,
+        "news": 0
+      },
+      "response": {
+        "claims": [
+          {
+            "id": "BTC_fundamental_1756537187697_0",
+            "ticker": "BTC",
+            "agentRole": "fundamental",
+            "claim": "HOLD",
+            "confidence": 0.74,
+            "evidence": [
+              "BTC_market_1756537270668",
+              "BTC_market_1756537270668",
+              "BTC_market_1756537270668"
+            ],
+            "timestamp": 1756537187697,
+            "riskFlags": [
+              "high_volatility",
+              "low_community_health"
+            ],
+            "direction": "neutral",
+            "magnitude": 0.5,
+            "rationale": "BTC shows good liquidity and strong market cap health, but moderate on-chain health and community engagement suggest a cautious approach.",
+            "signals": [
+              {
+                "name": "liquidity_score",
+                "value": 0.594
+              },
+              {
+                "name": "on_chain_health",
+                "value": 0.699
+              },
+              {
+                "name": "social_sentiment",
+                "value": 0.795
+              },
+              {
+                "name": "market_cap_health",
+                "value": 1
+              },
+              {
+                "name": "risk_adjustment",
+                "value": 0.609
+              },
+              {
+                "name": "network_activity",
+                "value": 0.777
+              },
+              {
+                "name": "address_growth",
+                "value": 1
+              },
+              {
+                "name": "community_health",
+                "value": 0.36
+              },
+              {
+                "name": "profit_taking_pressure",
+                "value": 0.4
+              }
+            ]
+          },
+          {
+            "id": "ETH_fundamental_1756537187697_1",
+            "ticker": "ETH",
+            "agentRole": "fundamental",
+            "claim": "HOLD",
+            "confidence": 0.68,
+            "evidence": [
+              "ETH_market_1756537270668",
+              "ETH_market_1756537270668",
+              "ETH_market_1756537270668"
+            ],
+            "timestamp": 1756537187697,
+            "riskFlags": [
+              "high_profit_taking_pressure",
+              "low_on_chain_health"
+            ],
+            "direction": "neutral",
+            "magnitude": 0.5,
+            "rationale": "ETH has excellent liquidity but suffers from weak on-chain health and market cap inefficiencies, warranting a cautious stance.",
+            "signals": [
+              {
+                "name": "liquidity_score",
+                "value": 0.885
+              },
+              {
+                "name": "on_chain_health",
+                "value": 0.38
+              },
+              {
+                "name": "social_sentiment",
+                "value": 0.797
+              },
+              {
+                "name": "market_cap_health",
+                "value": 0.523
+              },
+              {
+                "name": "risk_adjustment",
+                "value": 0.687
+              },
+              {
+                "name": "network_activity",
+                "value": 0.689
+              },
+              {
+                "name": "address_growth",
+                "value": 1
+              },
+              {
+                "name": "community_health",
+                "value": 0.537
+              },
+              {
+                "name": "profit_taking_pressure",
+                "value": 0.8
+              }
+            ]
+          }
+        ],
+        "textPart": "FUNDAMENTAL ANALYSIS:\nBTC demonstrates strong liquidity with a volume of 23,725.42, although the liquidity score is moderate at 0.594. The on-chain health is solid with a score of 0.699, indicating good network activity and address growth, which is at its maximum of 1.000. Social engagement is high with a sentiment score of 0.795, suggesting a positive community outlook, although community health is relatively low at 0.360. Market cap health is excellent at 1.000, indicating strong institutional interest and utilization of supply. Risk factors are present, as indicated by a high correlation factor and moderate profit-taking pressure, but overall, BTC shows good fundamentals.\n\nETH exhibits excellent liquidity with a high liquidity score of 0.885, supported by a substantial volume of 732,828.33. However, on-chain health is weaker at 0.380, with concerns about UTXO health and network security both at 0.000. Social engagement is robust, with a sentiment score of 0.797 and strong social engagement metrics. Market cap health is a concern at 0.523, indicating potential inefficiencies and lower institutional interest. Risk factors are also notable, with high profit-taking pressure at 0.800, which could affect price stability. Overall, ETH shows moderate fundamentals with areas needing improvement.\n\nBased on this analysis, here are the claims:",
+        "jsonPart": {
+          "claims": [
+            {
+              "ticker": "BTC",
+              "agentRole": "fundamental",
+              "claim": "HOLD",
+              "confidence": 0.74,
+              "direction": "neutral",
+              "magnitude": 0.5,
+              "rationale": "BTC shows good liquidity and strong market cap health, but moderate on-chain health and community engagement suggest a cautious approach.",
+              "signals": [
+                {
+                  "name": "liquidity_score",
+                  "value": 0.594
+                },
+                {
+                  "name": "on_chain_health",
+                  "value": 0.699
+                },
+                {
+                  "name": "social_sentiment",
+                  "value": 0.795
+                },
+                {
+                  "name": "market_cap_health",
+                  "value": 1
+                },
+                {
+                  "name": "risk_adjustment",
+                  "value": 0.609
+                },
+                {
+                  "name": "network_activity",
+                  "value": 0.777
+                },
+                {
+                  "name": "address_growth",
+                  "value": 1
+                },
+                {
+                  "name": "community_health",
+                  "value": 0.36
+                },
+                {
+                  "name": "profit_taking_pressure",
+                  "value": 0.4
+                }
+              ],
+              "evidence": [
+                "REAL_EVIDENCE_ID_1",
+                "REAL_EVIDENCE_ID_2"
+              ],
+              "riskFlags": [
+                "high_volatility",
+                "low_community_health"
+              ]
+            },
+            {
+              "ticker": "ETH",
+              "agentRole": "fundamental",
+              "claim": "HOLD",
+              "confidence": 0.68,
+              "direction": "neutral",
+              "magnitude": 0.5,
+              "rationale": "ETH has excellent liquidity but suffers from weak on-chain health and market cap inefficiencies, warranting a cautious stance.",
+              "signals": [
+                {
+                  "name": "liquidity_score",
+                  "value": 0.885
+                },
+                {
+                  "name": "on_chain_health",
+                  "value": 0.38
+                },
+                {
+                  "name": "social_sentiment",
+                  "value": 0.797
+                },
+                {
+                  "name": "market_cap_health",
+                  "value": 0.523
+                },
+                {
+                  "name": "risk_adjustment",
+                  "value": 0.687
+                },
+                {
+                  "name": "network_activity",
+                  "value": 0.689
+                },
+                {
+                  "name": "address_growth",
+                  "value": 1
+                },
+                {
+                  "name": "community_health",
+                  "value": 0.537
+                },
+                {
+                  "name": "profit_taking_pressure",
+                  "value": 0.8
+                }
+              ],
+              "evidence": [
+                "REAL_EVIDENCE_ID_3",
+                "REAL_EVIDENCE_ID_4"
+              ],
+              "riskFlags": [
+                "high_profit_taking_pressure",
+                "low_on_chain_health"
+              ]
+            }
+          ]
+        },
+        "openaiResponse": "FUNDAMENTAL ANALYSIS:\nBTC demonstrates strong liquidity with a volume of 23,725.42, although the liquidity score is moderate at 0.594. The on-chain health is solid with a score of 0.699, indicating good network activity and address growth, which is at its maximum of 1.000. Social engagement is high with a sentiment score of 0.795, suggesting a positive community outlook, although community health is relatively low at 0.360. Market cap health is excellent at 1.000, indicating strong institutional interest and utilization of supply. Risk factors are present, as indicated by a high correlation factor and moderate profit-taking pressure, but overall, BTC shows good fundamentals.\n\nETH exhibits excellent liquidity with a high liquidity score of 0.885, supported by a substantial volume of 732,828.33. However, on-chain health is weaker at 0.380, with concerns about UTXO health and network security both at 0.000. Social engagement is robust, with a sentiment score of 0.797 and strong social engagement metrics. Market cap health is a concern at 0.523, indicating potential inefficiencies and lower institutional interest. Risk factors are also notable, with high profit-taking pressure at 0.800, which could affect price stability. Overall, ETH shows moderate fundamentals with areas needing improvement.\n\nBased on this analysis, here are the claims:\n\n```json\n{\n  \"claims\": [\n    {\n      \"ticker\": \"BTC\",\n      \"agentRole\": \"fundamental\",\n      \"claim\": \"HOLD\",\n      \"confidence\": 0.74,\n      \"direction\": \"neutral\",\n      \"magnitude\": 0.5,\n      \"rationale\": \"BTC shows good liquidity and strong market cap health, but moderate on-chain health and community engagement suggest a cautious approach.\",\n      \"signals\": [\n        {\"name\": \"liquidity_score\", \"value\": 0.594},\n        {\"name\": \"on_chain_health\", \"value\": 0.699},\n        {\"name\": \"social_sentiment\", \"value\": 0.795},\n        {\"name\": \"market_cap_health\", \"value\": 1.000},\n        {\"name\": \"risk_adjustment\", \"value\": 0.609},\n        {\"name\": \"network_activity\", \"value\": 0.777},\n        {\"name\": \"address_growth\", \"value\": 1.000},\n        {\"name\": \"community_health\", \"value\": 0.360},\n        {\"name\": \"profit_taking_pressure\", \"value\": 0.400}\n      ],\n      \"evidence\": [\"REAL_EVIDENCE_ID_1\", \"REAL_EVIDENCE_ID_2\"],\n      \"riskFlags\": [\"high_volatility\", \"low_community_health\"]\n    },\n    {\n      \"ticker\": \"ETH\",\n      \"agentRole\": \"fundamental\",\n      \"claim\": \"HOLD\",\n      \"confidence\": 0.68,\n      \"direction\": \"neutral\",\n      \"magnitude\": 0.5,\n      \"rationale\": \"ETH has excellent liquidity but suffers from weak on-chain health and market cap inefficiencies, warranting a cautious stance.\",\n      \"signals\": [\n        {\"name\": \"liquidity_score\", \"value\": 0.885},\n        {\"name\": \"on_chain_health\", \"value\": 0.380},\n        {\"name\": \"social_sentiment\", \"value\": 0.797},\n        {\"name\": \"market_cap_health\", \"value\": 0.523},\n        {\"name\": \"risk_adjustment\", \"value\": 0.687},\n        {\"name\": \"network_activity\", \"value\": 0.689},\n        {\"name\": \"address_growth\", \"value\": 1.000},\n        {\"name\": \"community_health\", \"value\": 0.537},\n        {\"name\": \"profit_taking_pressure\", \"value\": 0.800}\n      ],\n      \"evidence\": [\"REAL_EVIDENCE_ID_3\", \"REAL_EVIDENCE_ID_4\"],\n      \"riskFlags\": [\"high_profit_taking_pressure\", \"low_on_chain_health\"]\n    }\n  ]\n}\n```",
+        "systemPrompt": "",
+        "userPrompt": ""
+      }
+    },
+    {
+      "timestamp": "2025-08-30T07:01:29.406Z",
+      "role": "sentiment",
+      "context": {
+        "universe": [
+          "BTC",
+          "ETH"
+        ],
+        "marketStats": 2,
+        "facts": 11,
+        "news": 0
+      },
+      "response": {
+        "claims": [],
+        "textPart": "{\n  \"claims\": [\n    {\n      \"ticker\": \"BTC\",\n      \"agentRole\": \"sentiment\",\n      \"claim\": \"HOLD\",\n      \"confidence\": 0.3,\n      \"direction\": \"neutral\",\n      \"magnitude\": 0.5,\n      \"rationale\": \"The sentiment score is low, and while there is significant news coverage, the freshness is outdated and social engagement is moderate.\",\n      \"signals\": [\n        {\"name\": \"sentiment_score\", \"value\": 0.223},\n        {\"name\": \"news_coverage\", \"value\": 20},\n        {\"name\": \"freshness_score\", \"value\": 0.0},\n        {\"name\": \"consistency\", \"value\": 0.544},\n        {\"name\": \"credibility\", \"value\": 0.655},\n        {\"name\": \"coverage_norm\", \"value\": 0.774},\n        {\"name\": \"market_mood_factor\", \"value\": 1.0},\n        {\"name\": \"social_volume\", \"value\": 0.45},\n        {\"name\": \"galaxyscore\", \"value\": 36},\n        {\"name\": \"social_engagement\", \"value\": 0.73}\n      ],\n      \"evidence\": [\n        {\"kind\": \"news\", \"source\": \"multiple\", \"url\": \"https:\n        {\"kind\": \"index\", \"name\": \"fear_greed\", \"value\": 51, \"observedAt\": \"2024-01-01T00:00:00Z\"},\n        {\"kind\": \"social\", \"source\": \"signals\", \"metric\": \"galaxyscore\", \"value\": 36, \"observedAt\": \"2024-01-01T00:00:00Z\"}\n      ],\n      \"riskFlags\": [\"old_news\", \"low_social_engagement\"]\n    },\n    {\n      \"ticker\": \"ETH\",\n      \"agentRole\": \"sentiment\",\n      \"claim\": \"HOLD\",\n      \"confidence\": 0.3,\n      \"direction\": \"neutral\",\n      \"magnitude\": 0.5,\n      \"rationale\": \"Similar to Bitcoin, Ethereum's sentiment score is low, with significant coverage but outdated news and moderate social engagement.\",\n      \"signals\": [\n        {\"name\": \"sentiment_score\", \"value\": 0.228},\n        {\"name\": \"news_coverage\", \"value\": 20},\n        {\"name\": \"freshness_score\", \"value\": 0.0},\n        {\"name\": \"consistency\", \"value\": 0.516},\n        {\"name\": \"credibility\", \"value\": 0.667},\n        {\"name\": \"coverage_norm\", \"value\": 0.774},\n        {\"name\": \"market_mood_factor\", \"value\": 1.0},\n        {\"name\": \"social_volume\", \"value\": 0.45},\n        {\"name\": \"galaxyscore\", \"value\": 53.7},\n        {\"name\": \"social_engagement\", \"value\": 0.73}\n      ],\n      \"evidence\": [\n        {\"kind\": \"news\", \"source\": \"multiple\", \"url\": \"https:\n        {\"kind\": \"index\", \"name\": \"fear_greed\", \"value\": 51, \"observedAt\": \"2024-01-01T00:00:00Z\"},\n        {\"kind\": \"social\", \"source\": \"signals\", \"metric\": \"galaxyscore\", \"value\": 53.7, \"observedAt\": \"2024-01-01T00:00:00Z\"}\n      ],\n      \"riskFlags\": [\"old_news\", \"low_social_engagement\"]\n    }\n  ]\n}",
+        "jsonPart": {
+          "claims": []
+        },
+        "openaiResponse": "{\n  \"claims\": [\n    {\n      \"ticker\": \"BTC\",\n      \"agentRole\": \"sentiment\",\n      \"claim\": \"HOLD\",\n      \"confidence\": 0.3,\n      \"direction\": \"neutral\",\n      \"magnitude\": 0.5,\n      \"rationale\": \"The sentiment score is low, and while there is significant news coverage, the freshness is outdated and social engagement is moderate.\",\n      \"signals\": [\n        {\"name\": \"sentiment_score\", \"value\": 0.223},\n        {\"name\": \"news_coverage\", \"value\": 20},\n        {\"name\": \"freshness_score\", \"value\": 0.0},\n        {\"name\": \"consistency\", \"value\": 0.544},\n        {\"name\": \"credibility\", \"value\": 0.655},\n        {\"name\": \"coverage_norm\", \"value\": 0.774},\n        {\"name\": \"market_mood_factor\", \"value\": 1.0},\n        {\"name\": \"social_volume\", \"value\": 0.45},\n        {\"name\": \"galaxyscore\", \"value\": 36},\n        {\"name\": \"social_engagement\", \"value\": 0.73}\n      ],\n      \"evidence\": [\n        {\"kind\": \"news\", \"source\": \"multiple\", \"url\": \"https://example.com\", \"publishedAt\": \"2024-01-01T00:00:00Z\", \"snippet\": \"Various news articles discussing Bitcoin's market position.\"},\n        {\"kind\": \"index\", \"name\": \"fear_greed\", \"value\": 51, \"observedAt\": \"2024-01-01T00:00:00Z\"},\n        {\"kind\": \"social\", \"source\": \"signals\", \"metric\": \"galaxyscore\", \"value\": 36, \"observedAt\": \"2024-01-01T00:00:00Z\"}\n      ],\n      \"riskFlags\": [\"old_news\", \"low_social_engagement\"]\n    },\n    {\n      \"ticker\": \"ETH\",\n      \"agentRole\": \"sentiment\",\n      \"claim\": \"HOLD\",\n      \"confidence\": 0.3,\n      \"direction\": \"neutral\",\n      \"magnitude\": 0.5,\n      \"rationale\": \"Similar to Bitcoin, Ethereum's sentiment score is low, with significant coverage but outdated news and moderate social engagement.\",\n      \"signals\": [\n        {\"name\": \"sentiment_score\", \"value\": 0.228},\n        {\"name\": \"news_coverage\", \"value\": 20},\n        {\"name\": \"freshness_score\", \"value\": 0.0},\n        {\"name\": \"consistency\", \"value\": 0.516},\n        {\"name\": \"credibility\", \"value\": 0.667},\n        {\"name\": \"coverage_norm\", \"value\": 0.774},\n        {\"name\": \"market_mood_factor\", \"value\": 1.0},\n        {\"name\": \"social_volume\", \"value\": 0.45},\n        {\"name\": \"galaxyscore\", \"value\": 53.7},\n        {\"name\": \"social_engagement\", \"value\": 0.73}\n      ],\n      \"evidence\": [\n        {\"kind\": \"news\", \"source\": \"multiple\", \"url\": \"https://example.com\", \"publishedAt\": \"2024-01-01T00:00:00Z\", \"snippet\": \"Various news articles discussing Ethereum's market position.\"},\n        {\"kind\": \"index\", \"name\": \"fear_greed\", \"value\": 51, \"observedAt\": \"2024-01-01T00:00:00Z\"},\n        {\"kind\": \"social\", \"source\": \"signals\", \"metric\": \"galaxyscore\", \"value\": 53.7, \"observedAt\": \"2024-01-01T00:00:00Z\"}\n      ],\n      \"riskFlags\": [\"old_news\", \"low_social_engagement\"]\n    }\n  ]\n}",
+        "systemPrompt": "",
+        "userPrompt": ""
+      }
+    },
+    {
+      "timestamp": "2025-08-30T07:01:51.138Z",
+      "role": "technical",
+      "context": {
+        "universe": [
+          "BTC",
+          "ETH"
+        ],
+        "marketStats": 2,
+        "facts": 11,
+        "news": 0
+      },
+      "response": {
+        "claims": [
+          {
+            "id": "BTC_technical_1756537187697_0",
+            "ticker": "BTC",
+            "agentRole": "technical",
+            "claim": "HOLD",
+            "confidence": 0.72,
+            "evidence": [],
+            "timestamp": 1756537187697,
+            "riskFlags": [
+              "moderate_volatility",
+              "mixed_signals"
+            ],
+            "direction": "neutral",
+            "magnitude": 0.5,
+            "rationale": "Mixed signals with bearish MACD but some bullish indicators suggest caution.",
+            "signals": [
+              {
+                "name": "rsi",
+                "value": 33.75
+              },
+              {
+                "name": "macd",
+                "value": -1030.68
+              },
+              {
+                "name": "volatility_30d",
+                "value": 0.27
+              },
+              {
+                "name": "signal_strength",
+                "value": -0.059
+              }
+            ]
+          },
+          {
+            "id": "ETH_technical_1756537187697_1",
+            "ticker": "ETH",
+            "agentRole": "technical",
+            "claim": "HOLD",
+            "confidence": 0.2,
+            "evidence": [],
+            "timestamp": 1756537187697,
+            "riskFlags": [
+              "low_volatility",
+              "weak_signals"
+            ],
+            "direction": "neutral",
+            "magnitude": 0.1,
+            "rationale": "Insufficient alignment of indicators and weak signal strength suggest holding.",
+            "signals": [
+              {
+                "name": "rsi",
+                "value": 43.41
+              },
+              {
+                "name": "macd",
+                "value": -55.54
+              },
+              {
+                "name": "volatility_30d",
+                "value": 0.22
+              },
+              {
+                "name": "signal_strength",
+                "value": 0
+              }
+            ]
+          }
+        ],
+        "textPart": "TECHNICAL ANALYSIS:\nBTC shows a neutral RSI at 33.75, indicating that it is approaching oversold conditions but is not yet there. The MACD is bearish at -1030.68, suggesting downward momentum. The Stochastic indicator is at 15.80, indicating bullish momentum, while the Williams %R is at -84.42, also suggesting bullish momentum. The volatility is moderate at 0.27, which implies potential for significant price movements. The overall signal strength is negative at -0.059, indicating weak technical momentum. However, there are three indicators aligned (Stochastic, Williams %R, and Bollinger Bands), which provides some support for a potential reversal. Overall, the technical picture is mixed with bearish MACD but some bullish indicators suggesting a cautious approach.\n\nETH displays a neutral RSI at 43.41, suggesting balanced buying and selling pressure. The MACD is bearish at -55.54, indicating downward momentum. The Stochastic is at 28.72, which is neutral, while the Williams %R is at -63.25, also neutral. The volatility is low at 0.22, suggesting less potential for large price movements. The signal strength is neutral at 0.00, indicating no strong technical momentum. With only one indicator aligned (Bollinger Bands), the overall technical indicators suggest a cautious approach with mixed signals.\n\nBased on the analysis, here are the claims:",
+        "jsonPart": {
+          "claims": [
+            {
+              "ticker": "BTC",
+              "agentRole": "technical",
+              "claim": "HOLD",
+              "confidence": 0.72,
+              "direction": "neutral",
+              "magnitude": 0.5,
+              "rationale": "Mixed signals with bearish MACD but some bullish indicators suggest caution.",
+              "signals": [
+                {
+                  "name": "rsi",
+                  "value": 33.75
+                },
+                {
+                  "name": "macd",
+                  "value": -1030.68
+                },
+                {
+                  "name": "volatility_30d",
+                  "value": 0.27
+                },
+                {
+                  "name": "signal_strength",
+                  "value": -0.059
+                }
+              ],
+              "evidence": [
+                "REAL_EVIDENCE_ID_1",
+                "REAL_EVIDENCE_ID_2"
+              ],
+              "riskFlags": [
+                "moderate_volatility",
+                "mixed_signals"
+              ]
+            },
+            {
+              "ticker": "ETH",
+              "agentRole": "technical",
+              "claim": "HOLD",
+              "confidence": 0.2,
+              "direction": "neutral",
+              "magnitude": 0.1,
+              "rationale": "Insufficient alignment of indicators and weak signal strength suggest holding.",
+              "signals": [
+                {
+                  "name": "rsi",
+                  "value": 43.41
+                },
+                {
+                  "name": "macd",
+                  "value": -55.54
+                },
+                {
+                  "name": "volatility_30d",
+                  "value": 0.22
+                },
+                {
+                  "name": "signal_strength",
+                  "value": 0
+                }
+              ],
+              "evidence": [
+                "REAL_EVIDENCE_ID_3"
+              ],
+              "riskFlags": [
+                "low_volatility",
+                "weak_signals"
+              ]
+            }
+          ]
+        },
+        "openaiResponse": "TECHNICAL ANALYSIS:\nBTC shows a neutral RSI at 33.75, indicating that it is approaching oversold conditions but is not yet there. The MACD is bearish at -1030.68, suggesting downward momentum. The Stochastic indicator is at 15.80, indicating bullish momentum, while the Williams %R is at -84.42, also suggesting bullish momentum. The volatility is moderate at 0.27, which implies potential for significant price movements. The overall signal strength is negative at -0.059, indicating weak technical momentum. However, there are three indicators aligned (Stochastic, Williams %R, and Bollinger Bands), which provides some support for a potential reversal. Overall, the technical picture is mixed with bearish MACD but some bullish indicators suggesting a cautious approach.\n\nETH displays a neutral RSI at 43.41, suggesting balanced buying and selling pressure. The MACD is bearish at -55.54, indicating downward momentum. The Stochastic is at 28.72, which is neutral, while the Williams %R is at -63.25, also neutral. The volatility is low at 0.22, suggesting less potential for large price movements. The signal strength is neutral at 0.00, indicating no strong technical momentum. With only one indicator aligned (Bollinger Bands), the overall technical indicators suggest a cautious approach with mixed signals.\n\nBased on the analysis, here are the claims:\n\n```json\n{\n  \"claims\": [\n    {\n      \"ticker\": \"BTC\",\n      \"agentRole\": \"technical\",\n      \"claim\": \"HOLD\",\n      \"confidence\": 0.72,\n      \"direction\": \"neutral\",\n      \"magnitude\": 0.5,\n      \"rationale\": \"Mixed signals with bearish MACD but some bullish indicators suggest caution.\",\n      \"signals\": [\n        {\"name\": \"rsi\", \"value\": 33.75},\n        {\"name\": \"macd\", \"value\": -1030.68},\n        {\"name\": \"volatility_30d\", \"value\": 0.27},\n        {\"name\": \"signal_strength\", \"value\": -0.059}\n      ],\n      \"evidence\": [\"REAL_EVIDENCE_ID_1\", \"REAL_EVIDENCE_ID_2\"],\n      \"riskFlags\": [\"moderate_volatility\", \"mixed_signals\"]\n    },\n    {\n      \"ticker\": \"ETH\",\n      \"agentRole\": \"technical\",\n      \"claim\": \"HOLD\",\n      \"confidence\": 0.20,\n      \"direction\": \"neutral\",\n      \"magnitude\": 0.1,\n      \"rationale\": \"Insufficient alignment of indicators and weak signal strength suggest holding.\",\n      \"signals\": [\n        {\"name\": \"rsi\", \"value\": 43.41},\n        {\"name\": \"macd\", \"value\": -55.54},\n        {\"name\": \"volatility_30d\", \"value\": 0.22},\n        {\"name\": \"signal_strength\", \"value\": 0.00}\n      ],\n      \"evidence\": [\"REAL_EVIDENCE_ID_3\"],\n      \"riskFlags\": [\"low_volatility\", \"weak_signals\"]\n    }\n  ]\n}\n```",
+        "systemPrompt": "",
+        "userPrompt": ""
+      }
+    }
+  ]
+}

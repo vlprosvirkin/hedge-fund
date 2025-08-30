@@ -369,8 +369,7 @@ export const MarketRegimeWeightsSchema = z.object({
 // ===== System Types =====
 export const SystemConfigSchema = z.object({
   riskProfile: RiskProfileSchema,
-  debateInterval: z.number(), // seconds
-  rebalanceInterval: z.number(), // seconds
+  roundInterval: z.number(), // seconds
   maxPositions: z.number(),
   decisionThresholds: RiskProfileDecisionThresholdsSchema,
   technicalThresholds: TechnicalThresholdsSchema,

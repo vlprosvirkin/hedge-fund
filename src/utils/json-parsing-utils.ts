@@ -1,20 +1,12 @@
 /**
  * JSON Parsing Utilities for OpenAI Responses
- * Handles various JSON parsing scenarios and edge cases
+ * Handles incomplete JSON responses from AI models
  */
-import crypto from 'crypto';
-
 export interface ParsedResponse {
     textPart: string;
     jsonPart: any;
     hasValidJson: boolean;
     parseErrors: string[];
-}
-
-export interface JSONMatch {
-    jsonPart: any;
-    jsonStart: number;
-    jsonEnd: number;
 }
 
 /**
@@ -35,7 +27,6 @@ export function splitResponseIntoParts(content: string): ParsedResponse {
 
     if (jsonMatch) {
         const { jsonPart, jsonStart } = jsonMatch;
-        // Extract text part as everything before the JSON
         const textPart = cleanedContent.substring(0, jsonStart).trim();
 
         return {
@@ -46,7 +37,7 @@ export function splitResponseIntoParts(content: string): ParsedResponse {
         };
     }
 
-    // No fallback - return empty structure if JSON parsing fails
+    // No JSON found
     parseErrors.push('No valid JSON found in response');
     return {
         textPart: cleanedContent,
@@ -57,10 +48,10 @@ export function splitResponseIntoParts(content: string): ParsedResponse {
 }
 
 /**
- * Find JSON part in the content
+ * Find and parse JSON part in the content
  */
-export function findJSONPart(content: string): JSONMatch | null {
-    // Look for JSON object with "claims" field first
+function findJSONPart(content: string): { jsonPart: any; jsonStart: number } | null {
+    // Look for JSON object with "claims" field
     const claimsPattern = /\{\s*"claims"\s*:/;
     const match = content.match(claimsPattern);
 
@@ -72,30 +63,17 @@ export function findJSONPart(content: string): JSONMatch | null {
             const jsonStr = content.substring(jsonStart, jsonEnd);
 
             try {
-                // Try to fix common JSON issues before parsing
-                const fixedJsonStr = fixCommonJSONIssues(jsonStr);
-                const jsonPart = JSON.parse(fixedJsonStr);
-                return { jsonPart, jsonStart, jsonEnd };
+                const jsonPart = JSON.parse(jsonStr);
+                return { jsonPart, jsonStart };
             } catch (error) {
-                console.warn('Failed to parse JSON with claims pattern:', error);
-            }
-        }
-    }
-
-    // Fallback: try to find any JSON object
-    const jsonStart = content.search(/[{\[]/);
-    if (jsonStart !== -1) {
-        const jsonEnd = findJSONEnd(content, jsonStart);
-
-        if (jsonEnd > jsonStart) {
-            const jsonStr = content.substring(jsonStart, jsonEnd);
-            try {
-                // Try to fix common JSON issues before parsing
-                const fixedJsonStr = fixCommonJSONIssues(jsonStr);
-                const jsonPart = JSON.parse(fixedJsonStr);
-                return { jsonPart, jsonStart, jsonEnd };
-            } catch (error) {
-                console.warn('Failed to parse fallback JSON:', error);
+                // Try to fix common issues
+                const fixedJson = fixIncompleteJSON(jsonStr);
+                try {
+                    const jsonPart = JSON.parse(fixedJson);
+                    return { jsonPart, jsonStart };
+                } catch (error2) {
+                    console.warn('Failed to parse JSON even after fixing:', error2);
+                }
             }
         }
     }
@@ -104,23 +82,32 @@ export function findJSONPart(content: string): JSONMatch | null {
 }
 
 /**
- * Fix common JSON issues that cause parsing errors
+ * Fix incomplete JSON by adding missing closing braces/brackets
  */
-export function fixCommonJSONIssues(jsonStr: string): string {
+function fixIncompleteJSON(jsonStr: string): string {
     // Fix incomplete URLs
-    jsonStr = jsonStr.replace(/"url":\s*"https:\\n/g, '"url": "https://example.com"');
-    jsonStr = jsonStr.replace(/"url":\s*"https:\/\/\.\.\./g, '"url": "https://example.com"');
-    jsonStr = jsonStr.replace(/"url":\s*"https:\/\/\.\.\./g, '"url": "https://example.com"');
+    jsonStr = jsonStr.replace(/\"url\":\s*\"https:\n/g, '"url": "https://example.com"');
+    jsonStr = jsonStr.replace(/\"url\":\s*\"https:\/\/[^\"]*$/g, '"url": "https://example.com"');
+    jsonStr = jsonStr.replace(/\"url\":\s*\"[^\"]*$/g, '"url": "https://example.com"');
 
-    // Fix incomplete snippets
-    jsonStr = jsonStr.replace(/"snippet":\s*"\.\.\./g, '"snippet": "Sample news snippet"');
-    jsonStr = jsonStr.replace(/"snippet":\s*"\.\.\./g, '"snippet": "Sample news snippet"');
-
-    // Fix trailing commas
+    // Remove trailing commas
     jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
 
-    // Fix missing quotes around property names
-    jsonStr = jsonStr.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+    // Count braces and brackets
+    let openBraces = (jsonStr.match(/\{/g) || []).length;
+    let closeBraces = (jsonStr.match(/\}/g) || []).length;
+    let openBrackets = (jsonStr.match(/\[/g) || []).length;
+    let closeBrackets = (jsonStr.match(/\]/g) || []).length;
+
+    // Add missing closing braces/brackets
+    while (openBraces > closeBraces) {
+        jsonStr += '}';
+        closeBraces++;
+    }
+    while (openBrackets > closeBrackets) {
+        jsonStr += ']';
+        closeBrackets++;
+    }
 
     return jsonStr;
 }
@@ -128,7 +115,7 @@ export function fixCommonJSONIssues(jsonStr: string): string {
 /**
  * Find the end of a JSON object/array
  */
-export function findJSONEnd(content: string, startIndex: number): number {
+function findJSONEnd(content: string, startIndex: number): number {
     let braceCount = 0;
     let bracketCount = 0;
     let inString = false;
@@ -164,7 +151,6 @@ export function findJSONEnd(content: string, startIndex: number): number {
                 bracketCount++;
             } else if (char === ']') {
                 bracketCount--;
-                // Don't stop on array end - continue until object end
             }
         }
     }
@@ -172,119 +158,111 @@ export function findJSONEnd(content: string, startIndex: number): number {
     return content.length;
 }
 
-
-
 /**
- * Validate and fix common JSON issues
- */
-export function validateAndFixJSON(jsonStr: string): { fixed: string; issues: string[] } {
-    const issues: string[] = [];
-    let fixed = jsonStr;
-
-    // Fix trailing commas
-    fixed = fixed.replace(/,(\s*[}\]])/g, '$1');
-
-    // Fix missing quotes around property names
-    fixed = fixed.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
-
-    // Fix single quotes to double quotes
-    fixed = fixed.replace(/'/g, '"');
-
-    // Fix missing closing braces
-    const openBraces = (fixed.match(/\{/g) || []).length;
-    const closeBraces = (fixed.match(/\}/g) || []).length;
-
-    if (openBraces > closeBraces) {
-        fixed += '}'.repeat(openBraces - closeBraces);
-        issues.push(`Added ${openBraces - closeBraces} missing closing braces`);
-    }
-
-    return { fixed, issues };
-}
-
-/**
- * Extract claims from parsed JSON with validation
+ * Extract claims from parsed JSON
  */
 export function extractClaimsFromJSON(jsonPart: any, context: any): any[] {
+    console.log('🔍 extractClaimsFromJSON: Starting claim extraction', {
+        hasJsonPart: !!jsonPart,
+        hasClaims: !!jsonPart?.claims,
+        claimsCount: jsonPart?.claims?.length || 0,
+        contextKeys: Object.keys(context || {}),
+        hasFacts: !!context.facts,
+        factsCount: context.facts?.length || 0
+    });
+
     const claimsArray = jsonPart?.claims || [];
     const validClaims = [];
-    const errors = [];
-
-    // Debug logging
-    console.log(`🔍 extractClaimsFromJSON: Processing ${claimsArray.length} claims from ${context.facts?.length || 0} facts`);
 
     for (let i = 0; i < claimsArray.length; i++) {
         const claimData = claimsArray[i];
+        console.log(`🔍 Processing claim ${i + 1}/${claimsArray.length}:`, {
+            ticker: claimData.ticker,
+            hasClaim: !!claimData.claim,
+            hasAction: !!claimData.action,
+            confidence: claimData.confidence,
+            agentRole: claimData.agentRole
+        });
 
-        try {
-            // Validate required fields
-            if (!claimData.ticker) {
-                errors.push(`Claim ${i}: Missing ticker field`);
-                continue;
-            }
-
-            if (!claimData.claim && !claimData.action) {
-                errors.push(`Claim ${i}: Missing claim/action field`);
-                continue;
-            }
-
-            // Use appropriate evidence based on agent type
-            let evidenceIds = [];
-            if (claimData.agentRole === 'sentiment') {
-                // Sentiment agent uses news evidence
-                const tickerEvidence = context.facts?.filter((e: any) =>
-                    e.ticker === claimData.ticker && e.kind === 'news'
-                ) || [];
-                evidenceIds = tickerEvidence.map((e: any) => e.id || `${e.ticker}_${e.kind}_${Date.now()}`).slice(0, 3);
-                console.log(`🔍 extractClaimsFromJSON: ${claimData.ticker} sentiment - Found ${tickerEvidence.length} news evidence`);
-            } else if (claimData.agentRole === 'fundamental') {
-                // Fundamental agent uses market data evidence
-                const tickerEvidence = context.facts?.filter((e: any) =>
-                    e.ticker === claimData.ticker && e.kind === 'market'
-                ) || [];
-                evidenceIds = tickerEvidence.map((e: any) => e.id || `${e.ticker}_${e.kind}_${Date.now()}`).slice(0, 3);
-                console.log(`🔍 extractClaimsFromJSON: ${claimData.ticker} fundamental - Found ${tickerEvidence.length} market evidence`);
-            } else if (claimData.agentRole === 'technical') {
-                // Technical analysis evidence
-                const tickerEvidence = context.facts?.filter((e: any) =>
-                    e.ticker === claimData.ticker && e.kind === 'technical'
-                ) || [];
-                evidenceIds = tickerEvidence.map((e: any) => e.id || `${e.ticker}_${e.kind}_${Date.now()}`).slice(0, 3);
-                console.log(`🔍 extractClaimsFromJSON: ${claimData.ticker} technical - Found ${tickerEvidence.length} technical evidence`);
-            }
-
-            const validClaim = {
-                id: `${claimData.ticker}_${claimData.agentRole}_${context.timestamp}_${i}`,
-                ticker: claimData.ticker,
-                agentRole: claimData.agentRole,
-                claim: claimData.claim || claimData.action || 'HOLD',
-                confidence: Math.max(0, Math.min(1, claimData.confidence || 0.5)),
-                evidence: evidenceIds, // Always use real evidence IDs
-                timestamp: context.timestamp,
-                riskFlags: claimData.riskFlags || [],
-                // Include additional fields from the original claim data
-                direction: claimData.direction,
-                magnitude: claimData.magnitude,
-                rationale: claimData.rationale,
-                signals: claimData.signals
-            };
-
-            validClaims.push(validClaim);
-
-        } catch (error) {
-            errors.push(`Claim ${i}: ${error instanceof Error ? error.message : String(error)}`);
+        // Validate required fields
+        if (!claimData.ticker) {
+            console.warn(`Claim ${i}: Missing ticker field`);
+            continue;
         }
+
+        if (!claimData.claim && !claimData.action) {
+            console.warn(`Claim ${i}: Missing claim/action field`);
+            continue;
+        }
+
+        // Get evidence for this ticker
+        const tickerEvidence = context.facts?.filter((e: any) => e && e.ticker === claimData.ticker) || [];
+        console.log(`🔍 Found ${tickerEvidence.length} evidence items for ticker ${claimData.ticker}:`, {
+            evidenceIds: tickerEvidence.map((e: any) => e?.id).filter(Boolean),
+            evidenceKinds: tickerEvidence.map((e: any) => e?.kind).filter(Boolean),
+            evidenceSources: tickerEvidence.map((e: any) => e?.source).filter(Boolean)
+        });
+
+        const evidenceIds = tickerEvidence
+            .filter((e: any) => e && e.id) // Filter out null/undefined evidence
+            .map((e: any) => e.id)
+            .slice(0, 3);
+
+        // If no evidence found, create a fallback evidence ID
+        if (evidenceIds.length === 0) {
+            const fallbackId = `${claimData.ticker}_market_data_${context.timestamp}`;
+            evidenceIds.push(fallbackId);
+            console.log(`⚠️ No evidence found for ${claimData.ticker}, created fallback: ${fallbackId}`);
+        }
+
+        console.log(`🔍 Final evidence IDs for claim ${i}:`, evidenceIds);
+
+        const validClaim = {
+            id: `${claimData.ticker}_${claimData.agentRole || 'unknown'}_${context.timestamp}_${i}`,
+            ticker: claimData.ticker,
+            agentRole: claimData.agentRole || 'unknown',
+            claim: claimData.claim || claimData.action || 'HOLD',
+            confidence: Math.max(0, Math.min(1, claimData.confidence || 0.5)),
+            evidence: evidenceIds,
+            timestamp: context.timestamp,
+            riskFlags: claimData.riskFlags || [],
+            direction: claimData.direction,
+            magnitude: claimData.magnitude,
+            rationale: claimData.rationale,
+            signals: claimData.signals
+        };
+
+        console.log(`✅ Created valid claim ${i + 1}:`, {
+            claimId: validClaim.id,
+            ticker: validClaim.ticker,
+            claim: validClaim.claim,
+            confidence: validClaim.confidence,
+            evidenceCount: validClaim.evidence.length,
+            evidenceIds: validClaim.evidence,
+            hasDirection: !!validClaim.direction,
+            hasMagnitude: !!validClaim.magnitude,
+            hasRationale: !!validClaim.rationale,
+            signalsCount: validClaim.signals?.length || 0
+        });
+
+        validClaims.push(validClaim);
     }
 
-    if (errors.length > 0) {
-        console.warn('JSON parsing errors:', errors);
-    }
+    console.log('✅ extractClaimsFromJSON: Completed claim extraction', {
+        totalClaims: validClaims.length,
+        claimsSummary: validClaims.map(c => ({
+            ticker: c.ticker,
+            claim: c.claim,
+            confidence: c.confidence,
+            evidenceCount: c.evidence.length
+        }))
+    });
 
     return validClaims;
 }
 
 /**
- * Extract claims from text when JSON parsing fails (for sentiment agent)
+ * Extract claims from text when JSON parsing fails
  */
 export function extractClaimsFromText(textPart: string, context: any): any[] {
     const claims = [];
@@ -302,21 +280,23 @@ export function extractClaimsFromText(textPart: string, context: any): any[] {
 
                 if (actionMatch && actionMatch[1]) {
                     const action = actionMatch[1].toUpperCase();
+                    const tickerEvidence = context.facts?.filter((e: any) => e && e.ticker === ticker) || [];
+                    const evidenceIds = tickerEvidence
+                        .filter((e: any) => e && e.id) // Filter out null/undefined evidence
+                        .map((e: any) => e.id)
+                        .slice(0, 3);
 
-                    // Try to extract confidence from sentiment scores
-                    const confidenceMatch = textPart.match(new RegExp(`${ticker}[^\\n]*?(\\d+\\.\\d+)`, 'i'));
-                    const confidence = confidenceMatch && confidenceMatch[1] ? Math.min(1, parseFloat(confidenceMatch[1])) : 0.5;
-
-                    // Get evidence for this ticker (same for all agent types for now)
-                    const tickerEvidence = context.facts?.filter((e: any) => e.ticker === ticker) || [];
-                    const evidenceIds = tickerEvidence.map((e: any) => e.id).slice(0, 3);
+                    // If no evidence found, create a fallback evidence ID
+                    if (evidenceIds.length === 0) {
+                        evidenceIds.push(`${ticker}_market_data_${context.timestamp}`);
+                    }
 
                     claims.push({
-                        id: `${ticker}_${context.agentRole || 'sentiment'}_${context.timestamp}_${claims.length}`,
+                        id: `${ticker}_${context.agentRole || 'unknown'}_${context.timestamp}_${claims.length}`,
                         ticker,
-                        agentRole: context.agentRole || 'sentiment',
+                        agentRole: context.agentRole || 'unknown',
                         claim: action,
-                        confidence,
+                        confidence: 0.5,
                         evidence: evidenceIds,
                         timestamp: context.timestamp,
                         riskFlags: []

@@ -349,11 +349,13 @@ export class VaultController {
                 });
 
                 orderIds.push(orderId);
-                this.logger.info('✅ Rebalancing order executed', {
+                const startTime = Date.now();
+                this.logger.debug('✅ Rebalancing order executed', {
                     orderId,
                     symbol: order.symbol,
                     side: order.side,
-                    usdtAmount: order.usdtAmount
+                    usdtAmount: order.usdtAmount,
+                    executionTime: Date.now() - startTime
                 });
             } catch (error) {
                 this.logger.error('Failed to execute rebalancing order:', error);

@@ -466,59 +466,125 @@ export class PostgresAdapter implements FactStore {
 
     // Evidence operations
     async storeEvidence(evidenceItems: any[]): Promise<void> {
+        console.log(`🔍 PostgresAdapter: Starting to store ${evidenceItems.length} evidence items`);
+        
+        // Log evidence summary before storing
+        const evidenceByKind = evidenceItems.reduce((acc, e) => {
+            acc[e.kind] = (acc[e.kind] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+        
+        const evidenceByTicker = evidenceItems.reduce((acc, e) => {
+            acc[e.ticker] = (acc[e.ticker] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+        
+        console.log('📊 Evidence summary before storing:', {
+            totalEvidence: evidenceItems.length,
+            evidenceByKind,
+            evidenceByTicker,
+            sampleEvidence: evidenceItems.slice(0, 3).map(e => ({
+                id: e.id,
+                ticker: e.ticker,
+                kind: e.kind,
+                source: e.source,
+                relevance: e.relevance
+            }))
+        });
+
         const client = await this.pool.connect();
 
         try {
             await client.query('BEGIN');
+            let storedCount = 0;
+            let skippedCount = 0;
 
             for (const item of evidenceItems) {
-                // Handle new discriminated union structure
-                if (item.kind === 'news') {
-                    await client.query(`
-                        INSERT INTO evidence (ticker, kind, source, url, snippet, published_at, relevance, impact, confidence)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                        ON CONFLICT (id) DO UPDATE SET
-                            relevance = EXCLUDED.relevance,
-                            impact = EXCLUDED.impact,
-                            confidence = EXCLUDED.confidence,
-                            updated_at = CURRENT_TIMESTAMP
-                    `, [
-                        item.ticker,
-                        item.kind,
-                        item.source,
-                        item.url,
-                        item.snippet,
-                        new Date(item.publishedAt),
-                        item.relevance,
-                        item.impact || null,
-                        item.confidence || null
-                    ]);
-                } else if (item.kind === 'market' || item.kind === 'tech') {
-                    await client.query(`
-                        INSERT INTO evidence (ticker, kind, source, metric, value, observed_at, relevance, impact, confidence)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                        ON CONFLICT (id) DO UPDATE SET
-                            relevance = EXCLUDED.relevance,
-                            impact = EXCLUDED.impact,
-                            confidence = EXCLUDED.confidence,
-                            updated_at = CURRENT_TIMESTAMP
-                    `, [
-                        item.ticker,
-                        item.kind,
-                        item.source,
-                        item.metric,
-                        item.value,
-                        new Date(item.observedAt),
-                        item.relevance,
-                        item.impact || null,
-                        item.confidence || null
-                    ]);
+                try {
+                    // Validate evidence item
+                    if (!item.id || !item.ticker || !item.kind || !item.source) {
+                        console.warn('⚠️ Skipping invalid evidence item:', {
+                            hasId: !!item.id,
+                            hasTicker: !!item.ticker,
+                            hasKind: !!item.kind,
+                            hasSource: !!item.source,
+                            item
+                        });
+                        skippedCount++;
+                        continue;
+                    }
+
+                    // Handle new discriminated union structure
+                    if (item.kind === 'news') {
+                        await client.query(`
+                            INSERT INTO evidence (id, ticker, kind, source, url, snippet, published_at, relevance, impact, confidence)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                            ON CONFLICT (id) DO UPDATE SET
+                                relevance = EXCLUDED.relevance,
+                                impact = EXCLUDED.impact,
+                                confidence = EXCLUDED.confidence,
+                                updated_at = CURRENT_TIMESTAMP
+                        `, [
+                            item.id,
+                            item.ticker,
+                            item.kind,
+                            item.source,
+                            item.url,
+                            item.snippet,
+                            new Date(item.publishedAt),
+                            item.relevance,
+                            item.impact || null,
+                            item.confidence || null
+                        ]);
+                    } else if (item.kind === 'market' || item.kind === 'tech') {
+                        await client.query(`
+                            INSERT INTO evidence (id, ticker, kind, source, metric, value, observed_at, relevance, impact, confidence)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                            ON CONFLICT (id) DO UPDATE SET
+                                value = EXCLUDED.value,
+                                relevance = EXCLUDED.relevance,
+                                impact = EXCLUDED.impact,
+                                confidence = EXCLUDED.confidence,
+                                updated_at = CURRENT_TIMESTAMP
+                        `, [
+                            item.id,
+                            item.ticker,
+                            item.kind,
+                            item.source,
+                            item.metric,
+                            item.value,
+                            new Date(item.observedAt),
+                            item.relevance,
+                            item.impact || null,
+                            item.confidence || null
+                        ]);
+                    }
+
+                    storedCount++;
+                    
+                    if (storedCount % 10 === 0) {
+                        console.log(`📊 Progress: Stored ${storedCount}/${evidenceItems.length} evidence items`);
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Error storing evidence item:', {
+                        item,
+                        error: error instanceof Error ? error.message : String(error)
+                    });
+                    skippedCount++;
                 }
             }
 
             await client.query('COMMIT');
+            console.log(`✅ Successfully stored ${storedCount} evidence items in database`, {
+                totalEvidence: evidenceItems.length,
+                storedCount,
+                skippedCount,
+                successRate: ((storedCount / evidenceItems.length) * 100).toFixed(1) + '%'
+            });
         } catch (error) {
             await client.query('ROLLBACK');
+            console.error('❌ Error in storeEvidence transaction:', error);
             throw error;
         } finally {
             client.release();

@@ -59,14 +59,13 @@ async function startProductionSystem() {
     const { SYSTEM_CONFIG } = await import('./core/config.js');
 
     // Log configuration
-    logger.info('System configuration loaded:', {
-      riskProfile: SYSTEM_CONFIG.riskProfile,
-      debateInterval: SYSTEM_CONFIG.debateInterval,
-      rebalanceInterval: SYSTEM_CONFIG.rebalanceInterval,
-      maxPositions: SYSTEM_CONFIG.maxPositions,
-      killSwitchEnabled: SYSTEM_CONFIG.killSwitchEnabled,
-      environment: SYSTEM_CONFIG.environment
-    });
+          logger.info('System configuration loaded:', {
+        riskProfile: SYSTEM_CONFIG.riskProfile,
+        roundInterval: SYSTEM_CONFIG.roundInterval,
+        maxPositions: SYSTEM_CONFIG.maxPositions,
+        killSwitchEnabled: SYSTEM_CONFIG.killSwitchEnabled,
+        environment: SYSTEM_CONFIG.environment
+      });
 
     // Validate configuration
     const { validateConfig, validateAPIConfig } = await import('./core/config.js');

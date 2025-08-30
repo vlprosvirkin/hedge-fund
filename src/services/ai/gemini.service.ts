@@ -73,7 +73,13 @@ export class GeminiService implements AIProvider {
             const requestId = `${context.agentRole || 'unknown'}_${context.timestamp}_${Math.random().toString(36).substr(2, 9)}`;
             console.log(`🔍 Gemini Request ID: ${requestId} using model: ${this.model}`);
 
-            const model = this.client.getGenerativeModel({ model: this.model });
+            const model = this.client.getGenerativeModel({ 
+                model: this.model,
+                generationConfig: {
+                    temperature: 0.3,
+                    maxOutputTokens: 4000  // Increased from default to handle longer responses
+                }
+            });
 
             // Combine system and user prompts for Gemini
             const combinedPrompt = `${systemPrompt}\n\n${userPrompt}`;
@@ -111,7 +117,7 @@ export class GeminiService implements AIProvider {
 
             return {
                 claims,
-                openaiResponse: content, // Keep field name for compatibility
+                openaiResponse: content,
                 textPart,
                 jsonPart
             };

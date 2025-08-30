@@ -91,7 +91,7 @@ export class OpenAIService implements AIProvider {
                     }
                 ],
                 temperature: 0.3,
-                max_tokens: 2000
+                max_tokens: 4000  // Increased from 2000 to handle longer responses
             });
 
             const content = response.choices[0]?.message?.content;
@@ -99,12 +99,18 @@ export class OpenAIService implements AIProvider {
                 throw new Error('No content received from OpenAI');
             }
 
+            // Check if response was truncated
+            const finishReason = response.choices[0]?.finish_reason;
+            if (finishReason === 'length') {
+                console.warn(`⚠️  OpenAI response was truncated (finish_reason: ${finishReason}). This may cause JSON parsing issues.`);
+            }
+
             // Log token usage for cost tracking
             const usage = response.usage;
             if (usage) {
                 const modelInfo = this.getModelInfo();
-                            console.log(`💰 Token usage: ${usage.prompt_tokens} input + ${usage.completion_tokens} output = ${usage.total_tokens} total (${modelInfo.model})`);
-        }
+                console.log(`💰 Token usage: ${usage.prompt_tokens} input + ${usage.completion_tokens} output = ${usage.total_tokens} total (${modelInfo.model})`);
+            }
 
             // Split response into text part and JSON part
             const { textPart, jsonPart, hasValidJson } = splitResponseIntoParts(content);

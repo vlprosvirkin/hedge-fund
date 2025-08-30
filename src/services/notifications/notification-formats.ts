@@ -168,8 +168,8 @@ export class NotificationFormats {
             });
         }
 
-        // Show full analysis insights
-        if (analysis && analysis.trim().length > 0) {
+        // Show full analysis insights (skip if it's JSON)
+        if (analysis && analysis.trim().length > 0 && !analysis.trim().startsWith('{')) {
             text += `🧠 <b>FULL ANALYSIS:</b>\n`;
             text += `<i>"${analysis}"</i>\n\n`;
         }
@@ -277,7 +277,10 @@ export class NotificationFormats {
         claims.forEach(claim => {
             if (claim.evidence) {
                 claim.evidence.forEach(evidence => {
-                    allEvidence.add(evidence);
+                    // Filter out null/undefined evidence
+                    if (evidence) {
+                        allEvidence.add(evidence);
+                    }
                 });
             }
         });
@@ -292,9 +295,30 @@ export class NotificationFormats {
                     // Try to parse evidence ID for better display
                     if (evidence.includes('_')) {
                         const parts = evidence.split('_');
+                        const ticker = parts[0]?.toUpperCase() || 'UNKNOWN';
                         const type = parts[1] || 'unknown';
                         const timestamp = parts[2] || 'unknown';
-                        text += `${i + 1}. 📄 ${type.toUpperCase()} data (${timestamp})\n`;
+                        
+                        // Create more descriptive evidence name
+                        let evidenceName = '';
+                        if (type === 'market_data') {
+                            evidenceName = `${ticker} Market Data`;
+                        } else if (type === 'news') {
+                            evidenceName = `${ticker} News Article`;
+                        } else if (type === 'technical') {
+                            evidenceName = `${ticker} Technical Data`;
+                        } else {
+                            evidenceName = `${ticker} ${type.toUpperCase()} Data`;
+                        }
+                        
+                        // Try to format timestamp
+                        let timeDisplay = timestamp;
+                        if (!isNaN(parseInt(timestamp))) {
+                            const date = new Date(parseInt(timestamp));
+                            timeDisplay = date.toLocaleDateString();
+                        }
+                        
+                        text += `${i + 1}. 📄 ${evidenceName} (${timeDisplay})\n`;
                     } else {
                         text += `${i + 1}. 📄 ${evidence}\n`;
                     }

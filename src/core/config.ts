@@ -31,7 +31,7 @@ export const API_CONFIG = {
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
     model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-    maxTokens: 2000,
+    maxTokens: 4000,  // Increased from 2000 to handle longer responses
     temperature: 0.7,
     timeout: 30000
   },
@@ -81,17 +81,12 @@ export const DEFAULT_CONFIG: SystemConfig = {
   // - 'bold': Aggressive strategy, max 25% per position, 15% max daily loss
   riskProfile: 'neutral',
 
-  // Trading intervals (in seconds)
+  // Trading round interval (in seconds)
   // - 1800: 30 minutes (for testing)
-  // - 3600: 1 hour (recommended for development)
+  // - 3600: 1 hour (for development)
   // - 7200: 2 hours (for production)
-  debateInterval: 3600, // 1 hour
-
-  // Rebalancing interval (in seconds)
-  // - 1800: 30 minutes (frequent rebalancing)
-  // - 3600: 1 hour (balanced)
-  // - 7200: 2 hours (less frequent)
-  rebalanceInterval: 3600, // 1 hour
+  // - 43200: 12 hours (for production - twice daily)
+  roundInterval: 43200, // 12 hours
 
   // Maximum number of concurrent positions
   // - 5: Conservative (fewer positions, more focused)
@@ -309,9 +304,8 @@ export const SYSTEM_CONFIG = {
   // Risk profile is now set in DEFAULT_CONFIG with detailed comments
   riskProfile: DEFAULT_CONFIG.riskProfile,
 
-  // Trading intervals are now set in DEFAULT_CONFIG with detailed comments
-  debateInterval: DEFAULT_CONFIG.debateInterval,
-  rebalanceInterval: DEFAULT_CONFIG.rebalanceInterval,
+  // Trading round interval is now set in DEFAULT_CONFIG with detailed comments
+  roundInterval: DEFAULT_CONFIG.roundInterval,
 
   // Max positions is now set in DEFAULT_CONFIG with detailed comments
   maxPositions: DEFAULT_CONFIG.maxPositions,
@@ -342,8 +336,7 @@ console.log('🔧 Environment variables debug:', {
 });
 
 console.log('🔧 SYSTEM_CONFIG loaded:', {
-  debateInterval: SYSTEM_CONFIG.debateInterval,
-  rebalanceInterval: SYSTEM_CONFIG.rebalanceInterval,
+  roundInterval: SYSTEM_CONFIG.roundInterval,
   riskProfile: SYSTEM_CONFIG.riskProfile,
   environment: SYSTEM_CONFIG.environment
 });
@@ -352,8 +345,7 @@ console.log('🔧 SYSTEM_CONFIG loaded:', {
 export function loadConfig(): SystemConfig {
   return {
     riskProfile: SYSTEM_CONFIG.riskProfile,
-    debateInterval: SYSTEM_CONFIG.debateInterval,
-    rebalanceInterval: SYSTEM_CONFIG.rebalanceInterval,
+    roundInterval: SYSTEM_CONFIG.roundInterval,
     maxPositions: SYSTEM_CONFIG.maxPositions,
     decisionThresholds: SYSTEM_CONFIG.decisionThresholds,
     technicalThresholds: SYSTEM_CONFIG.technicalThresholds,
@@ -370,8 +362,8 @@ export function validateConfig(config: SystemConfig): string[] {
     errors.push('Invalid risk profile');
   }
 
-  if (config.debateInterval < 60) {
-    errors.push('Debate interval must be at least 60 seconds');
+  if (config.roundInterval < 60) {
+    errors.push('Round interval must be at least 60 seconds');
   }
 
   if (config.maxPositions < 1 || config.maxPositions > 20) {
@@ -465,7 +457,7 @@ export function getConfigSummary() {
     },
     trading: {
       maxPositions: SYSTEM_CONFIG.maxPositions,
-      debateInterval: SYSTEM_CONFIG.debateInterval,
+      roundInterval: SYSTEM_CONFIG.roundInterval,
       killSwitchEnabled: SYSTEM_CONFIG.killSwitchEnabled
     }
   };

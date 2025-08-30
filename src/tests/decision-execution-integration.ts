@@ -27,10 +27,9 @@ async function decisionExecutionIntegrationTest() {
         console.log('🔧 Step 1: Initializing components...');
 
         const config: SystemConfig = {
-            debateInterval: 30, // 30 seconds
+            roundInterval: 43200, // 12 hours for production
             maxPositions: 5,
             riskProfile: 'neutral',
-            rebalanceInterval: 3600,
             decisionThresholds: {
                 averse: { buy: 0.15, sell: -0.15, minConfidence: 0.7, maxRisk: 0.3 },
                 neutral: { buy: 0.1, sell: -0.1, minConfidence: 0.6, maxRisk: 0.5 },
@@ -69,7 +68,10 @@ async function decisionExecutionIntegrationTest() {
             disconnect: async () => console.log('✅ Market data disconnected'),
             getMarketStats: async (symbol: string) => ({
                 symbol,
-                volume24h: Math.random() * 1000000 + 100000,
+                price: symbol === 'BTC' ? 108247.25 : 4400.00,
+                volume24h: symbol === 'BTC' ? Math.random() * 50000000 + 10000000 : Math.random() * 2000000 + 500000, // USD volume
+                volumeChange24h: Math.random() * 20 - 10,
+                priceChange24h: Math.random() * 10 - 5,
                 spread: Math.random() * 0.1 + 0.01,
                 tickSize: 0.01,
                 stepSize: 0.00001,
